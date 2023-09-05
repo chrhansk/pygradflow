@@ -2,8 +2,6 @@ import abc
 
 import numpy as np
 
-from .log import logger
-
 
 class PenaltyStrategy(abc.ABC):
     def __init__(self, problem, params):

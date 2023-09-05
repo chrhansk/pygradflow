@@ -5,14 +5,11 @@ from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 
 from pygradflow.log import logger as lgg
+from pygradflow.params import NewtonType
 from pygradflow.step import step_solver
-from pygradflow.step.extended_step_solver import ExtendedStepSolver
-from pygradflow.step.symmetric_step_solver import SymmetricStepSolver
+
 
 logger = lgg.getChild("newton")
-
-from pygradflow.lazy import lazyprop
-from pygradflow.params import NewtonType
 
 
 class _NewtonMethod(abc.ABC):

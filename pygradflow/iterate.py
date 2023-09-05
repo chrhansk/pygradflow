@@ -38,8 +38,8 @@ class Iterate:
     def cons_jac(self):
         return self.problem.cons_jac(self.x)
 
-    def lag_hess(self, l):
-        return self.problem.lag_hess(self.x, l)
+    def lag_hess(self, lag):
+        return self.problem.lag_hess(self.x, lag)
 
     def aug_lag_violation(self, rho):
         cv = self.cons

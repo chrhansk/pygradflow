@@ -1,7 +1,6 @@
-import copy
 import numpy as np
 import scipy as sp
-from pygradflow.implicit_func import ScaledImplicitFunc
+
 from pygradflow.step.scaled_step_solver import ScaledStepSolver
 
 
@@ -22,17 +21,13 @@ class SymmetricStepSolver(ScaledStepSolver):
         inactive_indices = np.where(np.logical_not(self.active_set))[0]
 
         lamb = 1.0 / self.dt
-        rho = self.rho
 
         n = self.n
-        m = self.m
 
-        jac = self.jac
         hess = self.hess + sp.sparse.diags([lamb], shape=(n, n))
 
         hess_rows = hess.tocsr()[inactive_indices, :]
         self.hess_rows = hess_rows.tocsc()
-
 
     def update_derivs(self, iterate):
         super().update_derivs(iterate)
@@ -48,7 +43,6 @@ class SymmetricStepSolver(ScaledStepSolver):
         lamb = 1.0 / self.dt
         rho = self.rho
 
-        n = self.n
         m = self.m
 
         inactive_jac = self.jac[:, inactive_indices]
@@ -67,7 +61,6 @@ class SymmetricStepSolver(ScaledStepSolver):
         assert np.allclose((deriv - deriv.T).data, 0.0)
 
         return deriv
-
 
     def compute_rhs(self, active_indices, b0, b1, b2t):
         active_hess = self.hess_rows[:, active_indices]
@@ -114,10 +107,6 @@ class SymmetricStepSolver(ScaledStepSolver):
         return self.solver.solve(rhs)
 
     def solve_active_set(self, active_set, rhs):
-        inactive_indices = np.where(np.logical_not(self.active_set))[0]
-
-        inactive_set_size = inactive_indices.size
-
         if self.deriv is None:
             self.deriv = self.compute_deriv(self.active_set)
 

@@ -1,7 +1,6 @@
-import copy
 import numpy as np
 import scipy as sp
-from pygradflow.implicit_func import ScaledImplicitFunc
+
 from pygradflow.step.scaled_step_solver import ScaledStepSolver
 
 
