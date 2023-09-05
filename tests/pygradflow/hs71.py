@@ -34,7 +34,6 @@ class HS71(Problem):
 
     def cons_jac(self, x):
         xx = x[:-1]
-        s = x[-1]
 
         jac = np.array(
             [
@@ -51,8 +50,8 @@ class HS71(Problem):
 
         return scipy.sparse.coo_matrix(jac)
 
-    def lag_hess(self, x, l):
-        [l1, l2] = l
+    def lag_hess(self, x, lag):
+        [l1, l2] = lag
         xx = x[:-1]
 
         obj_hess = np.array(

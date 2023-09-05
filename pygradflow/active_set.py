@@ -3,8 +3,6 @@ import numpy as np
 
 class ActiveSet:
     def __init__(self, iterate):
-        r = -(iterate.obj_grad + iterate.cons_jac.T.dot(iterate.y))
-
         active_tol = iterate.params.active_tol
 
         lb = iterate.problem.var_lb

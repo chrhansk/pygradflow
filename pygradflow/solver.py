@@ -1,10 +1,7 @@
 from collections import namedtuple
 
-import math
 import numpy as np
-import scipy as sp
 from termcolor import colored
-from pygradflow.implicit_func import ImplicitFunc
 
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
@@ -122,7 +119,6 @@ class Solver:
         logger.info("Solving problem with {0} variables, {1} constraints".format(n, m))
 
         lamb = params.lamb_init
-        I = 0.0
 
         success = True
 

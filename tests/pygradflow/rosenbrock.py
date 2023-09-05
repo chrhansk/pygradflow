@@ -36,7 +36,6 @@ class Rosenbrock(Problem):
     def lag_hess(self, v, _):
         [x, y] = v
 
-        a = self.a
         b = self.b
 
         h = np.array(

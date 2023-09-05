@@ -1,7 +1,4 @@
 import abc
-import copy
-from dataclasses import dataclass
-import math
 
 import numpy as np
 
@@ -47,13 +44,8 @@ class ExactController(StepController):
         for i in range(10):
             next_iterate = next(next_iterates)
 
-            if i > 0:
-                logger.info(next_iterate.dist(prev_iterate))
-
             next_func_val = func_val(next_iterate)
             logger.info(f"Func val: {next_func_val}")
-
-            prev_iterate = copy.copy(next_iterate)
 
             if next_func_val <= self.params.newton_tol:
                 logger.debug("Newton method converged in %d iterations", i + 1)

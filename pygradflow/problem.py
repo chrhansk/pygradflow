@@ -38,5 +38,5 @@ class Problem(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def lag_hess(self, x, l):
+    def lag_hess(self, x, lag):
         pass

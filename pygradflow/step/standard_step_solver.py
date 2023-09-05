@@ -1,10 +1,7 @@
 import copy
 
-import numpy as np
-import scipy as sp
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.step.step_solver import StepSolver
-from pygradflow.log import logger
 
 
 class StandardStepSolver(StepSolver):

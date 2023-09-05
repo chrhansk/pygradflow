@@ -26,9 +26,9 @@ class Tame(Problem):
     def cons_jac(self, z):
         return scipy.sparse.coo_matrix(np.array([[1, 1]]))
 
-    def lag_hess(self, z, l):
+    def lag_hess(self, z, lag):
         obj_hess = np.array([[2.0, -2.0], [-2.0, 2.0]])
 
         h1 = np.array([[0, 0], [0, 0]])
 
-        return scipy.sparse.coo_matrix(obj_hess + l[0] * h1)
+        return scipy.sparse.coo_matrix(obj_hess + lag[0] * h1)
