@@ -50,6 +50,7 @@ class Params:
     newton_type: NewtonType = NewtonType.Simple
     newton_tol: float = 1e-8
 
+    step_solver: object = None
     step_solver_type: StepSolverType = StepSolverType.Symmetric
     linear_solver_type: LinearSolverType = LinearSolverType.LU
     penalty_update: PenaltyUpdate = PenaltyUpdate.DualNorm

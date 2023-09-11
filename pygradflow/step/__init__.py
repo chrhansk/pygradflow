@@ -8,6 +8,9 @@ def step_solver(problem, params, iterate, dt, rho):
     assert dt > 0.0
     assert rho > 0.0
 
+    if params.step_solver is not None:
+        return params.step_solver(problem, params, iterate, dt, rho)
+
     step_solver_type = params.step_solver_type
 
     if step_solver_type == StepSolverType.Standard:
