@@ -7,7 +7,12 @@ from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.solver import Solver
 from pygradflow.newton import newton_method
-from pygradflow.params import NewtonType, Params, PenaltyUpdate, StepSolverType, LinearSolverType
+
+from pygradflow.params import (NewtonType,
+                               Params,
+                               PenaltyUpdate,
+                               StepSolverType,
+                               LinearSolverType)
 
 from .hs71 import HS71
 from .tame import Tame
@@ -188,6 +193,41 @@ def test_newton_step_constrained(rosenbrock_instance,
     params = Params(newton_type=newton_type,
                     step_solver_type=step_solver_type,
                     linear_solver_type=linear_solver_type)
+
+    (n,) = x_0.shape
+    (m,) = y_0.shape
+
+    problem.var_lb = x_0 + np.ones((n,))
+    problem.var_ub = x_0 + np.ones((n,))
+    problem.var_ub[-1] = np.inf
+
+    iterate = Iterate(problem, params, x_0, y_0)
+    dt = 1e-12
+    func = ImplicitFunc(problem, iterate, dt)
+
+    newton = newton_method(problem, params, iterate, dt, rho)
+
+    deriv = func.deriv_at(iterate, rho=rho)
+
+    s = n + m
+
+    assert np.allclose(deriv.toarray(), np.eye(s))
+
+    next_iterate = newton.step(iterate)
+
+    xclip = np.clip(x_0, problem.var_lb, problem.var_ub)
+
+    assert np.allclose(next_iterate.x, xclip)
+    assert np.allclose(next_iterate.y, iterate.y)
+
+
+def test_custom_step_solver(rosenbrock_instance):
+    from pygradflow.step.symmetric_step_solver import SymmetricStepSolver
+
+    problem, x_0, y_0 = rosenbrock_instance
+
+    params = Params(newton_type=NewtonType.Full,
+                    step_solver=SymmetricStepSolver)
 
     (n,) = x_0.shape
     (m,) = y_0.shape
