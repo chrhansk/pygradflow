@@ -1,20 +1,18 @@
-name: Python package
+name: Python deployment
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+
+  workflow_run:
+    workflows: ["Python tests"]
+    branches: [main]
+    types:
+      - completed
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.9", "3.10", "3.11"]
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -34,5 +32,9 @@ jobs:
         key: venv-${{ hashFiles('poetry.lock') }}
     - name: Install the project dependencies
       run: poetry install
-    - name: Test with pytest
-      run: poetry run pytest -v
+    - name: Build
+      run: poetry build
+    - name: Publish
+      run: |
+        poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+        poetry publish
