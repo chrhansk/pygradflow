@@ -25,6 +25,9 @@ class ScaledStepSolver(StepSolver):
         self.orig_iterate = orig_iterate
         self.func = ScaledImplicitFunc(problem, orig_iterate, dt)
 
+        self.dt = dt
+        self.rho = rho
+
     def initial_rhs(
         self, iterate: Iterate
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:

@@ -26,8 +26,6 @@ class SymmetricStepSolver(ScaledStepSolver):
         self.active_set = None
         self.jac = None
         self.hess = None
-        self.dt = dt
-        self.rho = rho
 
     def compute_hess_jac(self) -> None:
         inactive_indices = np.where(np.logical_not(self.active_set))[0]

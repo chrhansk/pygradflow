@@ -32,8 +32,6 @@ class ExtendedStepSolver(ScaledStepSolver):
         self.active_set = None
         self.jac = None
         self.hess = None
-        self.dt = dt
-        self.rho = rho
 
     def extract_rows(
         self, mat: sp.sparse.spmatrix, row_filter: np.ndarray

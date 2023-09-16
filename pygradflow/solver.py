@@ -64,14 +64,14 @@ class Solver:
         self.params = params
 
         self.penalty = penalty_strategy(problem, params)
-        self.rho = None
+        self.rho = -1.0
 
     def compute_step(
         self, controller: StepController, iterate: Iterate, dt: float
     ) -> StepResult:
         problem = self.problem
         params = self.params
-        assert self.rho is not None
+        assert self.rho is not -1.0
 
         method = newton_method(problem, params, iterate, dt, self.rho)
 
