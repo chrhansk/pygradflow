@@ -1,11 +1,23 @@
+from typing import Tuple
+
 import numpy as np
 import scipy as sp
 
 from pygradflow.step.scaled_step_solver import ScaledStepSolver
+from pygradflow.iterate import Iterate
+from pygradflow.params import Params
+from pygradflow.problem import Problem
 
 
 class SymmetricStepSolver(ScaledStepSolver):
-    def __init__(self, problem, params, orig_iterate, dt, rho) -> None:
+    def __init__(
+        self,
+        problem: Problem,
+        params: Params,
+        orig_iterate: Iterate,
+        dt: float,
+        rho: float,
+    ) -> None:
         super().__init__(problem, params, orig_iterate, dt, rho)
 
         assert dt > 0.0
@@ -14,10 +26,8 @@ class SymmetricStepSolver(ScaledStepSolver):
         self.active_set = None
         self.jac = None
         self.hess = None
-        self.dt = dt
-        self.rho = rho
 
-    def compute_hess_jac(self):
+    def compute_hess_jac(self) -> None:
         inactive_indices = np.where(np.logical_not(self.active_set))[0]
 
         lamb = 1.0 / self.dt
@@ -29,16 +39,16 @@ class SymmetricStepSolver(ScaledStepSolver):
         hess_rows = hess.tocsr()[inactive_indices, :]
         self.hess_rows = hess_rows.tocsc()
 
-    def update_derivs(self, iterate):
+    def update_derivs(self, iterate: Iterate) -> None:
         super().update_derivs(iterate)
         self.jac = self.jac.tocsc()
 
-    def reset_deriv(self):
+    def reset_deriv(self) -> None:
         super().reset_deriv()
         self.hess_rows = None
         self.deriv = None
 
-    def compute_deriv(self, active_set):
+    def compute_deriv(self, active_set: np.ndarray) -> sp.sparse.spmatrix:
         inactive_indices = np.where(np.logical_not(self.active_set))[0]
         lamb = 1.0 / self.dt
         rho = self.rho
@@ -62,7 +72,13 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         return deriv
 
-    def compute_rhs(self, active_indices, b0, b1, b2t):
+    def compute_rhs(
+        self,
+        active_indices: np.ndarray,
+        b0: np.ndarray,
+        b1: np.ndarray,
+        b2t: np.ndarray,
+    ) -> np.ndarray:
         active_hess = self.hess_rows[:, active_indices]
         active_jac = self.jac[:, active_indices]
 
@@ -73,7 +89,9 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         return rhs
 
-    def solve_scaled(self, b0, b1, b2t):
+    def solve_scaled(
+        self, b0: np.ndarray, b1: np.ndarray, b2t: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         n = self.n
         m = self.m
 
@@ -100,13 +118,15 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         return (dx, dy)
 
-    def solve_deriv(self, active_set, deriv, rhs):
+    def solve_deriv(
+        self, active_set: np.ndarray, deriv: sp.sparse.spmatrix, rhs: np.ndarray
+    ) -> np.ndarray:
         if self.solver is None:
             self.solver = self.linear_solver(self.deriv)
 
         return self.solver.solve(rhs)
 
-    def solve_active_set(self, active_set, rhs):
+    def solve_active_set(self, active_set: np.ndarray, rhs: np.ndarray) -> np.ndarray:
         if self.deriv is None:
             self.deriv = self.compute_deriv(self.active_set)
 

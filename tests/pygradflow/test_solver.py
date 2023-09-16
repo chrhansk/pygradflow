@@ -8,11 +8,13 @@ from pygradflow.iterate import Iterate
 from pygradflow.solver import Solver
 from pygradflow.newton import newton_method
 
-from pygradflow.params import (NewtonType,
-                               Params,
-                               PenaltyUpdate,
-                               StepSolverType,
-                               LinearSolverType)
+from pygradflow.params import (
+    NewtonType,
+    Params,
+    PenaltyUpdate,
+    StepSolverType,
+    LinearSolverType,
+)
 
 from .hs71 import HS71
 from .tame import Tame
@@ -151,15 +153,16 @@ def test_active_set_project_deriv(rosenbrock_instance):
 @pytest.mark.parametrize("newton_type", newton_types)
 @pytest.mark.parametrize("step_solver_type", step_solver_types)
 @pytest.mark.parametrize("linear_solver_type", linear_solver_types)
-def test_newton_step_unconstrained(rosenbrock_instance,
-                                   newton_type,
-                                   step_solver_type,
-                                   linear_solver_type):
+def test_newton_step_unconstrained(
+    rosenbrock_instance, newton_type, step_solver_type, linear_solver_type
+):
     problem, x_0, y_0 = rosenbrock_instance
 
-    params = Params(newton_type=newton_type,
-                    step_solver_type=step_solver_type,
-                    linear_solver_type=linear_solver_type)
+    params = Params(
+        newton_type=newton_type,
+        step_solver_type=step_solver_type,
+        linear_solver_type=linear_solver_type,
+    )
 
     iterate = Iterate(problem, params, x_0, y_0)
     dt = 1e-10
@@ -184,15 +187,16 @@ def test_newton_step_unconstrained(rosenbrock_instance,
 @pytest.mark.parametrize("newton_type", newton_types)
 @pytest.mark.parametrize("step_solver_type", step_solver_types)
 @pytest.mark.parametrize("linear_solver_type", linear_solver_types)
-def test_newton_step_constrained(rosenbrock_instance,
-                                 newton_type,
-                                 step_solver_type,
-                                 linear_solver_type):
+def test_newton_step_constrained(
+    rosenbrock_instance, newton_type, step_solver_type, linear_solver_type
+):
     problem, x_0, y_0 = rosenbrock_instance
 
-    params = Params(newton_type=newton_type,
-                    step_solver_type=step_solver_type,
-                    linear_solver_type=linear_solver_type)
+    params = Params(
+        newton_type=newton_type,
+        step_solver_type=step_solver_type,
+        linear_solver_type=linear_solver_type,
+    )
 
     (n,) = x_0.shape
     (m,) = y_0.shape
@@ -226,8 +230,7 @@ def test_custom_step_solver(rosenbrock_instance):
 
     problem, x_0, y_0 = rosenbrock_instance
 
-    params = Params(newton_type=NewtonType.Full,
-                    step_solver=SymmetricStepSolver)
+    params = Params(newton_type=NewtonType.Full, step_solver=SymmetricStepSolver)
 
     (n,) = x_0.shape
     (m,) = y_0.shape
@@ -292,9 +295,11 @@ def test_solve_hs71(hs71_instance):
 def test_one_step_convergence(newton_type, step_solver_type, linear_solver_type):
     problem = Tame()
 
-    params = Params(newton_type=newton_type,
-                    step_solver_type=step_solver_type,
-                    linear_solver_type=linear_solver_type)
+    params = Params(
+        newton_type=newton_type,
+        step_solver_type=step_solver_type,
+        linear_solver_type=linear_solver_type,
+    )
 
     x_0 = np.array([0.0, 0.0])
     y_0 = np.array([0.0])

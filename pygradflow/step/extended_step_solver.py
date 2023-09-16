@@ -1,7 +1,12 @@
+from typing import Tuple
+
 import numpy as np
 import scipy as sp
 
 from pygradflow.step.scaled_step_solver import ScaledStepSolver
+from pygradflow.iterate import Iterate
+from pygradflow.params import Params
+from pygradflow.problem import Problem
 
 
 class ExtendedStepSolver(ScaledStepSolver):
@@ -11,7 +16,14 @@ class ExtendedStepSolver(ScaledStepSolver):
     order to improve condition and sparsity.
     """
 
-    def __init__(self, problem, params, orig_iterate, dt, rho) -> None:
+    def __init__(
+        self,
+        problem: Problem,
+        params: Params,
+        orig_iterate: Iterate,
+        dt: float,
+        rho: float,
+    ) -> None:
         super().__init__(problem, params, orig_iterate, dt, rho)
 
         assert dt > 0.0
@@ -20,14 +32,14 @@ class ExtendedStepSolver(ScaledStepSolver):
         self.active_set = None
         self.jac = None
         self.hess = None
-        self.dt = dt
-        self.rho = rho
 
-    def extract_rows(self, mat, row_filter):
+    def extract_rows(
+        self, mat: sp.sparse.spmatrix, row_filter: np.ndarray
+    ) -> sp.sparse.spmatrix:
         mat = mat.tocsc()
         return mat[row_filter, :]
 
-    def _compute_deriv(self):
+    def _compute_deriv(self) -> None:
         active_indices = np.where(self.active_set)[0]
         inactive_indices = np.where(np.logical_not(self.active_set))[0]
 
@@ -66,7 +78,9 @@ class ExtendedStepSolver(ScaledStepSolver):
 
         assert self.deriv.shape == (n + m, n + m)
 
-    def solve_scaled(self, b0, b1, b2t):
+    def solve_scaled(
+        self, b0: np.ndarray, b1: np.ndarray, b2t: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         if self.deriv is None:
             self._compute_deriv()
 

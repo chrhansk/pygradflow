@@ -1,18 +1,36 @@
 import copy
+from typing import Tuple
+
 import numpy as np
+
 from pygradflow.implicit_func import ScaledImplicitFunc
 from pygradflow.step.step_solver import StepSolver
+from pygradflow.iterate import Iterate
+from pygradflow.params import Params
+from pygradflow.problem import Problem
 
 
 class ScaledStepSolver(StepSolver):
-    def __init__(self, problem, params, orig_iterate, dt, rho):
+    def __init__(
+        self,
+        problem: Problem,
+        params: Params,
+        orig_iterate: Iterate,
+        dt: float,
+        rho: float,
+    ) -> None:
         super().__init__(problem, params)
 
         self.problem = problem
         self.orig_iterate = orig_iterate
         self.func = ScaledImplicitFunc(problem, orig_iterate, dt)
 
-    def initial_rhs(self, iterate):
+        self.dt = dt
+        self.rho = rho
+
+    def initial_rhs(
+        self, iterate: Iterate
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         n = self.n
         m = self.m
 
@@ -37,20 +55,20 @@ class ScaledStepSolver(StepSolver):
     def solve_scaled(self, b0, b1, b2t):
         raise NotImplementedError
 
-    def reset_deriv(self):
+    def reset_deriv(self) -> None:
         self.deriv = None
         self.solver = None
 
-    def update_derivs(self, iterate):
+    def update_derivs(self, iterate: Iterate) -> None:
         self.jac = copy.copy(iterate.aug_lag_deriv_xy())
         self.hess = copy.copy(iterate.aug_lag_deriv_xx(rho=0.0))
         self.reset_deriv()
 
-    def update_active_set(self, active_set):
+    def update_active_set(self, active_set: np.ndarray) -> None:
         self.active_set = copy.copy(active_set)
         self.reset_deriv()
 
-    def solve(self, iterate):
+    def solve(self, iterate: Iterate) -> Tuple[np.ndarray, np.ndarray]:
         (b0, b1, b2) = self.initial_rhs(iterate)
 
         n = self.n

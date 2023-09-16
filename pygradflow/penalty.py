@@ -1,40 +1,43 @@
 import abc
 
 import numpy as np
+from pygradflow.iterate import Iterate
+from pygradflow.params import Params
+from pygradflow.problem import Problem
 
 
 class PenaltyStrategy(abc.ABC):
-    def __init__(self, problem, params):
+    def __init__(self, problem: Problem, params: Params) -> None:
         self.problem = problem
         self.params = params
 
-    def initial(self, iterate):
+    def initial(self, iterate) -> float:
         raise NotImplementedError()
 
-    def update(self, prev_iterate, next_iterate):
+    def update(self, prev_iterate, next_iterate) -> float:
         raise NotImplementedError()
 
 
 class ConstantPenalty(PenaltyStrategy):
-    def __init__(self, problem, params):
+    def __init__(self, problem: Problem, params: Params) -> None:
         super().__init__(problem, params)
 
-    def initial(self, iterate):
+    def initial(self, iterate: Iterate) -> float:
         return self.params.rho
 
-    def update(self, prev_iterate, next_iterate):
+    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
         return self.params.rho
 
 
 class DualNormUpdate(PenaltyStrategy):
-    def __init__(self, problem, params):
+    def __init__(self, problem: Problem, params: Params) -> None:
         super().__init__(problem, params)
 
-    def initial(self, iterate):
+    def initial(self, iterate: Iterate) -> float:
         self.rho = self.params.rho
         return self.rho
 
-    def update(self, prev_iterate, next_iterate):
+    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
         iterate = next_iterate
 
         if self.problem.num_cons == 0:
@@ -53,14 +56,14 @@ class DualNormUpdate(PenaltyStrategy):
 
 
 class DualEquilibration(PenaltyStrategy):
-    def __init__(self, problem, params):
+    def __init__(self, problem: Problem, params: Params):
         super().__init__(problem, params)
 
-    def initial(self, iterate):
+    def initial(self, iterate: Iterate) -> float:
         self.rho = self.params.rho
         return self.rho
 
-    def update(self, prev_iterate, next_iterate):
+    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
         iterate = next_iterate
 
         cons = iterate.cons

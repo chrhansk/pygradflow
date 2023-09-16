@@ -1,10 +1,17 @@
-from pygradflow.params import StepSolverType
-from pygradflow.step.extended_step_solver import ExtendedStepSolver
+from pygradflow.params import Params, StepSolverType
+from pygradflow.problem import Problem
+
+from pygradflow.step.step_solver import StepSolver
 from pygradflow.step.standard_step_solver import StandardStepSolver
+from pygradflow.step.extended_step_solver import ExtendedStepSolver
 from pygradflow.step.symmetric_step_solver import SymmetricStepSolver
 
+from pygradflow.iterate import Iterate
 
-def step_solver(problem, params, iterate, dt, rho):
+
+def step_solver(
+    problem: Problem, params: Params, iterate: Iterate, dt: float, rho: float
+) -> StepSolver:
     assert dt > 0.0
     assert rho > 0.0
 

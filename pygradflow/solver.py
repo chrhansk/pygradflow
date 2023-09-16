@@ -6,19 +6,29 @@ from termcolor import colored
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.params import Params, PenaltyUpdate
+from pygradflow.problem import Problem
 from pygradflow.newton import newton_method
-from pygradflow.penalty import ConstantPenalty, DualEquilibration, DualNormUpdate
-from pygradflow.step.step_control import DistanceRatioController
+from pygradflow.penalty import (
+    ConstantPenalty,
+    DualEquilibration,
+    DualNormUpdate,
+    PenaltyStrategy,
+)
+from pygradflow.step.step_control import (
+    StepResult,
+    DistanceRatioController,
+    StepController,
+)
 
 
 Result = namedtuple("Result", ["x", "y", "d", "success"])
 
 
-def bold(s):
+def bold(s: str) -> str:
     return colored(s, attrs=["bold"])
 
 
-def print_header():
+def print_header() -> None:
     header = "{0:^4} {1:^16} {2:^16} {3:^16} {4:^16} {5:^16} {6:^16} {7:^16} {8:^16} {9:^8}".format(
         "Iter",
         "Aug Lag",
@@ -35,7 +45,7 @@ def print_header():
     logger.info(bold(header))
 
 
-def penalty_strategy(problem, params):
+def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
     penalty_update = params.penalty_update
 
     if penalty_update == PenaltyUpdate.Constant:
@@ -49,17 +59,19 @@ def penalty_strategy(problem, params):
 
 
 class Solver:
-    def __init__(self, problem, params=Params()):
+    def __init__(self, problem: Problem, params: Params = Params()) -> None:
         self.problem = problem
         self.params = params
 
         self.penalty = penalty_strategy(problem, params)
-        self.rho = None
+        self.rho = -1.0
 
-    def compute_step(self, controller, iterate, dt):
+    def compute_step(
+        self, controller: StepController, iterate: Iterate, dt: float
+    ) -> StepResult:
         problem = self.problem
         params = self.params
-        assert self.rho is not None
+        assert self.rho is not -1.0
 
         method = newton_method(problem, params, iterate, dt, self.rho)
 
@@ -72,7 +84,7 @@ class Solver:
 
         return controller.step(iterate, self.rho, dt, next_iterates())
 
-    def _deriv_check(self, x, y):
+    def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
 
         problem = self.problem
@@ -95,7 +107,7 @@ class Solver:
             params,
         )
 
-    def print_result(self, iterate):
+    def print_result(self, iterate: Iterate) -> None:
         rho = self.rho
 
         logger.info("%30s: %.10e", "Objective", iterate.obj)
@@ -106,7 +118,7 @@ class Solver:
         logger.info("%30s: %.10e", "Constraint violation", iterate.cons_violation)
         logger.info("%30s: %.10e", "Dual violation", iterate.stat_res)
 
-    def solve(self, x_0, y_0):
+    def solve(self, x_0: np.ndarray, y_0: np.ndarray) -> Result:
         x = np.copy(x_0)
         y = np.copy(y_0)
 

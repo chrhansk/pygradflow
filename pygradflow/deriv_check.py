@@ -1,8 +1,17 @@
+from typing import Callable, Union
+
 import numpy as np
-import scipy
+import scipy as sp
+
+from pygradflow.params import Params
 
 
-def deriv_check(f, xval, dval, params):
+def deriv_check(
+    f: Callable,
+    xval: np.ndarray,
+    dval: Union[np.ndarray, sp.sparse.spmatrix],
+    params: Params,
+) -> None:
     (n,) = xval.shape
 
     fval = f(xval)
@@ -13,7 +22,7 @@ def deriv_check(f, xval, dval, params):
 
     dsparse = False
 
-    if scipy.sparse.issparse(dval):
+    if sp.sparse.issparse(dval):
         dval = dval.tocsc()
         dsparse = True
     else:

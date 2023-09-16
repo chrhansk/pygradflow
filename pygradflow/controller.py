@@ -12,12 +12,12 @@ class ControllerSettings:
     lamb_init: float = 0.0
     lamb_red: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         assert self.K_P >= 0.0
         assert self.K_I >= 0.0
 
     @staticmethod
-    def from_params(params: Params):
+    def from_params(params: Params) -> "ControllerSettings":
         return ControllerSettings(
             K_P=params.K_P,
             K_I=params.K_I,

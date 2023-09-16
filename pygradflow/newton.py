@@ -5,15 +5,19 @@ from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 
 from pygradflow.log import logger as lgg
-from pygradflow.params import NewtonType
+from pygradflow.params import Params, NewtonType
+from pygradflow.problem import Problem
 from pygradflow.step import step_solver
+from pygradflow.step.step_solver import StepSolver
 
 
 logger = lgg.getChild("newton")
 
 
-class _NewtonMethod(abc.ABC):
-    def __init__(self, problem, orig_iterate, dt, rho):
+class NewtonMethod(abc.ABC):
+    def __init__(
+        self, problem: Problem, orig_iterate: Iterate, dt: float, rho: float
+    ) -> None:
         self.problem = problem
         self.orig_iterate = orig_iterate
         self.dt = dt
@@ -21,7 +25,7 @@ class _NewtonMethod(abc.ABC):
         self.func = ImplicitFunc(problem, orig_iterate, dt)
 
     @property
-    def params(self):
+    def params(self) -> Params:
         return self.orig_iterate.params
 
     @abc.abstractmethod
@@ -29,13 +33,20 @@ class _NewtonMethod(abc.ABC):
         raise NotImplementedError()
 
 
-class SimpleNewtonMethod(_NewtonMethod):
+class SimpleNewtonMethod(NewtonMethod):
     """
     Computes step based on the matrix given in terms of the *initial*
     iterate. Only requires a back-solve for each step.
     """
 
-    def __init__(self, problem, orig_iterate, dt, rho, step_solver):
+    def __init__(
+        self,
+        problem: Problem,
+        orig_iterate: Iterate,
+        dt: float,
+        rho: float,
+        step_solver: StepSolver,
+    ) -> None:
         super().__init__(problem, orig_iterate, dt, rho)
 
         self.step_solver = step_solver
@@ -45,24 +56,31 @@ class SimpleNewtonMethod(_NewtonMethod):
         self.step_solver.update_active_set(active_set)
         self.step_solver.update_derivs(orig_iterate)
 
-    def step(self, iterate):
+    def step(self, iterate: Iterate) -> Iterate:
         (xn, yn) = self.step_solver.solve(iterate)
 
         return Iterate(self.problem, self.params, xn, yn)
 
 
-class FullNewtonMethod(_NewtonMethod):
+class FullNewtonMethod(NewtonMethod):
     """
     Computes step based on the matrix given in terms of the *current*
     iterate. Requires evaluation of the derivative and a factorization
     at each step.
     """
 
-    def __init__(self, problem, orig_iterate, dt, rho, step_solver):
+    def __init__(
+        self,
+        problem: Problem,
+        orig_iterate: Iterate,
+        dt: float,
+        rho: float,
+        step_solver: StepSolver,
+    ) -> None:
         super().__init__(problem, orig_iterate, dt, rho)
         self.step_solver = step_solver
 
-    def step(self, iterate):
+    def step(self, iterate: Iterate) -> Iterate:
         p = self.func.projection_initial(iterate, self.rho)
         active_set = self.func.compute_active_set(p)
 
@@ -74,7 +92,7 @@ class FullNewtonMethod(_NewtonMethod):
         return Iterate(self.problem, self.params, xn, yn)
 
 
-class FixedActiveSetNewtonMethod(_NewtonMethod):
+class FixedActiveSetNewtonMethod(NewtonMethod):
     """
     Computes step based on the matrix given in terms of the *current*
     iterate. Requires evaluation of the derivative and a factorization
@@ -158,7 +176,7 @@ class FixedActiveSetNewtonMethod(_NewtonMethod):
         return next_iterate
 
 
-class ActiveSetNewtonMethod(_NewtonMethod):
+class ActiveSetNewtonMethod(NewtonMethod):
     """
     Computes step based on the matrix given in terms of the
     *initial* iterate with an active set based on the active set
@@ -166,13 +184,20 @@ class ActiveSetNewtonMethod(_NewtonMethod):
     factorization at each step.
     """
 
-    def __init__(self, problem, orig_iterate, dt, rho, step_solver):
+    def __init__(
+        self,
+        problem: Problem,
+        orig_iterate: Iterate,
+        dt: float,
+        rho: float,
+        step_solver: StepSolver,
+    ) -> None:
         super().__init__(problem, orig_iterate, dt, rho)
 
         self.step_solver = step_solver
         self.step_solver.update_derivs(orig_iterate)
 
-    def step(self, iterate):
+    def step(self, iterate: Iterate) -> Iterate:
         p = self.func.projection_initial(iterate, self.rho)
         active_set = self.func.compute_active_set(p)
 
@@ -183,7 +208,9 @@ class ActiveSetNewtonMethod(_NewtonMethod):
         return Iterate(self.problem, self.params, xn, yn)
 
 
-def newton_method(problem, params, iterate, dt, rho):
+def newton_method(
+    problem: Problem, params: Params, iterate: Iterate, dt: float, rho: float
+) -> NewtonMethod:
     assert dt > 0.0
     assert rho > 0.0
 
