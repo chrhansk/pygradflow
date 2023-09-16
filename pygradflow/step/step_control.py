@@ -1,4 +1,5 @@
 import abc
+from typing import Iterator
 
 import numpy as np
 
@@ -6,17 +7,20 @@ from pygradflow.log import logger
 
 from pygradflow.controller import ControllerSettings, LogController
 from pygradflow.implicit_func import ImplicitFunc
+from pygradflow.iterate import Iterate
+from pygradflow.params import Params
+from pygradflow.problem import Problem
 
 
 class StepResult:
-    def __init__(self, iterate, lamb, accepted):
+    def __init__(self, iterate: Iterate, lamb: float, accepted: bool) -> None:
         self.iterate = iterate
         self.lamb = lamb
         self.accepted = accepted
 
 
 class StepController(abc.ABC):
-    def __init__(self, problem, params):
+    def __init__(self, problem: Problem, params: Params) -> None:
         self.problem = problem
         self.params = params
         self.lamb = params.lamb_init
@@ -59,12 +63,14 @@ class ExactController(StepController):
 
 
 class DistanceRatioController(StepController):
-    def __init__(self, problem, params):
+    def __init__(self, problem: Problem, params: Params) -> None:
         super().__init__(problem, params)
         settings = ControllerSettings.from_params(params)
         self.controller = LogController(settings, params.theta_ref)
 
-    def step(self, iterate, rho, dt, next_iterates):
+    def step(
+        self, iterate: Iterate, rho: float, dt: float, next_iterates: Iterator[Iterate]
+    ) -> StepResult:
         assert dt > 0.0
         lamb = 1.0 / dt
 

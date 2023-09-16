@@ -1,9 +1,16 @@
 import scipy as sp
 
 from pygradflow.params import LinearSolverType
+from numpy import ndarray
+from scipy.sparse._csc import csc_matrix
 
 
-class MINRESSolver:
+class LinearSolver:
+    def solve(self, b: ndarray) -> ndarray:
+        raise NotImplementedError
+
+
+class MINRESSolver(LinearSolver):
     def __init__(self, mat):
         self.mat = mat
 
@@ -11,15 +18,17 @@ class MINRESSolver:
         return sp.sparse.linalg.minres(self.mat, b)[0]
 
 
-class GMRESSolver:
-    def __init__(self, mat):
+class GMRESSolver(LinearSolver):
+    def __init__(self, mat: csc_matrix) -> None:
         self.mat = mat
 
-    def solve(self, b):
-        return sp.sparse.linalg.gmres(self.mat, b, atol=0.)[0]
+    def solve(self, b: ndarray) -> ndarray:
+        return sp.sparse.linalg.gmres(self.mat, b, atol=0.0)[0]
 
 
-def linear_solver(mat, solver_type):
+def linear_solver(
+    mat: sp.sparse.spmatrix, solver_type: LinearSolverType
+) -> LinearSolver:
     if solver_type == LinearSolverType.LU:
         return sp.sparse.linalg.splu(mat)
     elif solver_type == LinearSolverType.MINRES:
