@@ -71,7 +71,7 @@ class Solver:
     ) -> StepResult:
         problem = self.problem
         params = self.params
-        assert self.rho is not -1.0
+        assert self.rho != -1.0
 
         method = newton_method(problem, params, iterate, dt, self.rho)
 
