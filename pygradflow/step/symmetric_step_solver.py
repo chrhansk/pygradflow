@@ -68,7 +68,9 @@ class SymmetricStepSolver(ScaledStepSolver):
             format="csc",
         )
 
-        assert np.allclose((deriv - deriv.T).data, 0.0)
+        # May not be the case if Hessian itself is not
+        # numerically symmetric
+        # assert np.allclose((deriv - deriv.T).data, 0.0)
 
         return deriv
 

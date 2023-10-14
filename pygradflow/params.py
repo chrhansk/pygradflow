@@ -58,3 +58,5 @@ class Params:
     deriv_check: bool = False
     deriv_pert: float = 1e-8
     deriv_tol: float = 1e-4
+
+    validate_input: bool = True
