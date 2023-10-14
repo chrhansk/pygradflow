@@ -60,6 +60,11 @@ def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
 
 class Solver:
     def __init__(self, problem: Problem, params: Params = Params()) -> None:
+
+        if params.validate_input:
+            from ._problem import _Problem
+            problem = _Problem(problem)
+
         self.problem = problem
         self.params = params
 
