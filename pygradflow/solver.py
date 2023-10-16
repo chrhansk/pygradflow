@@ -61,12 +61,15 @@ def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
 class Solver:
     def __init__(self, problem: Problem, params: Params = Params()) -> None:
 
-        if params.validate_input:
-            from ._problem import _Problem
-            problem = _Problem(problem)
-
         self.problem = problem
         self.params = params
+
+        if params.validate_input:
+            from .eval import SimpleEvaluator
+            self.evaluator = SimpleEvaluator(problem)
+        else:
+            from .eval import ValidatingEvaluator
+            self.evaluator = ValidatingEvaluator(problem)
 
         self.penalty = penalty_strategy(problem, params)
         self.rho = -1.0
@@ -93,22 +96,23 @@ class Solver:
         from pygradflow.deriv_check import deriv_check
 
         problem = self.problem
+        eval = self.evaluator
         params = self.params
 
         logger.info("Checking objective derivative")
 
-        deriv_check(lambda x: problem.obj(x), x, problem.obj_grad(x), params)
+        deriv_check(lambda x: eval.obj(x), x, eval.obj_grad(x), params)
 
         logger.info("Checking constraint derivative")
 
-        deriv_check(lambda x: problem.cons(x), x, problem.cons_jac(x), params)
+        deriv_check(lambda x: eval.cons(x), x, eval.cons_jac(x), params)
 
         logger.info("Checking Hessian")
 
         deriv_check(
-            lambda x: problem.obj_grad(x) + problem.cons_jac(x).T.dot(y),
+            lambda x: eval.obj_grad(x) + eval.cons_jac(x).T.dot(y),
             x,
-            problem.lag_hess(x, y),
+            eval.lag_hess(x, y),
             params,
         )
 
@@ -144,7 +148,7 @@ class Solver:
         if params.deriv_check:
             self._deriv_check(x_0, y_0)
 
-        iterate = Iterate(problem, params, x_0, y_0)
+        iterate = Iterate(problem, params, x_0, y_0, self.evaluator)
         self.rho = self.penalty.initial(iterate)
 
         logger.info("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))

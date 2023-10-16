@@ -59,7 +59,11 @@ class SimpleNewtonMethod(NewtonMethod):
     def step(self, iterate: Iterate) -> Iterate:
         (xn, yn) = self.step_solver.solve(iterate)
 
-        return Iterate(self.problem, self.params, xn, yn)
+        return Iterate(self.problem,
+                       self.params,
+                       xn,
+                       yn,
+                       self.orig_iterate.eval)
 
 
 class FullNewtonMethod(NewtonMethod):
@@ -89,7 +93,11 @@ class FullNewtonMethod(NewtonMethod):
 
         (xn, yn) = self.step_solver.solve(iterate)
 
-        return Iterate(self.problem, self.params, xn, yn)
+        return Iterate(self.problem,
+                       self.params,
+                       xn,
+                       yn,
+                       self.orig_iterate.eval)
 
 
 class FixedActiveSetNewtonMethod(NewtonMethod):
@@ -125,7 +133,11 @@ class FixedActiveSetNewtonMethod(NewtonMethod):
         x = iterate.x
         y = iterate.y
 
-        return Iterate(self.problem, self.params, x - xn, y - yn)
+        return Iterate(self.problem,
+                       self.params,
+                       x - xn,
+                       y - yn,
+                       self.orig_iterate.eval)
 
     @staticmethod
     def active_set_from_iterate(problem, iterate):
@@ -205,7 +217,11 @@ class ActiveSetNewtonMethod(NewtonMethod):
 
         (xn, yn) = self.step_solver.solve(iterate)
 
-        return Iterate(self.problem, self.params, xn, yn)
+        return Iterate(self.problem,
+                       self.params,
+                       xn,
+                       yn,
+                       self.orig_iterate.eval)
 
 
 def newton_method(

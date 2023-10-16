@@ -4,6 +4,7 @@ import scipy as sp
 from pygradflow.util import norm_mult
 from pygradflow.lazy import lazyprop
 from pygradflow.active_set import ActiveSet
+from pygradflow.eval import Evaluator, SimpleEvaluator
 from pygradflow.params import Params
 from pygradflow.problem import Problem
 
@@ -14,35 +15,49 @@ def _read_only(a):
 
 
 class Iterate:
-    def __init__(self, problem: Problem, params: Params, x: np.ndarray, y: np.ndarray):
+    def __init__(self,
+                 problem: Problem,
+                 params: Params,
+                 x: np.ndarray,
+                 y: np.ndarray,
+                 eval: Evaluator = None):
         assert x.shape == (problem.num_vars,)
         assert y.shape == (problem.num_cons,)
         self.x = _read_only(np.copy(x))
         self.y = _read_only(np.copy(y))
         self.params = params
+
+        if eval:
+            self.eval = eval
+        else:
+            self.eval = SimpleEvaluator(problem)
         self.problem = problem
 
     def copy(self) -> "Iterate":
-        return Iterate(self.problem, self.params, np.copy(self.x), np.copy(self.y))
+        return Iterate(self.problem,
+                       self.params,
+                       np.copy(self.x),
+                       np.copy(self.y),
+                       self.eval)
 
     @lazyprop
     def obj(self) -> float:
-        return self.problem.obj(self.x)
+        return self.eval.obj(self.x)
 
     @lazyprop
     def obj_grad(self) -> np.ndarray:
-        return _read_only(self.problem.obj_grad(self.x))
+        return _read_only(self.eval.obj_grad(self.x))
 
     @lazyprop
     def cons(self) -> np.ndarray:
-        return _read_only(self.problem.cons(self.x))
+        return _read_only(self.eval.cons(self.x))
 
     @lazyprop
     def cons_jac(self) -> sp.sparse.spmatrix:
-        return self.problem.cons_jac(self.x)
+        return self.eval.cons_jac(self.x)
 
     def lag_hess(self, lag: np.ndarray) -> sp.sparse.spmatrix:
-        return self.problem.lag_hess(self.x, lag)
+        return self.eval.lag_hess(self.x, lag)
 
     def aug_lag_violation(self, rho: float) -> float:
         cv = self.cons
