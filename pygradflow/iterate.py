@@ -30,7 +30,7 @@ class Iterate:
         if eval:
             self.eval = eval
         else:
-            self.eval = SimpleEvaluator(problem)
+            self.eval = SimpleEvaluator(problem, params)
         self.problem = problem
 
     def copy(self) -> "Iterate":

@@ -123,15 +123,25 @@ class ImplicitFunc(_Func):
         dt = self.dt
 
         assert active_set is not None
+        params = self.orig_iterate.params
 
-        F_11 = sp.sparse.eye(n) + self.apply_project_deriv(dt * hess, active_set)
+        F_11 = sp.sparse.eye(n, dtype=params.dtype)
+        F_11 += self.apply_project_deriv(dt * hess, active_set)
 
         F_12 = self.apply_project_deriv(dt * jac.T, active_set)
 
-        F_21 = -dt * jac
-        F_22 = sp.sparse.eye(m)
+        assert F_11.dtype == params.dtype
+        assert F_12.dtype == params.dtype
 
-        return sp.sparse.bmat([[F_11, F_12], [F_21, F_22]], format="csc")
+        F_21 = -dt * jac
+        F_22 = sp.sparse.eye(m, dtype=params.dtype)
+
+        deriv = sp.sparse.bmat([[F_11, F_12], [F_21, F_22]],
+                               format="csc")
+
+        assert deriv.dtype == params.dtype
+
+        return deriv
 
     def deriv_at(self, iterate, rho, active_set=None):
         if active_set is None:
@@ -148,8 +158,9 @@ class ScaledImplicitFunc(_Func):
     def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
         super().__init__(problem, iterate, dt)
         self.lamb = 1.0 / dt
-        self.lb = self.lamb * problem.var_lb
-        self.ub = self.lamb * problem.var_ub
+        params = iterate.params
+        self.lb = (self.lamb * problem.var_lb).astype(params.dtype)
+        self.ub = (self.lamb * problem.var_ub).astype(params.dtype)
 
     def value_at(self, iterate, rho, active_set=None):
         y_0 = self.orig_iterate.y

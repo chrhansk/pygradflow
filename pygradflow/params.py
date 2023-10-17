@@ -1,6 +1,8 @@
 from enum import Enum, auto
 from dataclasses import dataclass
 
+import numpy as np
+
 
 class NewtonType(Enum):
     Simple = auto()
@@ -24,6 +26,11 @@ class PenaltyUpdate(Enum):
     Constant = auto()
     DualNorm = auto()
     DualEquilibration = auto()
+
+
+class Precision(Enum):
+    Single = auto()
+    Double = auto()
 
 
 @dataclass
@@ -59,4 +66,10 @@ class Params:
     deriv_pert: float = 1e-8
     deriv_tol: float = 1e-4
 
+    precision: Precision = Precision.Double
+
     validate_input: bool = True
+
+    @property
+    def dtype(self):
+        return np.float32 if self.precision == Precision.Single else np.float64
