@@ -12,6 +12,7 @@ from pygradflow.params import (
     NewtonType,
     Params,
     PenaltyUpdate,
+    Precision,
     StepSolverType,
     LinearSolverType,
 )
@@ -287,6 +288,34 @@ def test_solve_hs71(hs71_instance):
     result = solver.solve(x_0, y_0)
 
     assert result.success
+
+
+@pytest.mark.parametrize("newton_type", newton_types)
+@pytest.mark.parametrize("step_solver_type", step_solver_types)
+@pytest.mark.parametrize("linear_solver_type", linear_solver_types)
+def test_solve_hs71_single(hs71_instance,
+                           newton_type,
+                           step_solver_type,
+                           linear_solver_type):
+    problem, x_0, y_0 = hs71_instance
+    params = Params(precision=Precision.Single,
+                    newton_type=newton_type,
+                    step_solver_type=step_solver_type,
+                    num_it=10,
+                    linear_solver_type=linear_solver_type)
+
+    solver = Solver(problem, params)
+
+    result = solver.solve(x_0, y_0)
+
+    # Takes many more iterations to converge
+    # assert result.success
+
+    x = result.x
+    y = result.y
+
+    assert x.dtype == np.float32
+    assert y.dtype == np.float32
 
 
 @pytest.mark.parametrize("newton_type", newton_types)

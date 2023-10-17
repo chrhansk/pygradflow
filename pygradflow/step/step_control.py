@@ -88,9 +88,15 @@ class DistanceRatioController(StepController):
 
         first_diff = mid_iterate.dist(iterate)
 
+        if first_diff == 0.:
+            return StepResult(mid_iterate, lamb, True)
+
         final_iterate = next(next_iterates)
 
         second_diff = final_iterate.dist(mid_iterate)
+
+        if second_diff == 0.:
+            return StepResult(final_iterate, lamb, True)
 
         theta = second_diff / first_diff
 

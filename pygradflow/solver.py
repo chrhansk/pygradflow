@@ -66,10 +66,10 @@ class Solver:
 
         if params.validate_input:
             from .eval import SimpleEvaluator
-            self.evaluator = SimpleEvaluator(problem)
+            self.evaluator = SimpleEvaluator(problem, params)
         else:
             from .eval import ValidatingEvaluator
-            self.evaluator = ValidatingEvaluator(problem)
+            self.evaluator = ValidatingEvaluator(problem, params)
 
         self.penalty = penalty_strategy(problem, params)
         self.rho = -1.0
@@ -128,11 +128,12 @@ class Solver:
         logger.info("%30s: %.10e", "Dual violation", iterate.stat_res)
 
     def solve(self, x_0: np.ndarray, y_0: np.ndarray) -> Result:
-        x = np.copy(x_0)
-        y = np.copy(y_0)
-
         problem = self.problem
         params = self.params
+        dtype = params.dtype
+
+        x = np.copy(x_0).astype(dtype)
+        y = np.copy(y_0).astype(dtype)
 
         (n,) = x.shape
         (m,) = y.shape
@@ -146,9 +147,9 @@ class Solver:
         controller = DistanceRatioController(problem, params)
 
         if params.deriv_check:
-            self._deriv_check(x_0, y_0)
+            self._deriv_check(x, y)
 
-        iterate = Iterate(problem, params, x_0, y_0, self.evaluator)
+        iterate = Iterate(problem, params, x, y, self.evaluator)
         self.rho = self.penalty.initial(iterate)
 
         logger.info("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))

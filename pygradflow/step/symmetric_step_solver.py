@@ -34,7 +34,9 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         n = self.n
 
-        hess = self.hess + sp.sparse.diags([lamb], shape=(n, n))
+        hess = self.hess + sp.sparse.diags([lamb],
+                                           shape=(n, n),
+                                           dtype=self.params.dtype)
 
         hess_rows = hess.tocsr()[inactive_indices, :]
         self.hess_rows = hess_rows.tocsc()
@@ -58,7 +60,9 @@ class SymmetricStepSolver(ScaledStepSolver):
         inactive_jac = self.jac[:, inactive_indices]
         inactive_hess = self.hess_rows[:, inactive_indices]
 
-        lower_mat = sp.sparse.diags([-lamb / (1.0 + lamb * rho)], shape=(m, m))
+        lower_mat = sp.sparse.diags([-lamb / (1.0 + lamb * rho)],
+                                    shape=(m, m),
+                                    dtype=self.params.dtype)
 
         deriv = sp.sparse.bmat(
             [
@@ -67,6 +71,8 @@ class SymmetricStepSolver(ScaledStepSolver):
             ],
             format="csc",
         )
+
+        assert deriv.dtype == self.params.dtype
 
         # May not be the case if Hessian itself is not
         # numerically symmetric
@@ -113,7 +119,7 @@ class SymmetricStepSolver(ScaledStepSolver):
         inactive_dx = s[:inactive_set_size]
         dy = s[inactive_set_size:]
 
-        dx = np.zeros((n,))
+        dx = np.zeros((n,), dtype=self.params.dtype)
 
         dx[inactive_indices] = inactive_dx
         dx[active_indices] = b0
