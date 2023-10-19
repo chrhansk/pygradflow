@@ -4,7 +4,13 @@ import numpy as np
 import scipy as sp
 
 from pygradflow.log import logger
-from pygradflow.problem import Problem
+
+
+def astype(array, dtype):
+    if array.dtype == dtype:
+        return array
+    else:
+        return array.astype(dtype)
 
 
 class EvalError(ValueError):
@@ -57,19 +63,19 @@ class SimpleEvaluator(Evaluator):
         self.dtype = params.dtype
 
     def obj(self, x: np.ndarray) -> float:
-        return self.problem.obj(x).astype(self.dtype)
+        return self.problem.obj(x)
 
     def obj_grad(self, x: np.ndarray) -> np.ndarray:
-        return self.problem.obj_grad(x).astype(self.dtype)
+        return astype(self.problem.obj_grad(x), self.dtype)
 
     def cons(self, x: np.ndarray) -> np.ndarray:
-        return self.problem.cons(x).astype(self.dtype)
+        return astype(self.problem.cons(x), self.dtype)
 
     def cons_jac(self, x: np.ndarray) -> sp.sparse.spmatrix:
-        return self.problem.cons_jac(x).astype(self.dtype)
+        return astype(self.problem.cons_jac(x), self.dtype)
 
     def lag_hess(self, x: np.ndarray, lag: np.ndarray) -> sp.sparse.spmatrix:
-        return self.problem.lag_hess(x, lag).astype(self.dtype)
+        return astype(self.problem.lag_hess(x, lag), self.dtype)
 
 
 class ValidatingEvaluator(Evaluator):
@@ -83,7 +89,7 @@ class ValidatingEvaluator(Evaluator):
         if not math.isfinite(obj):
             raise EvalError("Infinite objective", x)
 
-        return obj.astype(self.dtype)
+        return obj
 
     def obj_grad(self, x: np.ndarray) -> np.ndarray:
         grad = self.problem.obj_grad(x)
@@ -94,7 +100,7 @@ class ValidatingEvaluator(Evaluator):
         if not np.isfinite(grad).all():
             raise EvalError("Non-finite gradient", x)
 
-        return grad.astype(self.dtype)
+        return astype(grad, self.dtype)
 
     def cons(self, x: np.ndarray) -> np.ndarray:
         cons = self.problem.cons(x)
@@ -105,7 +111,7 @@ class ValidatingEvaluator(Evaluator):
         if not np.isfinite(cons).all():
             raise EvalError("Non-finite constraints")
 
-        return cons.astype(self.dtype)
+        return astype(cons, self.dtype)
 
     def cons_jac(self, x: np.ndarray) -> sp.sparse.spmatrix:
         cons_jac = self.problem.cons_jac(x)
@@ -116,7 +122,7 @@ class ValidatingEvaluator(Evaluator):
         if not np.isfinite(cons_jac.data).all():
             raise EvalError("Non-finite Jacobian")
 
-        return cons_jac.astype(self.dtype)
+        return astype(cons_jac, self.dtype)
 
     def lag_hess(self, x: np.ndarray, lag: np.ndarray) -> sp.sparse.spmatrix:
         lag_hess = self.problem.lag_hess(x, lag)
@@ -146,4 +152,4 @@ class ValidatingEvaluator(Evaluator):
             if not np.allclose(coo_data, coo_T_data):
                 warn_hessian_values()
 
-        return lag_hess.astype(self.dtype)
+        return astype(lag_hess, self.dtype)
