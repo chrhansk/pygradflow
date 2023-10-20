@@ -29,7 +29,7 @@ def bold(s: str) -> str:
 
 
 def print_header() -> None:
-    header = "{0:^4} {1:^16} {2:^16} {3:^16} {4:^16} {5:^16} {6:^16} {7:^16} {8:^16} {9:^8}".format(
+    header = "{0:^4} {1:^16} {2:^16} {3:^16} {4:^16} {5:^16} {6:^16} {7:^16} {8:^8}".format(
         "Iter",
         "Aug Lag",
         "Bound inf",
@@ -38,7 +38,6 @@ def print_header() -> None:
         "Primal step",
         "Dual step",
         "Lambda",
-        "Theta",
         "Type",
     )
 
@@ -95,7 +94,6 @@ class Solver:
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
 
-        problem = self.problem
         eval = self.evaluator
         params = self.params
 
@@ -178,10 +176,8 @@ class Solver:
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
 
-            theta = 0.0
-
             logger.info(
-                "{0} {1:16.9e} {2:16e} {3:16e} {4:16e} {5:16e} {6:16e} {7:16e} {8:16e} {9:^8}".format(
+                "{0} {1:16.9e} {2:16e} {3:16e} {4:16e} {5:16e} {6:16e} {7:16e} {8:^8}".format(
                     bold("{0:4d}".format(i)),
                     iterate.aug_lag(self.rho),
                     iterate.bound_violation,
@@ -190,8 +186,7 @@ class Solver:
                     primal_step_norm,
                     dual_step_norm,
                     lamb,
-                    theta,
-                    accept_str,
+                    accept_str
                 )
             )
 
