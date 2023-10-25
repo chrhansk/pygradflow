@@ -174,6 +174,9 @@ class Solver:
             accept = step_result.accepted
             lamb = step_result.lamb
 
+            if lamb >= params.lamb_max:
+                raise Exception(f"Inverse step size {lamb} exceeded maximum {params.lamb_max} (incorrect derivatives?)")
+
             accept_str = (
                 colored("Accept", "green") if accept else colored("Reject", "red")
             )

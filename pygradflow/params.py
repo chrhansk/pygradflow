@@ -50,7 +50,9 @@ class Params:
     theta_ref: float = 0.5
 
     lamb_init: float = 1.0
+    # Up to 1e-6 for single precision?
     lamb_min: float = 1e-12
+    lamb_max: float = 1e12
     lamb_inc: float = 2.0
     lamb_red: float = 0.5
 
