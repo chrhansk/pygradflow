@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from enum import Enum, Flag, auto
 from dataclasses import dataclass
 
 import numpy as np
@@ -33,6 +33,13 @@ class Precision(Enum):
     Double = auto()
 
 
+class DerivCheck(Flag):
+    NoCheck = 0
+    CheckFirst = (1 << 0)
+    CheckSecond = (1 << 1)
+    CheckAll = CheckFirst | CheckSecond
+
+
 @dataclass
 class Params:
     rho: float = 1e2
@@ -62,7 +69,7 @@ class Params:
     linear_solver_type: LinearSolverType = LinearSolverType.LU
     penalty_update: PenaltyUpdate = PenaltyUpdate.DualNorm
 
-    deriv_check: bool = False
+    deriv_check: DerivCheck = DerivCheck.NoCheck
     deriv_pert: float = 1e-8
     deriv_tol: float = 1e-4
 

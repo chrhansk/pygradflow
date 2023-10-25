@@ -11,6 +11,7 @@ from pygradflow.newton import newton_method
 from pygradflow.params import (
     NewtonType,
     Params,
+    DerivCheck,
     PenaltyUpdate,
     Precision,
     StepSolverType,
@@ -347,7 +348,7 @@ def test_solve_tame():
     problem = Tame()
     x_0 = np.array([0.0, 0.0])
     y_0 = np.array([0.0])
-    params = Params(newton_type=NewtonType.Full, deriv_check=True)
+    params = Params(newton_type=NewtonType.Full, deriv_check=DerivCheck.CheckAll)
     solver = Solver(problem, params)
 
     result = solver.solve(x_0, y_0)
@@ -371,3 +372,23 @@ def test_solve_with_newton_types(hs71_instance, newton_type):
     result = solver.solve(x_0, y_0)
 
     assert result.success
+
+
+def test_deriv_errors():
+    problem = Tame()
+
+    def obj_grad(x):
+        g = Tame().obj_grad(x)
+        g[0] += 1.
+        return g
+
+    problem.obj_grad = obj_grad
+
+    x_0 = np.array([0.0, 0.0])
+    y_0 = np.array([0.0])
+    params = Params(deriv_check=DerivCheck.CheckAll)
+
+    solver = Solver(problem, params)
+
+    with pytest.raises(ValueError):
+        solver.solve(x_0, y_0)

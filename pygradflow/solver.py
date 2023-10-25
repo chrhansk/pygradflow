@@ -94,27 +94,31 @@ class Solver:
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
+        from pygradflow.params import DerivCheck
 
         problem = self.problem
         eval = self.evaluator
         params = self.params
+        deriv_check_type = params.deriv_check
 
-        logger.info("Checking objective derivative")
+        if deriv_check_type == DerivCheck.NoCheck:
+            return
 
-        deriv_check(lambda x: eval.obj(x), x, eval.obj_grad(x), params)
+        if deriv_check_type & DerivCheck.CheckFirst:
+            logger.info("Checking objective derivative")
+            deriv_check(lambda x: eval.obj(x), x, eval.obj_grad(x), params)
 
-        logger.info("Checking constraint derivative")
+            logger.info("Checking constraint derivative")
+            deriv_check(lambda x: eval.cons(x), x, eval.cons_jac(x), params)
 
-        deriv_check(lambda x: eval.cons(x), x, eval.cons_jac(x), params)
+        if deriv_check_type & DerivCheck.CheckSecond:
+            logger.info("Checking Hessian")
 
-        logger.info("Checking Hessian")
-
-        deriv_check(
-            lambda x: eval.obj_grad(x) + eval.cons_jac(x).T.dot(y),
-            x,
-            eval.lag_hess(x, y),
-            params,
-        )
+            deriv_check(
+                lambda x: eval.obj_grad(x) + eval.cons_jac(x).T.dot(y),
+                x,
+                eval.lag_hess(x, y),
+                params)
 
     def print_result(self, iterate: Iterate) -> None:
         rho = self.rho
@@ -146,8 +150,7 @@ class Solver:
 
         controller = DistanceRatioController(problem, params)
 
-        if params.deriv_check:
-            self._deriv_check(x, y)
+        self._deriv_check(x, y)
 
         iterate = Iterate(problem, params, x, y, self.evaluator)
         self.rho = self.penalty.initial(iterate)
