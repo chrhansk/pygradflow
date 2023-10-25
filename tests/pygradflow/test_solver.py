@@ -348,7 +348,9 @@ def test_solve_tame():
     problem = Tame()
     x_0 = np.array([0.0, 0.0])
     y_0 = np.array([0.0])
-    params = Params(newton_type=NewtonType.Full, deriv_check=DerivCheck.CheckAll)
+    params = Params(newton_type=NewtonType.Full,
+                    deriv_check=DerivCheck.CheckAll)
+
     solver = Solver(problem, params)
 
     result = solver.solve(x_0, y_0)
@@ -374,7 +376,7 @@ def test_solve_with_newton_types(hs71_instance, newton_type):
     assert result.success
 
 
-def test_deriv_errors():
+def test_grad_errors():
     problem = Tame()
 
     def obj_grad(x):
@@ -390,5 +392,38 @@ def test_deriv_errors():
 
     solver = Solver(problem, params)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as e:
         solver.solve(x_0, y_0)
+
+    e = e.value
+    assert (e.invalid_indices == [[0, 0]]).all()
+
+
+def test_cons_errors():
+    problem = Tame()
+
+    invalid_index = 1
+
+    def cons_jac(x):
+        g = Tame().cons_jac(x)
+        g.data[invalid_index] += 1.
+        return g
+
+    problem.cons_jac = cons_jac
+
+    x_0 = np.array([0.0, 0.0])
+    y_0 = np.array([0.0])
+    params = Params(deriv_check=DerivCheck.CheckAll)
+
+    solver = Solver(problem, params)
+
+    with pytest.raises(ValueError) as e:
+        solver.solve(x_0, y_0)
+
+    e = e.value
+    jac = Tame().cons_jac(x_0)
+
+    invalid_row = jac.row[invalid_index]
+    invalid_col = jac.col[invalid_index]
+
+    assert (e.invalid_indices == [[invalid_row, invalid_col]]).all()
