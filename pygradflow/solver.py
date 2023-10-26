@@ -82,14 +82,14 @@ class Solver:
 
         method = newton_method(problem, params, iterate, dt, self.rho)
 
-        def next_iterates():
+        def next_steps():
             curr_iterate = iterate
             while True:
-                next_iterate = method.step(curr_iterate)
-                yield next_iterate
-                curr_iterate = next_iterate
+                next_step = method.step(curr_iterate)
+                yield next_step
+                curr_iterate = next_step.iterate
 
-        return controller.step(iterate, self.rho, dt, next_iterates())
+        return controller.step(iterate, self.rho, dt, next_steps())
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check

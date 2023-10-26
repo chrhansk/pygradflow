@@ -8,7 +8,7 @@ from pygradflow.log import logger as lgg
 from pygradflow.params import Params, NewtonType
 from pygradflow.problem import Problem
 from pygradflow.step import step_solver
-from pygradflow.step.step_solver import StepSolver
+from pygradflow.step.step_solver import StepSolver, StepResult
 
 
 logger = lgg.getChild("newton")
@@ -29,7 +29,7 @@ class NewtonMethod(abc.ABC):
         return self.orig_iterate.params
 
     @abc.abstractmethod
-    def step(self, iterate):
+    def step(self, iterate: Iterate) -> StepResult:
         raise NotImplementedError()
 
 
@@ -56,14 +56,8 @@ class SimplifiedNewtonMethod(NewtonMethod):
         self.step_solver.update_active_set(active_set)
         self.step_solver.update_derivs(orig_iterate)
 
-    def step(self, iterate: Iterate) -> Iterate:
-        (xn, yn) = self.step_solver.solve(iterate)
-
-        return Iterate(self.problem,
-                       self.params,
-                       xn,
-                       yn,
-                       self.orig_iterate.eval)
+    def step(self, iterate):
+        return self.step_solver.solve(iterate)
 
 
 class FullNewtonMethod(NewtonMethod):
@@ -84,20 +78,14 @@ class FullNewtonMethod(NewtonMethod):
         super().__init__(problem, orig_iterate, dt, rho)
         self.step_solver = step_solver
 
-    def step(self, iterate: Iterate) -> Iterate:
+    def step(self, iterate: Iterate) -> StepResult:
         p = self.func.projection_initial(iterate, self.rho)
         active_set = self.func.compute_active_set(p)
 
         self.step_solver.update_active_set(active_set)
         self.step_solver.update_derivs(iterate)
 
-        (xn, yn) = self.step_solver.solve(iterate)
-
-        return Iterate(self.problem,
-                       self.params,
-                       xn,
-                       yn,
-                       self.orig_iterate.eval)
+        return self.step_solver.solve(iterate)
 
 
 class FixedActiveSetNewtonMethod(NewtonMethod):
@@ -121,23 +109,22 @@ class FixedActiveSetNewtonMethod(NewtonMethod):
             np.sum(active_set),
         )
 
-    def split_sol(self, s):
+    def split_sol(self, s: np.ndarray):
         n = self.problem.num_vars
         m = self.problem.num_cons
 
         assert s.shape == (n + m,)
         return s[:n], s[n:]
 
-    def create_iterate(self, iterate, s):
+    def create_step(self, iterate: Iterate, s: np.ndarray) -> StepResult:
         xn, yn = self.split_sol(s)
         x = iterate.x
         y = iterate.y
 
-        return Iterate(self.problem,
-                       self.params,
-                       x - xn,
-                       y - yn,
-                       self.orig_iterate.eval)
+        dx = x - xn
+        dy = y - yn
+
+        return StepResult(iterate, dx, dy)
 
     @staticmethod
     def active_set_from_iterate(problem, iterate):
@@ -177,7 +164,8 @@ class FixedActiveSetNewtonMethod(NewtonMethod):
         solver = sp.sparse.linalg.splu(mat)
 
         s = solver.solve(rhs)
-        next_iterate = self.create_iterate(iterate, s)
+        next_step = self.create_step(iterate, s)
+        next_iterate = next_step.iterate
 
         logger.info(
             "Initial rhs norm: {0}, final: {1}".format(
@@ -185,7 +173,7 @@ class FixedActiveSetNewtonMethod(NewtonMethod):
             )
         )
 
-        return next_iterate
+        return next_step
 
 
 class ActiveSetNewtonMethod(NewtonMethod):
@@ -209,19 +197,13 @@ class ActiveSetNewtonMethod(NewtonMethod):
         self.step_solver = step_solver
         self.step_solver.update_derivs(orig_iterate)
 
-    def step(self, iterate: Iterate) -> Iterate:
+    def step(self, iterate):
         p = self.func.projection_initial(iterate, self.rho)
         active_set = self.func.compute_active_set(p)
 
         self.step_solver.update_active_set(active_set)
 
-        (xn, yn) = self.step_solver.solve(iterate)
-
-        return Iterate(self.problem,
-                       self.params,
-                       xn,
-                       yn,
-                       self.orig_iterate.eval)
+        return self.step_solver.solve(iterate)
 
 
 def newton_method(

@@ -4,7 +4,7 @@ from typing import Tuple
 import numpy as np
 
 from pygradflow.implicit_func import ScaledImplicitFunc
-from pygradflow.step.step_solver import StepSolver
+from pygradflow.step.step_solver import StepSolver, StepResult
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
@@ -68,7 +68,7 @@ class ScaledStepSolver(StepSolver):
         self.active_set = copy.copy(active_set)
         self.reset_deriv()
 
-    def solve(self, iterate: Iterate) -> Tuple[np.ndarray, np.ndarray]:
+    def solve(self, iterate: Iterate) -> StepResult:
         (b0, b1, b2) = self.initial_rhs(iterate)
 
         n = self.n
@@ -90,7 +90,4 @@ class ScaledStepSolver(StepSolver):
         dx = sx
         dy = fact * (sy - rho * b2)
 
-        x = iterate.x
-        y = iterate.y
-
-        return (x - dx, y - dy)
+        return StepResult(iterate, dx, dy)

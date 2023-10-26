@@ -5,6 +5,7 @@ import numpy as np
 
 from pygradflow.log import logger
 
+from pygradflow.step.step_solver import StepResult
 from pygradflow.controller import ControllerSettings, LogController
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
@@ -12,7 +13,7 @@ from pygradflow.params import Params
 from pygradflow.problem import Problem
 
 
-class StepResult:
+class StepControlResult:
     def __init__(self, iterate: Iterate, lamb: float, accepted: bool) -> None:
         self.iterate = iterate
         self.lamb = lamb
@@ -26,7 +27,11 @@ class StepController(abc.ABC):
         self.lamb = params.lamb_init
 
     @abc.abstractmethod
-    def step(self, iterate, rho, dt, next_iterates):
+    def step(self,
+             iterate: Iterate,
+             rho: float,
+             dt: float,
+             next_steps: Iterator[StepResult]) -> StepControlResult:
         raise NotImplementedError()
 
 
@@ -34,7 +39,7 @@ class ExactController(StepController):
     def __init__(self, problem, params):
         super().__init__(problem, params)
 
-    def step(self, iterate, rho, dt, next_iterates):
+    def step(self, iterate, rho, dt, next_steps):
         assert dt > 0.0
         lamb = 1.0 / dt
 
@@ -46,20 +51,20 @@ class ExactController(StepController):
         cur_func_val = func_val(iterate)
 
         for i in range(10):
-            next_iterate = next(next_iterates)
+            next_iterate = next(next_steps).iterate
 
             next_func_val = func_val(next_iterate)
             logger.info(f"Func val: {next_func_val}")
 
             if next_func_val <= self.params.newton_tol:
                 logger.debug("Newton method converged in %d iterations", i + 1)
-                return StepResult(next_iterate, 0.5 * lamb, True)
+                return StepControlResult(next_iterate, 0.5 * lamb, True)
             elif next_func_val > cur_func_val:
                 break
 
         logger.debug("Newton method did not converge")
 
-        return StepResult(next_iterate, 2.0 * lamb, False)
+        return StepControlResult(next_iterate, 2.0 * lamb, False)
 
 
 class DistanceRatioController(StepController):
@@ -68,9 +73,7 @@ class DistanceRatioController(StepController):
         settings = ControllerSettings.from_params(params)
         self.controller = LogController(settings, params.theta_ref)
 
-    def step(
-        self, iterate: Iterate, rho: float, dt: float, next_iterates: Iterator[Iterate]
-    ) -> StepResult:
+    def step(self, iterate, rho, dt, next_steps):
         assert dt > 0.0
         lamb = 1.0 / dt
 
@@ -79,24 +82,30 @@ class DistanceRatioController(StepController):
 
         func = ImplicitFunc(problem, iterate, dt)
 
-        mid_iterate = next(next_iterates)
+        # TODO: Fix
+        mid_step = next(next_steps)
+        mid_iterate = mid_step.iterate
 
-        if np.linalg.norm(func.value_at(mid_iterate, rho)) <= params.newton_tol:
+        mid_func_norm = np.linalg.norm(func.value_at(mid_iterate, rho))
+
+        if mid_func_norm <= params.newton_tol:
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
-            logger.info("Newton converged during first iteration, lamb_n = %f", lamb_n)
-            return StepResult(mid_iterate, lamb_n, True)
+            logger.info("Newton converged during first iteration, lamb_n = %f",
+                        lamb_n)
+            return StepControlResult(mid_iterate, lamb_n, True)
 
-        first_diff = mid_iterate.dist(iterate)
+        first_diff = mid_step.diff
 
         if first_diff == 0.:
-            return StepResult(mid_iterate, lamb, True)
+            return StepControlResult(mid_iterate, lamb, True)
 
-        final_iterate = next(next_iterates)
+        final_step = next(next_steps)
+        final_iterate = final_step.iterate
 
-        second_diff = final_iterate.dist(mid_iterate)
+        second_diff = final_step.diff
 
         if second_diff == 0.:
-            return StepResult(final_iterate, lamb, True)
+            return StepControlResult(final_iterate, lamb, True)
 
         theta = second_diff / first_diff
 
@@ -120,4 +129,4 @@ class DistanceRatioController(StepController):
 
         self.lamb = lamb_n
 
-        return StepResult(final_iterate, lamb_n, accepted)
+        return StepControlResult(final_iterate, lamb_n, accepted)
