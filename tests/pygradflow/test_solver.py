@@ -180,7 +180,7 @@ def test_newton_step_unconstrained(
 
     assert np.allclose(deriv.toarray(), np.eye(s))
 
-    next_iterate = newton.step(iterate)
+    next_iterate = newton.step(iterate).iterate
 
     assert np.allclose(next_iterate.x, iterate.x)
     assert np.allclose(next_iterate.y, iterate.y)
@@ -219,7 +219,7 @@ def test_newton_step_constrained(
 
     assert np.allclose(deriv.toarray(), np.eye(s))
 
-    next_iterate = newton.step(iterate)
+    next_iterate = newton.step(iterate).iterate
 
     xclip = np.clip(x_0, problem.var_lb, problem.var_ub)
 
@@ -253,7 +253,7 @@ def test_custom_step_solver(rosenbrock_instance):
 
     assert np.allclose(deriv.toarray(), np.eye(s))
 
-    next_iterate = newton.step(iterate)
+    next_iterate = newton.step(iterate).iterate
 
     xclip = np.clip(x_0, problem.var_lb, problem.var_ub)
 
@@ -338,7 +338,7 @@ def test_one_step_convergence(newton_type, step_solver_type, linear_solver_type)
     iterate = Iterate(problem, params, x_0, y_0)
     method = newton_method(problem, params, iterate, dt, rho)
 
-    next_iterate = method.step(iterate)
+    next_iterate = method.step(iterate).iterate
     func = ImplicitFunc(problem, iterate, dt)
 
     assert np.allclose(func.value_at(next_iterate, rho=rho), 0.0)

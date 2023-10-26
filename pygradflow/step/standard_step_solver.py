@@ -4,7 +4,7 @@ from typing import Tuple
 import numpy as np
 
 from pygradflow.implicit_func import ImplicitFunc
-from pygradflow.step.step_solver import StepSolver
+from pygradflow.step.step_solver import StepSolver, StepResult
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
@@ -54,7 +54,7 @@ class StandardStepSolver(StepSolver):
         self.active_set = copy.copy(active_set)
         self._reset_deriv()
 
-    def solve(self, iterate: Iterate) -> Tuple[np.ndarray, np.ndarray]:
+    def solve(self, iterate: Iterate) -> StepResult:
         if self.deriv is None:
             self._compute_deriv()
 
@@ -73,7 +73,4 @@ class StandardStepSolver(StepSolver):
         dx = s[:n]
         dy = s[n:]
 
-        x = iterate.x
-        y = iterate.y
-
-        return (x - dx, y - dy)
+        return StepResult(iterate, dx, dy)
