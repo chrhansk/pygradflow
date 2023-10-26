@@ -5,7 +5,7 @@ import numpy as np
 
 
 class NewtonType(Enum):
-    Simple = auto()
+    Simplified = auto()
     Full = auto()
     ActiveSet = auto()
 
@@ -63,7 +63,7 @@ class Params:
     lamb_term: float = 1e-8
     active_tol: float = 1e-8
 
-    newton_type: NewtonType = NewtonType.Simple
+    newton_type: NewtonType = NewtonType.Simplified
     newton_tol: float = 1e-8
 
     step_solver: object = None

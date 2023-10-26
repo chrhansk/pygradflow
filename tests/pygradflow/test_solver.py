@@ -360,7 +360,7 @@ def test_solve_tame():
 
 # TODO: Find out why full Newton does not converge
 @pytest.mark.parametrize(
-    "newton_type", [NewtonType.ActiveSet, NewtonType.Simple, NewtonType.Full]
+    "newton_type", [NewtonType.ActiveSet, NewtonType.Simplified, NewtonType.Full]
 )
 def test_solve_with_newton_types(hs71_instance, newton_type):
     problem, x_0, y_0 = hs71_instance
