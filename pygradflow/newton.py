@@ -33,7 +33,7 @@ class NewtonMethod(abc.ABC):
         raise NotImplementedError()
 
 
-class SimpleNewtonMethod(NewtonMethod):
+class SimplifiedNewtonMethod(NewtonMethod):
     """
     Computes step based on the matrix given in terms of the *initial*
     iterate. Only requires a back-solve for each step.
@@ -232,8 +232,8 @@ def newton_method(
 
     solver = step_solver(problem, params, iterate, dt, rho)
 
-    if params.newton_type == NewtonType.Simple:
-        return SimpleNewtonMethod(problem, iterate, dt, rho, solver)
+    if params.newton_type == NewtonType.Simplified:
+        return SimplifiedNewtonMethod(problem, iterate, dt, rho, solver)
     elif params.newton_type == NewtonType.Full:
         return FullNewtonMethod(problem, iterate, dt, rho, solver)
     elif params.newton_type == NewtonType.ActiveSet:
