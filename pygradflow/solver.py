@@ -16,7 +16,7 @@ from pygradflow.penalty import (
 )
 from pygradflow.step.step_control import (
     StepResult,
-    DistanceRatioController,
+    step_controller,
     StepController,
 )
 
@@ -146,7 +146,7 @@ class Solver:
 
         success = True
 
-        controller = DistanceRatioController(problem, params)
+        controller = step_controller(problem, params)
 
         self._deriv_check(x, y)
 
