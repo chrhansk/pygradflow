@@ -87,6 +87,8 @@ class Params:
 
     validate_input: bool = True
 
+    time_limit: float = np.inf
+
     @property
     def dtype(self):
         return np.float32 if self.precision == Precision.Single else np.float64
