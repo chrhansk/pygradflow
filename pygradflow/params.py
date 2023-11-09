@@ -22,6 +22,12 @@ class LinearSolverType(Enum):
     GMRES = auto()
 
 
+class StepControlType(Enum):
+    Exact = auto()
+    ResiduumRatio = auto()
+    DistanceRatio = auto()
+
+
 class PenaltyUpdate(Enum):
     Constant = auto()
     DualNorm = auto()
@@ -66,6 +72,8 @@ class Params:
     newton_type: NewtonType = NewtonType.Simplified
     newton_tol: float = 1e-8
 
+    step_control_type: StepControlType = StepControlType.DistanceRatio
+
     step_solver: object = None
     step_solver_type: StepSolverType = StepSolverType.Symmetric
     linear_solver_type: LinearSolverType = LinearSolverType.LU
@@ -78,6 +86,9 @@ class Params:
     precision: Precision = Precision.Double
 
     validate_input: bool = True
+
+    time_limit: float = np.inf
+    display_interval: float = 0.1
 
     @property
     def dtype(self):

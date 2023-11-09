@@ -1,4 +1,7 @@
 from collections import namedtuple
+import time
+
+from enum import Enum, auto
 
 import numpy as np
 from termcolor import colored
@@ -14,14 +17,30 @@ from pygradflow.penalty import (
     DualNormUpdate,
     PenaltyStrategy,
 )
+
 from pygradflow.step.step_control import (
     StepResult,
-    DistanceRatioController,
+    step_controller,
     StepController,
 )
 
 
-Result = namedtuple("Result", ["x", "y", "d", "success"])
+class SolverStatus(Enum):
+    Converged = auto(),
+    IterationLimit = auto(),
+    TimeLimit = auto()
+
+
+class Result:
+    def __init__(self, x, y, d, success, status):
+        self.x = x
+        self.y = y
+        self.d = d
+        self.success = success
+        self.status = status
+
+
+header_interval = 25
 
 
 def bold(s: str) -> str:
@@ -134,8 +153,8 @@ class Solver:
         params = self.params
         dtype = params.dtype
 
-        x = np.copy(x_0).astype(dtype)
-        y = np.copy(y_0).astype(dtype)
+        x = x_0.astype(dtype)
+        y = y_0.astype(dtype)
 
         (n,) = x.shape
         (m,) = y.shape
@@ -146,7 +165,7 @@ class Solver:
 
         success = True
 
-        controller = DistanceRatioController(problem, params)
+        controller = step_controller(problem, params)
 
         self._deriv_check(x, y)
 
@@ -155,12 +174,22 @@ class Solver:
 
         logger.info("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))
 
-        for i in range(params.num_it):
-            if (i % 25) == 0:
+        status = None
+        start_time = time.time()
+        last_time = start_time
+        line_diff = 0
+        iteration = 0
+
+        print_header()
+
+        for iteration in range(params.num_it):
+            if line_diff == header_interval:
+                line_diff = 0
                 print_header()
 
             if iterate.total_res <= params.opt_tol:
                 logger.info("Convergence achieved")
+                status = SolverStatus.Converged
                 break
 
             step_result = self.compute_step(controller, iterate, 1.0 / lamb)
@@ -182,28 +211,39 @@ class Solver:
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
 
-            logger.info(
-                "{0} {1:16.9e} {2:16e} {3:16e} {4:16e} {5:16e} {6:16e} {7:16e} {8:^8}".format(
-                    bold("{0:4d}".format(i)),
-                    iterate.aug_lag(self.rho),
-                    iterate.bound_violation,
-                    iterate.cons_violation,
-                    iterate.stat_res,
-                    primal_step_norm,
-                    dual_step_norm,
-                    lamb,
-                    accept_str
+            curr_time = time.time()
+
+            if curr_time - start_time >= params.time_limit:
+                logger.info("Reached time limit")
+                status = SolverStatus.TimeLimit
+                break
+
+            if curr_time - last_time >= params.display_interval:
+                last_time = curr_time
+                line_diff += 1
+
+                logger.info(
+                    "{0} {1:16.9e} {2:16e} {3:16e} {4:16e} {5:16e} {6:16e} {7:16e} {8:^8}".format(
+                        bold("{0:4d}".format(iteration)),
+                        iterate.aug_lag(self.rho),
+                        iterate.bound_violation,
+                        iterate.cons_violation,
+                        iterate.stat_res,
+                        primal_step_norm,
+                        dual_step_norm,
+                        lamb,
+                        accept_str
+                    )
                 )
-            )
 
             if accept:
                 # Accept
                 next_rho = self.penalty.update(iterate, next_iterate)
 
                 if next_rho != self.rho:
-                    logger.debug(
-                        "Updating penalty parameter from %e to %e", self.rho, next_rho
-                    )
+                    logger.debug("Updating penalty parameter from %e to %e",
+                                 self.rho,
+                                 next_rho)
                     self.rho = next_rho
 
                 delta = iterate.dist(next_iterate)
@@ -212,10 +252,12 @@ class Solver:
 
                 if (lamb <= params.lamb_term) and (delta <= params.opt_tol):
                     logger.info("Convergence achieved")
+                    status = SolverStatus.Converged
                     break
 
         else:
             success = False
+            status = SolverStatus.IterationLimit
             logger.info("Iteration limit reached")
 
         self.print_result(iterate)
@@ -224,4 +266,6 @@ class Solver:
         y = iterate.y
         d = iterate.bound_duals
 
-        return Result(x, y, d, success)
+        assert status is not None
+
+        return Result(x, y, d, success, status)
