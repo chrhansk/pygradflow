@@ -40,6 +40,9 @@ class Result:
         self.status = status
 
 
+header_interval = 25
+
+
 def bold(s: str) -> str:
     return colored(s, attrs=["bold"])
 
@@ -150,8 +153,8 @@ class Solver:
         params = self.params
         dtype = params.dtype
 
-        x = np.copy(x_0).astype(dtype)
-        y = np.copy(y_0).astype(dtype)
+        x = x_0.astype(dtype)
+        y = y_0.astype(dtype)
 
         (n,) = x.shape
         (m,) = y.shape
@@ -173,19 +176,20 @@ class Solver:
 
         status = None
         start_time = time.time()
+        last_time = start_time
+        line_diff = 0
+        iteration = 0
 
-        for i in range(params.num_it):
-            if (i % 25) == 0:
+        print_header()
+
+        for iteration in range(params.num_it):
+            if line_diff == header_interval:
+                line_diff = 0
                 print_header()
 
             if iterate.total_res <= params.opt_tol:
                 logger.info("Convergence achieved")
                 status = SolverStatus.Converged
-                break
-
-            if time.time() - start_time >= params.time_limit:
-                logger.info("Reached time limit")
-                status = SolverStatus.TimeLimit
                 break
 
             step_result = self.compute_step(controller, iterate, 1.0 / lamb)
@@ -207,19 +211,30 @@ class Solver:
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
 
-            logger.info(
-                "{0} {1:16.9e} {2:16e} {3:16e} {4:16e} {5:16e} {6:16e} {7:16e} {8:^8}".format(
-                    bold("{0:4d}".format(i)),
-                    iterate.aug_lag(self.rho),
-                    iterate.bound_violation,
-                    iterate.cons_violation,
-                    iterate.stat_res,
-                    primal_step_norm,
-                    dual_step_norm,
-                    lamb,
-                    accept_str
+            curr_time = time.time()
+
+            if curr_time - start_time >= params.time_limit:
+                logger.info("Reached time limit")
+                status = SolverStatus.TimeLimit
+                break
+
+            if curr_time - last_time >= params.display_interval:
+                last_time = curr_time
+                line_diff += 1
+
+                logger.info(
+                    "{0} {1:16.9e} {2:16e} {3:16e} {4:16e} {5:16e} {6:16e} {7:16e} {8:^8}".format(
+                        bold("{0:4d}".format(iteration)),
+                        iterate.aug_lag(self.rho),
+                        iterate.bound_violation,
+                        iterate.cons_violation,
+                        iterate.stat_res,
+                        primal_step_norm,
+                        dual_step_norm,
+                        lamb,
+                        accept_str
+                    )
                 )
-            )
 
             if accept:
                 # Accept

@@ -88,6 +88,7 @@ class Params:
     validate_input: bool = True
 
     time_limit: float = np.inf
+    display_interval: float = 0.1
 
     @property
     def dtype(self):
