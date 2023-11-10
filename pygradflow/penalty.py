@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 from pygradflow.iterate import Iterate
-from pygradflow.params import Params
+from pygradflow.params import Params, PenaltyUpdate
 from pygradflow.problem import Problem
 
 
@@ -86,3 +86,16 @@ class DualEquilibration(PenaltyStrategy):
             self.rho = next_rho
 
         return self.rho
+
+
+def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
+    penalty_update = params.penalty_update
+
+    if penalty_update == PenaltyUpdate.Constant:
+        return ConstantPenalty(problem, params)
+    elif penalty_update == PenaltyUpdate.DualNorm:
+        return DualNormUpdate(problem, params)
+    elif penalty_update == PenaltyUpdate.DualEquilibration:
+        return DualEquilibration(problem, params)
+
+    raise ValueError("Invalid penalty update strategy")

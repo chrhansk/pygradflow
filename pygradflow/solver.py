@@ -8,15 +8,10 @@ from termcolor import colored
 
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
-from pygradflow.params import Params, PenaltyUpdate
+from pygradflow.params import Params
 from pygradflow.problem import Problem
 from pygradflow.newton import newton_method
-from pygradflow.penalty import (
-    ConstantPenalty,
-    DualEquilibration,
-    DualNormUpdate,
-    PenaltyStrategy,
-)
+from pygradflow.penalty import penalty_strategy
 
 from pygradflow.step.step_control import (
     StepResult,
@@ -61,19 +56,6 @@ def print_header() -> None:
     )
 
     logger.info(bold(header))
-
-
-def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
-    penalty_update = params.penalty_update
-
-    if penalty_update == PenaltyUpdate.Constant:
-        return ConstantPenalty(problem, params)
-    elif penalty_update == PenaltyUpdate.DualNorm:
-        return DualNormUpdate(problem, params)
-    elif penalty_update == PenaltyUpdate.DualEquilibration:
-        return DualEquilibration(problem, params)
-
-    raise ValueError("Invalid penalty update strategy")
 
 
 class Solver:
