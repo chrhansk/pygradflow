@@ -16,13 +16,23 @@ from pygradflow.step.step_control import (
     StepController,
 )
 
-from pygradflow.display import problem_display
+from pygradflow.display import problem_display, Format
 
 
 class SolverStatus(Enum):
-    Converged = auto(),
-    IterationLimit = auto(),
-    TimeLimit = auto()
+    Converged = (auto(), "Convergence achieved")
+    IterationLimit = (auto(), "Reached iteration limit")
+    TimeLimit = (auto(), "Reached time limit")
+
+    def __new__(cls, value, description):
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj.description = description
+        return obj
+
+    @staticmethod
+    def success(status):
+        return status == SolverStatus.Converged
 
 
 class SolverResult:
@@ -98,16 +108,29 @@ class Solver:
                 eval.lag_hess(x, y),
                 params)
 
-    def print_result(self, iterate: Iterate) -> None:
+    def print_result(self,
+                     status: SolverStatus,
+                     iterate: Iterate,
+                     iterations: int,
+                     dist_factor: float) -> None:
         rho = self.rho
 
-        logger.info("%30s: %14e", "Objective", iterate.obj)
-        logger.info("%30s: %14e", "Aug Lag violation", iterate.aug_lag_violation(rho))
-        logger.info("%30s: %14e", "Aug Lag dual", iterate.aug_lag_dual())
+        desc = "{:>30s}".format(status.description)
 
-        logger.info("%30s: %14e", "Bound violation", iterate.bound_violation)
-        logger.info("%30s: %14e", "Constraint violation", iterate.cons_violation)
-        logger.info("%30s: %14e", "Dual violation", iterate.stat_res)
+        status_desc = Format.redgreen(desc, status.success, bold=True)
+        status_name = Format.bold("{:>30s}".format("Status"))
+
+        logger.info("%30s: %30s", status_name, status_desc)
+        logger.info("%30s: %30d", "Iterations", iterations)
+        logger.info("%30s: %30e", "Distance factor", dist_factor)
+
+        logger.info("%30s: %30e", "Objective", iterate.obj)
+        logger.info("%30s: %30e", "Aug Lag violation", iterate.aug_lag_violation(rho))
+        logger.info("%30s: %30e", "Aug Lag dual", iterate.aug_lag_dual())
+
+        logger.info("%30s: %30e", "Bound violation", iterate.bound_violation)
+        logger.info("%30s: %30e", "Constraint violation", iterate.cons_violation)
+        logger.info("%30s: %30e", "Dual violation", iterate.stat_res)
 
     def solve(self, x_0: np.ndarray, y_0: np.ndarray) -> SolverResult:
         problem = self.problem
@@ -135,7 +158,7 @@ class Solver:
         iterate = Iterate(problem, params, x, y, self.evaluator)
         self.rho = self.penalty.initial(iterate)
 
-        logger.info("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))
+        logger.debug("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))
 
         status = None
         start_time = time.time()
@@ -145,13 +168,16 @@ class Solver:
 
         logger.info(display.header)
 
+        path_dist = 0.
+        initial_iterate = iterate
+
         for iteration in range(params.num_it):
             if line_diff == header_interval:
                 line_diff = 0
                 logger.info(display.header)
 
             if iterate.total_res <= params.opt_tol:
-                logger.info("Convergence achieved")
+                logger.debug("Convergence achieved")
                 status = SolverStatus.Converged
                 break
 
@@ -173,7 +199,7 @@ class Solver:
             curr_time = time.time()
 
             if curr_time - start_time >= params.time_limit:
-                logger.info("Reached time limit")
+                logger.debug("Reached time limit")
                 status = SolverStatus.TimeLimit
                 break
 
@@ -207,22 +233,33 @@ class Solver:
 
                 iterate = next_iterate
 
+                path_dist += (primal_step_norm + dual_step_norm)
+
                 if (lamb <= params.lamb_term) and (delta <= params.opt_tol):
-                    logger.info("Convergence achieved")
+                    logger.debug("Convergence achieved")
                     status = SolverStatus.Converged
                     break
 
         else:
             success = False
             status = SolverStatus.IterationLimit
-            logger.info("Iteration limit reached")
+            logger.debug("Iteration limit reached")
 
-        self.print_result(iterate)
+        direct_dist = iterate.dist(initial_iterate)
+
+        assert path_dist >= direct_dist
+
+        dist_factor = path_dist / direct_dist if direct_dist != 0. else 1.
+
+        assert status is not None
+
+        self.print_result(status=status,
+                          iterate=iterate,
+                          iterations=iteration,
+                          dist_factor=dist_factor)
 
         x = iterate.x
         y = iterate.y
         d = iterate.bound_duals
-
-        assert status is not None
 
         return SolverResult(x, y, d, success, status)
