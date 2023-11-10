@@ -23,6 +23,7 @@ class SolverStatus(Enum):
     Converged = (auto(), "Convergence achieved")
     IterationLimit = (auto(), "Reached iteration limit")
     TimeLimit = (auto(), "Reached time limit")
+    LocallyInfeasible = (auto(), "Local infeasibility detected")
 
     def __new__(cls, value, description):
         obj = object.__new__(cls)
@@ -112,6 +113,7 @@ class Solver:
                      status: SolverStatus,
                      iterate: Iterate,
                      iterations: int,
+                     accepted_steps: int,
                      dist_factor: float) -> None:
         rho = self.rho
 
@@ -122,6 +124,8 @@ class Solver:
 
         logger.info("%30s: %30s", status_name, status_desc)
         logger.info("%30s: %30d", "Iterations", iterations)
+        logger.info("%30s: %30d", "Accepted steps", accepted_steps)
+
         logger.info("%30s: %30e", "Distance factor", dist_factor)
 
         logger.info("%30s: %30e", "Objective", iterate.obj)
@@ -170,6 +174,7 @@ class Solver:
 
         path_dist = 0.
         initial_iterate = iterate
+        accepted_steps = 0
 
         for iteration in range(params.num_it):
             if line_diff == header_interval:
@@ -179,6 +184,11 @@ class Solver:
             if iterate.total_res <= params.opt_tol:
                 logger.debug("Convergence achieved")
                 status = SolverStatus.Converged
+                break
+
+            if iterate.locally_infeasible(params.opt_tol):
+                logger.debug("Local infeasibility detected")
+                status = SolverStatus.LocallyInfeasible
                 break
 
             step_result = self.compute_step(controller, iterate, 1.0 / lamb)
@@ -234,6 +244,7 @@ class Solver:
                 iterate = next_iterate
 
                 path_dist += (primal_step_norm + dual_step_norm)
+                accepted_steps += 1
 
                 if (lamb <= params.lamb_term) and (delta <= params.opt_tol):
                     logger.debug("Convergence achieved")
@@ -256,6 +267,7 @@ class Solver:
         self.print_result(status=status,
                           iterate=iterate,
                           iterations=iteration,
+                          accepted_steps=accepted_steps,
                           dist_factor=dist_factor)
 
         x = iterate.x
