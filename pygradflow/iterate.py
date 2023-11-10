@@ -1,8 +1,9 @@
+import functools
+
 import numpy as np
 import scipy as sp
 
 from pygradflow.util import norm_mult
-from pygradflow.lazy import lazyprop
 from pygradflow.active_set import ActiveSet
 from pygradflow.eval import Evaluator, SimpleEvaluator
 from pygradflow.params import Params
@@ -40,19 +41,19 @@ class Iterate:
                        np.copy(self.y),
                        self.eval)
 
-    @lazyprop
+    @functools.cached_property
     def obj(self) -> float:
         return self.eval.obj(self.x)
 
-    @lazyprop
+    @functools.cached_property
     def obj_grad(self) -> np.ndarray:
         return _read_only(self.eval.obj_grad(self.x))
 
-    @lazyprop
+    @functools.cached_property
     def cons(self) -> np.ndarray:
         return _read_only(self.eval.cons(self.x))
 
-    @lazyprop
+    @functools.cached_property
     def cons_jac(self) -> sp.sparse.spmatrix:
         return self.eval.cons_jac(self.x)
 
@@ -96,11 +97,26 @@ class Iterate:
     def dist(self, other: "Iterate") -> float:
         return norm_mult(self.x - other.x, self.y - other.y)
 
-    @lazyprop
+    def locally_infeasible(self, tol: float) -> bool:
+        """
+        Check if the iterate is locally infeasible. It is
+        judged to be locally infeasible if the constraint
+        violation is greater than the tolerance and
+        optimality conditions for the minimization
+        of the constraint violation are (approximately) satisfied.
+        """
+        if self.cons_violation <= tol:
+            return False
+
+        infeas_opt_res = self.cons_jac.T.dot(self.cons)
+
+        return np.linalg.norm(infeas_opt_res) <= tol
+
+    @functools.cached_property
     def active_set(self) -> ActiveSet:
         return ActiveSet(self)
 
-    @lazyprop
+    @functools.cached_property
     def bound_duals(self) -> np.ndarray:
         r = -(self.obj_grad + self.cons_jac.T.dot(self.y))
         d = np.zeros_like(self.x)
@@ -113,7 +129,7 @@ class Iterate:
 
         return d
 
-    @lazyprop
+    @functools.cached_property
     def bound_violation(self) -> float:
         lb = self.problem.var_lb
         ub = self.problem.var_ub
@@ -124,14 +140,14 @@ class Iterate:
 
         return max(lower, upper)
 
-    @lazyprop
+    @functools.cached_property
     def cons_violation(self) -> float:
         c = self.cons
         if c.size == 0:
             return 0.0
         return np.linalg.norm(c, np.inf)
 
-    @lazyprop
+    @functools.cached_property
     def stat_res(self) -> float:
         r = self.obj_grad + self.cons_jac.T.dot(self.y) + self.bound_duals
         return np.linalg.norm(r, np.inf)
