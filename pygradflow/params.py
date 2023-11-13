@@ -90,6 +90,8 @@ class Params:
     time_limit: float = np.inf
     display_interval: float = 0.1
 
+    obj_lower_limit: float = -1e10
+
     @property
     def dtype(self):
         return np.float32 if self.precision == Precision.Single else np.float64

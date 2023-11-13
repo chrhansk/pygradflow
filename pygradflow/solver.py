@@ -23,6 +23,7 @@ class SolverStatus(Enum):
     Converged = (auto(), "Convergence achieved")
     IterationLimit = (auto(), "Reached iteration limit")
     TimeLimit = (auto(), "Reached time limit")
+    Unbounded = (auto(), "Unbounded")
     LocallyInfeasible = (auto(), "Local infeasibility detected")
 
     def __new__(cls, value, description):
@@ -37,12 +38,15 @@ class SolverStatus(Enum):
 
 
 class SolverResult:
-    def __init__(self, x, y, d, success, status):
+    def __init__(self, x, y, d, status):
         self.x = x
         self.y = y
         self.d = d
-        self.success = success
         self.status = status
+
+    @property
+    def success(self):
+        return SolverStatus.success(self.status)
 
 
 header_interval = 25
@@ -153,8 +157,6 @@ class Solver:
 
         lamb = params.lamb_init
 
-        success = True
-
         controller = step_controller(problem, params)
 
         self._deriv_check(x, y)
@@ -189,6 +191,12 @@ class Solver:
             if iterate.locally_infeasible(params.opt_tol):
                 logger.debug("Local infeasibility detected")
                 status = SolverStatus.LocallyInfeasible
+                break
+
+            if (iterate.obj <= params.obj_lower_limit) and \
+               (iterate.is_feasible(params.opt_tol)):
+                logger.debug("Unboundedness detected")
+                status = SolverStatus.Unbounded
                 break
 
             step_result = self.compute_step(controller, iterate, 1.0 / lamb)
@@ -252,7 +260,6 @@ class Solver:
                     break
 
         else:
-            success = False
             status = SolverStatus.IterationLimit
             logger.debug("Iteration limit reached")
 
@@ -274,4 +281,4 @@ class Solver:
         y = iterate.y
         d = iterate.bound_duals
 
-        return SolverResult(x, y, d, success, status)
+        return SolverResult(x, y, d, status)

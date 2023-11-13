@@ -152,6 +152,9 @@ class Iterate:
         r = self.obj_grad + self.cons_jac.T.dot(self.y) + self.bound_duals
         return np.linalg.norm(r, np.inf)
 
+    def is_feasible(self, tol):
+        return (self.cons_violation <= tol) and (self.bound_violation <= tol)
+
     @property
     def total_res(self) -> float:
         return max(self.cons_violation, self.bound_violation, self.stat_res)
