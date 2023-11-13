@@ -1,10 +1,12 @@
 import numpy as np
+import scipy as sp
 
 import pytest
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
-from pygradflow.solver import Solver
+from pygradflow.problem import Problem
+from pygradflow.solver import Solver, SolverStatus
 from pygradflow.newton import newton_method
 
 from pygradflow.params import (
@@ -251,3 +253,39 @@ def test_cons_errors():
     invalid_col = jac.col[invalid_index]
 
     assert (e.invalid_indices == [[invalid_row, invalid_col]]).all()
+
+
+def test_detect_unbounded():
+    num_vars = 1
+
+    class UnboundedProblem(Problem):
+        def __init__(self):
+            var_lb = np.full(shape=(num_vars,), fill_value=-np.inf)
+            var_ub = np.full(shape=(num_vars,), fill_value=np.inf)
+            super().__init__(var_lb, var_ub)
+
+        def obj(self, x):
+            return x[0]
+
+        def obj_grad(self, x):
+            return np.array([1.] + [0.] * (num_vars - 1))
+
+        def cons(self, x):
+            return np.array([])
+
+        def cons_jac(self, x):
+            return sp.sparse.coo_matrix((0, num_vars))
+
+        def lag_hess(self, x, lag):
+            return sp.sparse.diags([0.]*num_vars)
+
+    problem = UnboundedProblem()
+
+    solver = Solver(problem)
+
+    x0 = np.array([0.0]*num_vars)
+    y0 = np.array([])
+
+    result = solver.solve(x0, y0)
+
+    assert result.status == SolverStatus.Unbounded
