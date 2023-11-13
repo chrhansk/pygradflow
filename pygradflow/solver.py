@@ -44,6 +44,9 @@ class SolverResult:
         self.d = d
         self.status = status
 
+    def __repr__(self):
+        return "SolverResult(status={0})".format(self.status)
+
     @property
     def success(self):
         return SolverStatus.success(self.status)
@@ -123,7 +126,7 @@ class Solver:
 
         desc = "{:>30s}".format(status.description)
 
-        status_desc = Format.redgreen(desc, status.success, bold=True)
+        status_desc = Format.redgreen(desc, SolverStatus.success(status), bold=True)
         status_name = Format.bold("{:>30s}".format("Status"))
 
         logger.info("%30s: %30s", status_name, status_desc)
