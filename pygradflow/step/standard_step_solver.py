@@ -1,5 +1,4 @@
 import copy
-from typing import Tuple
 
 import numpy as np
 
@@ -73,4 +72,10 @@ class StandardStepSolver(StepSolver):
         dx = s[:n]
         dy = s[n:]
 
-        return StepResult(iterate, dx, dy)
+        params = self.params
+
+        rcond = None
+        if params.report_rcond:
+            rcond = self.estimate_rcond(self.deriv, self.solver)
+
+        return StepResult(iterate, dx, dy, rcond)

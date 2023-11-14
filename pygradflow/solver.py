@@ -148,7 +148,7 @@ class Solver:
         params = self.params
         dtype = params.dtype
 
-        display = problem_display(problem)
+        display = problem_display(problem, params)
 
         x = x_0.astype(dtype)
         y = y_0.astype(dtype)
@@ -237,6 +237,7 @@ class Solver:
                 state["dual_step_norm"] = lambda: dual_step_norm
                 state["lamb"] = lambda: lamb
                 state["step_accept"] = lambda: accept
+                state["rcond"] = lambda: step_result.rcond
 
                 logger.info(display.row(state))
 

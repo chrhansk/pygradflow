@@ -90,7 +90,11 @@ class Params:
     time_limit: float = np.inf
     display_interval: float = 0.1
 
+    # lower bound on objective function value,
+    # used to detect unbounded problems
     obj_lower_limit: float = -1e10
+
+    report_rcond: bool = False
 
     @property
     def dtype(self):

@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 import scipy as sp
 
@@ -85,9 +83,8 @@ class ExtendedStepSolver(ScaledStepSolver):
         assert self.deriv.shape == (n + m, n + m)
         assert self.deriv.dtype == self.params.dtype
 
-    def solve_scaled(
-        self, b0: np.ndarray, b1: np.ndarray, b2t: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def solve_scaled(self, b0, b1, b2t):
+        params = self.params
         if self.deriv is None:
             self._compute_deriv()
 
@@ -106,4 +103,8 @@ class ExtendedStepSolver(ScaledStepSolver):
         dx = s[:n]
         dy = s[n:]
 
-        return (dx, dy)
+        rcond = None
+        if params.report_rcond:
+            rcond = self.estimate_rcond(self.deriv, self.solver)
+
+        return (dx, dy, rcond)

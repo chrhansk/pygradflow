@@ -1,5 +1,6 @@
 from termcolor import colored
 
+from pygradflow.params import Params
 from pygradflow.problem import Problem
 
 
@@ -95,8 +96,7 @@ class IterateAttr:
         return getattr(iterate, self.name)
 
 
-def problem_display(problem: Problem):
-
+def problem_display(problem: Problem, params: Params):
     is_bounded = problem.var_bounded
 
     cols = []
@@ -112,6 +112,10 @@ def problem_display(problem: Problem):
     cols.append(Column("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm")))
     cols.append(Column("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm")))
     cols.append(Column("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
+
+    if params.report_rcond:
+        cols.append(Column("Rcond", 5, "{:5.0e}", StateAttr("rcond")))
+
     cols.append(Column("Type", 8, StepFormatter(), StateAttr("step_accept")))
 
     return Display(cols)
