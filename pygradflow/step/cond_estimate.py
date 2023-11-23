@@ -19,7 +19,7 @@ class ConditionEstimator:
 
     def __init__(self,
                  mat: sp.sparse.spmatrix,
-                 solver: LinearSolver,
+                 linear_solver: LinearSolver,
                  params: Params,
                  min_prob: float = .99,
                  factor: float = 10.):
@@ -32,7 +32,7 @@ class ConditionEstimator:
         self.min_prob = min_prob
         self.factor = factor
         self.mat = mat
-        self.linear_solver = sp.sparse.linalg.splu(mat)
+        self.linear_solver = linear_solver
         self.rng = np.random.default_rng(seed=seed)
 
     def _required_its(self):
