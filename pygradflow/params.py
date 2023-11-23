@@ -14,6 +14,7 @@ class StepSolverType(Enum):
     Standard = auto()
     Extended = auto()
     Symmetric = auto()
+    Asymmetric = auto()
 
 
 class LinearSolverType(Enum):
