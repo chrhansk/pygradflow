@@ -66,22 +66,36 @@ class ConditionEstimator:
         xprod = np.copy(x)
         yprod = np.copy(y)
 
+        # Factors to prevent over- or underflow
+        xfac = 1.
+        yfac = 1.
+
         logger.debug("Number of iterations: %s", num_its)
 
         for k in range(num_its):
-
             xprod = mat @ xprod
             xprod = trans_mat @ xprod
 
-            yprod = linear_solver.solve(yprod, trans='T')
+            yprod = linear_solver.solve(yprod, trans=True)
             yprod = linear_solver.solve(yprod)
+
+            xnorm = np.linalg.norm(xprod)
+            ynorm = np.linalg.norm(yprod)
+
+            xfac *= xnorm
+            xprod /= xnorm
+
+            yfac *= ynorm
+            yprod /= ynorm
+
+            assert y.dot(yprod) > 0.
 
         pow_fac = 1. / (2. * num_its)
 
-        xdot = x.dot(xprod)
+        xdot = x.dot(xprod) * xfac
         xdot = math.pow(xdot, pow_fac)
 
-        ydot = y.dot(yprod)
+        ydot = y.dot(yprod) * yfac
         ydot = math.pow(ydot, pow_fac)
 
         if np.isinf(xdot) or np.isinf(ydot):
