@@ -1,5 +1,5 @@
 import copy
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 
@@ -52,8 +52,8 @@ class ScaledStepSolver(StepSolver):
 
         return (b0, b1, b2)
 
-    def solve_scaled(self, b0, b1, b2t):
-        raise NotImplementedError
+    def solve_scaled(self, b0, b1, b2t) -> Tuple[np.ndarray, np.ndarray, Optional[float]]:
+        raise NotImplementedError()
 
     def reset_deriv(self) -> None:
         self.deriv = None
@@ -82,7 +82,7 @@ class ScaledStepSolver(StepSolver):
 
         b2t = fact * b2
 
-        (sx, sy) = self.solve_scaled(b0, b1, b2t)
+        (sx, sy, rcond) = self.solve_scaled(b0, b1, b2t)
 
         assert sx.shape == (n,)
         assert sy.shape == (m,)
@@ -90,4 +90,4 @@ class ScaledStepSolver(StepSolver):
         dx = sx
         dy = fact * (sy - rho * b2)
 
-        return StepResult(iterate, dx, dy)
+        return StepResult(iterate, dx, dy, rcond)

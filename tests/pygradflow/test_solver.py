@@ -129,6 +129,7 @@ def test_solve_hs71_single(hs71_instance,
                     newton_type=newton_type,
                     step_solver_type=step_solver_type,
                     num_it=10,
+                    report_rcond=True,
                     linear_solver_type=linear_solver_type)
 
     solver = Solver(problem, params)

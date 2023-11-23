@@ -44,6 +44,9 @@ class SolverResult:
         self.d = d
         self.status = status
 
+    def __repr__(self):
+        return "SolverResult(status={0})".format(self.status)
+
     @property
     def success(self):
         return SolverStatus.success(self.status)
@@ -123,7 +126,7 @@ class Solver:
 
         desc = "{:>30s}".format(status.description)
 
-        status_desc = Format.redgreen(desc, status.success, bold=True)
+        status_desc = Format.redgreen(desc, SolverStatus.success(status), bold=True)
         status_name = Format.bold("{:>30s}".format("Status"))
 
         logger.info("%30s: %30s", status_name, status_desc)
@@ -145,7 +148,7 @@ class Solver:
         params = self.params
         dtype = params.dtype
 
-        display = problem_display(problem)
+        display = problem_display(problem, params)
 
         x = x_0.astype(dtype)
         y = y_0.astype(dtype)
@@ -234,6 +237,7 @@ class Solver:
                 state["dual_step_norm"] = lambda: dual_step_norm
                 state["lamb"] = lambda: lamb
                 state["step_accept"] = lambda: accept
+                state["rcond"] = lambda: step_result.rcond
 
                 logger.info(display.row(state))
 

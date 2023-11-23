@@ -12,10 +12,11 @@ from pygradflow.util import norm_mult
 
 
 class StepResult:
-    def __init__(self, orig_iterate, dx, dy):
+    def __init__(self, orig_iterate, dx, dy, rcond=None):
         self.orig_iterate = orig_iterate
         self.dx = dx
         self.dy = dy
+        self.rcond = rcond
 
     @functools.cached_property
     def iterate(self):
@@ -29,12 +30,7 @@ class StepResult:
 
     @functools.cached_property
     def diff(self):
-        diff = norm_mult(self.dx, self.dy)
-
-        assert np.allclose(self.iterate.dist(self.orig_iterate),
-                           diff)
-
-        return diff
+        return norm_mult(self.dx, self.dy)
 
 
 class StepSolver(abc.ABC):
@@ -49,6 +45,14 @@ class StepSolver(abc.ABC):
 
         solver_type = self.params.linear_solver_type
         return linear_solver(mat, solver_type)
+
+    def estimate_rcond(self,
+                       mat: sp.sparse.spmatrix,
+                       solver: LinearSolver) -> float:
+        from .cond_estimate import ConditionEstimator
+
+        estimator = ConditionEstimator(mat, solver, self.params)
+        return estimator.estimate_rcond()
 
     @abc.abstractmethod
     def update_active_set(self, active_set: np.ndarray):

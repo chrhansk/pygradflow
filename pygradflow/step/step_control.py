@@ -1,5 +1,5 @@
 import abc
-from typing import Iterator
+from typing import Iterator, Optional
 
 import numpy as np
 
@@ -14,9 +14,14 @@ from pygradflow.problem import Problem
 
 
 class StepControlResult:
-    def __init__(self, iterate: Iterate, lamb: float, accepted: bool) -> None:
+    def __init__(self,
+                 iterate: Iterate,
+                 lamb: float,
+                 rcond: Optional[float],
+                 accepted: bool) -> None:
         self.iterate = iterate
         self.lamb = lamb
+        self.rcond = rcond
         self.accepted = accepted
 
 
@@ -50,21 +55,25 @@ class ExactController(StepController):
 
         cur_func_val = func_val(iterate)
 
+        rcond = None
+
         for i in range(10):
-            next_iterate = next(next_steps).iterate
+            next_step = next(next_steps)
+            next_iterate = next_step.iterate
+            rcond = next_step.rcond
 
             next_func_val = func_val(next_iterate)
-            logger.info(f"Func val: {next_func_val}")
+            logger.debug(f"Func val: {next_func_val}")
 
             if next_func_val <= self.params.newton_tol:
                 logger.debug("Newton method converged in %d iterations", i + 1)
-                return StepControlResult(next_iterate, 0.5 * lamb, True)
+                return StepControlResult(next_iterate, 0.5 * lamb, rcond, True)
             elif next_func_val > cur_func_val:
                 break
 
         logger.debug("Newton method did not converge")
 
-        return StepControlResult(next_iterate, 2.0 * lamb, False)
+        return StepControlResult(next_iterate, 2.0 * lamb, rcond, False)
 
 
 class ResiduumRatioController(StepController):
@@ -89,9 +98,9 @@ class ResiduumRatioController(StepController):
 
         if mid_norm <= params.newton_tol:
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
-            logger.info("Newton converged during first iteration, lamb_n = %f",
-                        lamb_n)
-            return StepControlResult(mid_iterate, lamb_n, True)
+            logger.debug("Newton converged during first iteration, lamb_n = %f",
+                         lamb_n)
+            return StepControlResult(mid_iterate, lamb_n, mid_step.rcond, True)
 
         orig_norm = np.linalg.norm(func.value_at(iterate, rho))
 
@@ -107,7 +116,7 @@ class ResiduumRatioController(StepController):
                 self.controller.reset()
 
         logger.debug(
-            "StepController: theta: %e, accepted: %e, lamb: %e, lamb_n: %e",
+            "StepController: theta: %e, accepted: %s, lamb: %e, lamb_n: %e",
             theta,
             accepted,
             lamb,
@@ -115,7 +124,7 @@ class ResiduumRatioController(StepController):
         )
 
         self.lamb = lamb_n
-        return StepControlResult(mid_iterate, lamb_n, accepted)
+        return StepControlResult(mid_iterate, lamb_n, mid_step.rcond, accepted)
 
 
 class DistanceRatioController(StepController):
@@ -140,14 +149,14 @@ class DistanceRatioController(StepController):
 
         if mid_func_norm <= params.newton_tol:
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
-            logger.info("Newton converged during first iteration, lamb_n = %f",
-                        lamb_n)
-            return StepControlResult(mid_iterate, lamb_n, True)
+            logger.debug("Newton converged during first iteration, lamb_n = %f",
+                         lamb_n)
+            return StepControlResult(mid_iterate, lamb_n, mid_step.rcond, True)
 
         first_diff = mid_step.diff
 
         if first_diff == 0.:
-            return StepControlResult(mid_iterate, lamb, True)
+            return StepControlResult(mid_iterate, lamb, mid_step.rcond, True)
 
         final_step = next(next_steps)
         final_iterate = final_step.iterate
@@ -155,7 +164,9 @@ class DistanceRatioController(StepController):
         second_diff = final_step.diff
 
         if second_diff == 0.:
-            return StepControlResult(final_iterate, lamb, True)
+            return StepControlResult(final_iterate, lamb, final_step.rcond, True)
+
+        logger.debug("First distance: %e, second distance: %e", first_diff, second_diff)
 
         theta = second_diff / first_diff
 
@@ -170,7 +181,7 @@ class DistanceRatioController(StepController):
                 self.controller.reset()
 
         logger.debug(
-            "StepController: theta: %e, accepted: %e, lamb: %e, lamb_n: %e",
+            "StepController: theta: %e, accepted: %s, lamb: %e, lamb_n: %e",
             theta,
             accepted,
             lamb,
@@ -179,7 +190,7 @@ class DistanceRatioController(StepController):
 
         self.lamb = lamb_n
 
-        return StepControlResult(final_iterate, lamb_n, accepted)
+        return StepControlResult(final_iterate, lamb_n, final_step.rcond, accepted)
 
 
 def step_controller(problem: Problem, params: Params) -> StepController:
