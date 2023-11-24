@@ -191,7 +191,8 @@ class Solver:
                 status = SolverStatus.Converged
                 break
 
-            if iterate.locally_infeasible(params.opt_tol):
+            if iterate.locally_infeasible(params.opt_tol,
+                                          params.local_infeas_tol):
                 logger.debug("Local infeasibility detected")
                 status = SolverStatus.LocallyInfeasible
                 break
