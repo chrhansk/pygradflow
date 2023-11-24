@@ -70,6 +70,8 @@ class Params:
     lamb_term: float = 1e-8
     active_tol: float = 1e-8
 
+    local_infeas_tol: float = 1e-8
+
     newton_type: NewtonType = NewtonType.Simplified
     newton_tol: float = 1e-8
 

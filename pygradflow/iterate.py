@@ -97,7 +97,9 @@ class Iterate:
     def dist(self, other: "Iterate") -> float:
         return norm_mult(self.x - other.x, self.y - other.y)
 
-    def locally_infeasible(self, tol: float) -> bool:
+    def locally_infeasible(self,
+                           feas_tol: float,
+                           local_infeas_tol: float) -> bool:
         """
         Check if the iterate is locally infeasible. It is
         judged to be locally infeasible if the constraint
@@ -105,12 +107,12 @@ class Iterate:
         optimality conditions for the minimization
         of the constraint violation are (approximately) satisfied.
         """
-        if self.cons_violation <= tol:
+        if self.cons_violation <= feas_tol:
             return False
 
         infeas_opt_res = self.cons_jac.T.dot(self.cons)
 
-        return np.linalg.norm(infeas_opt_res) <= tol
+        return np.linalg.norm(infeas_opt_res, ord=np.inf) <= local_infeas_tol
 
     @functools.cached_property
     def active_set(self) -> ActiveSet:
