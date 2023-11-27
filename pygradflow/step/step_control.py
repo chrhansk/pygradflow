@@ -3,14 +3,13 @@ from typing import Iterator, Optional
 
 import numpy as np
 
-from pygradflow.log import logger
-
-from pygradflow.step.step_solver import StepResult
 from pygradflow.controller import ControllerSettings, LogController
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
+from pygradflow.log import logger
 from pygradflow.params import Params, StepControlType
 from pygradflow.problem import Problem
+from pygradflow.step.step_solver import StepResult
 
 
 class StepControlResult:

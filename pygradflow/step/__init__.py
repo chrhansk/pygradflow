@@ -1,13 +1,11 @@
+from pygradflow.iterate import Iterate
 from pygradflow.params import Params, StepSolverType
 from pygradflow.problem import Problem
-
-from pygradflow.step.step_solver import StepSolver
-from pygradflow.step.standard_step_solver import StandardStepSolver
-from pygradflow.step.extended_step_solver import ExtendedStepSolver
-from pygradflow.step.symmetric_step_solver import SymmetricStepSolver
 from pygradflow.step.asymmetric_step_solver import AsymmetricStepSolver
-
-from pygradflow.iterate import Iterate
+from pygradflow.step.extended_step_solver import ExtendedStepSolver
+from pygradflow.step.standard_step_solver import StandardStepSolver
+from pygradflow.step.step_solver import StepSolver
+from pygradflow.step.symmetric_step_solver import SymmetricStepSolver
 
 
 def step_solver(

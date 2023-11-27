@@ -3,20 +3,15 @@ from enum import Enum, auto
 
 import numpy as np
 
+from pygradflow.display import Format, problem_display
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
-from pygradflow.params import Params
-from pygradflow.problem import Problem
 from pygradflow.newton import newton_method
+from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
-
-from pygradflow.step.step_control import (
-    StepResult,
-    step_controller,
-    StepController,
-)
-
-from pygradflow.display import problem_display, Format
+from pygradflow.problem import Problem
+from pygradflow.step.step_control import (StepController, StepResult,
+                                          step_controller)
 
 
 class SolverStatus(Enum):

@@ -1,6 +1,7 @@
 import abc
 
 import numpy as np
+
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params, PenaltyUpdate
 from pygradflow.problem import Problem

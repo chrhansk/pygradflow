@@ -1,4 +1,5 @@
 import numpy as np
+
 from pygradflow.implicit_func import ImplicitFunc, ScaledImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params

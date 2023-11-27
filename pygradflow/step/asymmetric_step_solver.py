@@ -1,11 +1,12 @@
 import copy
+
 import numpy as np
 import scipy as sp
 
-from pygradflow.step.scaled_step_solver import ScaledStepSolver
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.step.scaled_step_solver import ScaledStepSolver
 
 
 class AsymmetricStepSolver(ScaledStepSolver):

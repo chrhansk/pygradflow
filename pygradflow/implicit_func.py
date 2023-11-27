@@ -1,6 +1,8 @@
 import abc
+
 import numpy as np
 import scipy as sp
+
 from pygradflow.iterate import Iterate
 from pygradflow.problem import Problem
 

@@ -1,15 +1,15 @@
 import abc
+
 import numpy as np
 import scipy as sp
+
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
-
 from pygradflow.log import logger as lgg
-from pygradflow.params import Params, NewtonType
+from pygradflow.params import NewtonType, Params
 from pygradflow.problem import Problem
 from pygradflow.step import step_solver
-from pygradflow.step.step_solver import StepSolver, StepResult
-
+from pygradflow.step.step_solver import StepResult, StepSolver
 
 logger = lgg.getChild("newton")
 

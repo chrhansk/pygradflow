@@ -1,18 +1,11 @@
 import numpy as np
-
 import pytest
 import scipy as sp
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.newton import newton_method
-
-from pygradflow.params import (
-    NewtonType,
-    Params,
-    StepSolverType,
-    LinearSolverType,
-)
+from pygradflow.params import LinearSolverType, NewtonType, Params, StepSolverType
 
 from .rosenbrock import Rosenbrock
 

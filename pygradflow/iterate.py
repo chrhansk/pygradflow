@@ -3,11 +3,11 @@ import functools
 import numpy as np
 import scipy as sp
 
-from pygradflow.util import norm_mult
 from pygradflow.active_set import ActiveSet
 from pygradflow.eval import Evaluator, SimpleEvaluator
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.util import norm_mult
 
 
 def _read_only(a):

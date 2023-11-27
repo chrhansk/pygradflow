@@ -1,7 +1,9 @@
 import math
+
 import numpy as np
 import pytest
-from pygradflow.controller import Controller, LogController, ControllerSettings
+
+from pygradflow.controller import Controller, ControllerSettings, LogController
 
 
 # Control "x' = u" using PI controller to choose u.

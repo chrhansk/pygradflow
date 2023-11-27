@@ -1,28 +1,26 @@
 import numpy as np
-import scipy as sp
-
 import pytest
+import scipy as sp
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
-from pygradflow.problem import Problem
-from pygradflow.solver import Solver, SolverStatus
 from pygradflow.newton import newton_method
-
 from pygradflow.params import (
+    DerivCheck,
+    LinearSolverType,
     NewtonType,
     Params,
-    DerivCheck,
     PenaltyUpdate,
     Precision,
-    StepSolverType,
     StepControlType,
-    LinearSolverType,
+    StepSolverType,
 )
+from pygradflow.problem import Problem
+from pygradflow.solver import Solver, SolverStatus
 
 from .hs71 import HS71
-from .tame import Tame
 from .rosenbrock import Rosenbrock
+from .tame import Tame
 
 rho = 1.0
 
