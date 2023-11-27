@@ -1,4 +1,5 @@
 import functools
+from typing import Optional
 
 import numpy as np
 import scipy as sp
@@ -22,7 +23,7 @@ class Iterate:
         params: Params,
         x: np.ndarray,
         y: np.ndarray,
-        eval: Evaluator = None,
+        eval: Optional[Evaluator] = None,
     ):
         assert x.shape == (problem.num_vars,)
         assert y.shape == (problem.num_cons,)
