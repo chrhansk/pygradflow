@@ -33,4 +33,4 @@ jobs:
     - name: Install the project dependencies
       run: poetry install
     - name: Test with pytest
-      run: poetry run pytest -v
+      run: poetry run pytest -v --isort
