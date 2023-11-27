@@ -36,7 +36,6 @@ warn_hessian_values = warn_once("Hessian not numerically symmetric")
 
 
 class Evaluator(abc.ABC):
-
     @abc.abstractmethod
     def obj(self, x: np.ndarray) -> float:
         raise NotImplementedError()
@@ -83,6 +82,8 @@ class ValidatingEvaluator(Evaluator):
     def __init__(self, problem, params):
         self.problem = problem
         self.dtype = params.dtype
+        self.num_vars = problem.num_vars
+        self.num_cons = problem.num_cons
 
     def obj(self, x: np.ndarray) -> float:
         obj = self.problem.obj(x)
@@ -110,7 +111,7 @@ class ValidatingEvaluator(Evaluator):
             raise EvalError("Invalid shape of constraints", x)
 
         if not np.isfinite(cons).all():
-            raise EvalError("Non-finite constraints")
+            raise EvalError("Non-finite constraints", x)
 
         return astype(cons, self.dtype)
 
@@ -121,7 +122,7 @@ class ValidatingEvaluator(Evaluator):
             raise EvalError("Invalid shape of Jacobian", x)
 
         if not np.isfinite(cons_jac.data).all():
-            raise EvalError("Non-finite Jacobian")
+            raise EvalError("Non-finite Jacobian", x)
 
         return astype(cons_jac, self.dtype)
 
@@ -132,7 +133,7 @@ class ValidatingEvaluator(Evaluator):
             raise EvalError("Invalid shape of Hessian", x)
 
         if not np.isfinite(lag_hess.data).all():
-            raise EvalError("Non-finite Hessian")
+            raise EvalError("Non-finite Hessian", x)
 
         coo_hess = lag_hess.tocoo()
         coo_hess_T = coo_hess.T
