@@ -35,7 +35,7 @@ class DualNormUpdate(PenaltyStrategy):
         super().__init__(problem, params)
 
     def initial(self, iterate: Iterate) -> float:
-        self.rho = self.params.rho
+        self.rho = self.params.dtype(self.params.rho)
         return self.rho
 
     def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
