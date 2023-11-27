@@ -52,16 +52,17 @@ header_interval = 25
 
 class Solver:
     def __init__(self, problem: Problem, params: Params = Params()) -> None:
-
         self.problem = problem
         self.params = params
 
         if params.validate_input:
-            from .eval import SimpleEvaluator
-            self.evaluator = SimpleEvaluator(problem, params)
-        else:
             from .eval import ValidatingEvaluator
+
             self.evaluator = ValidatingEvaluator(problem, params)
+        else:
+            from .eval import SimpleEvaluator
+
+            self.evaluator = SimpleEvaluator(problem, params)
 
         self.penalty = penalty_strategy(problem, params)
         self.rho = -1.0
