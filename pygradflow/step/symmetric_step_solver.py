@@ -32,9 +32,9 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         n = self.n
 
-        hess = self.hess + sp.sparse.diags([lamb],
-                                           shape=(n, n),
-                                           dtype=self.params.dtype)
+        hess = self.hess + sp.sparse.diags(
+            [lamb], shape=(n, n), dtype=self.params.dtype
+        )
 
         hess_rows = hess.tocsr()[inactive_indices, :]
         self.hess_rows = hess_rows.tocsc()
@@ -58,9 +58,9 @@ class SymmetricStepSolver(ScaledStepSolver):
         inactive_jac = self.jac[:, inactive_indices]
         inactive_hess = self.hess_rows[:, inactive_indices]
 
-        lower_mat = sp.sparse.diags([-lamb / (1.0 + lamb * rho)],
-                                    shape=(m, m),
-                                    dtype=self.params.dtype)
+        lower_mat = sp.sparse.diags(
+            [-lamb / (1.0 + lamb * rho)], shape=(m, m), dtype=self.params.dtype
+        )
 
         deriv = sp.sparse.bmat(
             [

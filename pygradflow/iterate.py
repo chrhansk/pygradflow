@@ -16,12 +16,14 @@ def _read_only(a):
 
 
 class Iterate:
-    def __init__(self,
-                 problem: Problem,
-                 params: Params,
-                 x: np.ndarray,
-                 y: np.ndarray,
-                 eval: Evaluator = None):
+    def __init__(
+        self,
+        problem: Problem,
+        params: Params,
+        x: np.ndarray,
+        y: np.ndarray,
+        eval: Evaluator = None,
+    ):
         assert x.shape == (problem.num_vars,)
         assert y.shape == (problem.num_cons,)
         self.x = _read_only(np.copy(x))
@@ -35,11 +37,9 @@ class Iterate:
         self.problem = problem
 
     def copy(self) -> "Iterate":
-        return Iterate(self.problem,
-                       self.params,
-                       np.copy(self.x),
-                       np.copy(self.y),
-                       self.eval)
+        return Iterate(
+            self.problem, self.params, np.copy(self.x), np.copy(self.y), self.eval
+        )
 
     @functools.cached_property
     def obj(self) -> float:
@@ -97,9 +97,7 @@ class Iterate:
     def dist(self, other: "Iterate") -> float:
         return norm_mult(self.x - other.x, self.y - other.y)
 
-    def locally_infeasible(self,
-                           feas_tol: float,
-                           local_infeas_tol: float) -> bool:
+    def locally_infeasible(self, feas_tol: float, local_infeas_tol: float) -> bool:
         """
         Check if the iterate is locally infeasible. It is
         judged to be locally infeasible if the constraint

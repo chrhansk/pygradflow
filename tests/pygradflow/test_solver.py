@@ -118,17 +118,18 @@ def test_solve_hs71(hs71_instance):
 @pytest.mark.parametrize("newton_type", newton_types)
 @pytest.mark.parametrize("step_solver_type", step_solver_types)
 @pytest.mark.parametrize("linear_solver_type", linear_solver_types)
-def test_solve_hs71_single(hs71_instance,
-                           newton_type,
-                           step_solver_type,
-                           linear_solver_type):
+def test_solve_hs71_single(
+    hs71_instance, newton_type, step_solver_type, linear_solver_type
+):
     problem, x_0, y_0 = hs71_instance
-    params = Params(precision=Precision.Single,
-                    newton_type=newton_type,
-                    step_solver_type=step_solver_type,
-                    num_it=10,
-                    report_rcond=True,
-                    linear_solver_type=linear_solver_type)
+    params = Params(
+        precision=Precision.Single,
+        newton_type=newton_type,
+        step_solver_type=step_solver_type,
+        num_it=10,
+        report_rcond=True,
+        linear_solver_type=linear_solver_type,
+    )
 
     solver = Solver(problem, params)
 
@@ -173,8 +174,7 @@ def test_solve_tame():
     problem = Tame()
     x_0 = np.array([0.0, 0.0])
     y_0 = np.array([0.0])
-    params = Params(newton_type=NewtonType.Full,
-                    deriv_check=DerivCheck.CheckAll)
+    params = Params(newton_type=NewtonType.Full, deriv_check=DerivCheck.CheckAll)
 
     solver = Solver(problem, params)
 
@@ -206,7 +206,7 @@ def test_grad_errors():
 
     def obj_grad(x):
         g = Tame().obj_grad(x)
-        g[0] += 1.
+        g[0] += 1.0
         return g
 
     problem.obj_grad = obj_grad
@@ -231,7 +231,7 @@ def test_cons_errors():
 
     def cons_jac(x):
         g = Tame().cons_jac(x)
-        g.data[invalid_index] += 1.
+        g.data[invalid_index] += 1.0
         return g
 
     problem.cons_jac = cons_jac

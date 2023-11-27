@@ -43,11 +43,7 @@ class StepFormatter:
 
 
 class Column:
-    def __init__(self,
-                 name: str,
-                 width: int,
-                 format,
-                 attr):
+    def __init__(self, name: str, width: int, format, attr):
         self.name = name
         self.width = width
 

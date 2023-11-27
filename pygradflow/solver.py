@@ -10,8 +10,7 @@ from pygradflow.newton import newton_method
 from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
-from pygradflow.step.step_control import (StepController, StepResult,
-                                          step_controller)
+from pygradflow.step.step_control import StepController, StepResult, step_controller
 
 
 class SolverStatus(Enum):
@@ -110,14 +109,17 @@ class Solver:
                 lambda x: eval.obj_grad(x) + eval.cons_jac(x).T.dot(y),
                 x,
                 eval.lag_hess(x, y),
-                params)
+                params,
+            )
 
-    def print_result(self,
-                     status: SolverStatus,
-                     iterate: Iterate,
-                     iterations: int,
-                     accepted_steps: int,
-                     dist_factor: float) -> None:
+    def print_result(
+        self,
+        status: SolverStatus,
+        iterate: Iterate,
+        iterations: int,
+        accepted_steps: int,
+        dist_factor: float,
+    ) -> None:
         rho = self.rho
 
         desc = "{:>30s}".format(status.description)
@@ -173,7 +175,7 @@ class Solver:
 
         logger.info(display.header)
 
-        path_dist = 0.
+        path_dist = 0.0
         initial_iterate = iterate
         accepted_steps = 0
 
@@ -187,14 +189,14 @@ class Solver:
                 status = SolverStatus.Converged
                 break
 
-            if iterate.locally_infeasible(params.opt_tol,
-                                          params.local_infeas_tol):
+            if iterate.locally_infeasible(params.opt_tol, params.local_infeas_tol):
                 logger.debug("Local infeasibility detected")
                 status = SolverStatus.LocallyInfeasible
                 break
 
-            if (iterate.obj <= params.obj_lower_limit) and \
-               (iterate.is_feasible(params.opt_tol)):
+            if (iterate.obj <= params.obj_lower_limit) and (
+                iterate.is_feasible(params.opt_tol)
+            ):
                 logger.debug("Unboundedness detected")
                 status = SolverStatus.Unbounded
                 break
@@ -209,7 +211,9 @@ class Solver:
             lamb = step_result.lamb
 
             if lamb >= params.lamb_max:
-                raise Exception(f"Inverse step size {lamb} exceeded maximum {params.lamb_max} (incorrect derivatives?)")
+                raise Exception(
+                    f"Inverse step size {lamb} exceeded maximum {params.lamb_max} (incorrect derivatives?)"
+                )
 
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
@@ -243,16 +247,16 @@ class Solver:
                 next_rho = self.penalty.update(iterate, next_iterate)
 
                 if next_rho != self.rho:
-                    logger.debug("Updating penalty parameter from %e to %e",
-                                 self.rho,
-                                 next_rho)
+                    logger.debug(
+                        "Updating penalty parameter from %e to %e", self.rho, next_rho
+                    )
                     self.rho = next_rho
 
                 delta = iterate.dist(next_iterate)
 
                 iterate = next_iterate
 
-                path_dist += (primal_step_norm + dual_step_norm)
+                path_dist += primal_step_norm + dual_step_norm
                 accepted_steps += 1
 
                 if (lamb <= params.lamb_term) and (delta <= params.opt_tol):
@@ -268,15 +272,17 @@ class Solver:
 
         assert path_dist >= direct_dist
 
-        dist_factor = path_dist / direct_dist if direct_dist != 0. else 1.
+        dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
 
         assert status is not None
 
-        self.print_result(status=status,
-                          iterate=iterate,
-                          iterations=iteration,
-                          accepted_steps=accepted_steps,
-                          dist_factor=dist_factor)
+        self.print_result(
+            status=status,
+            iterate=iterate,
+            iterations=iteration,
+            accepted_steps=accepted_steps,
+            dist_factor=dist_factor,
+        )
 
         x = iterate.x
         y = iterate.y

@@ -42,8 +42,8 @@ class Precision(Enum):
 
 class DerivCheck(Flag):
     NoCheck = 0
-    CheckFirst = (1 << 0)
-    CheckSecond = (1 << 1)
+    CheckFirst = 1 << 0
+    CheckSecond = 1 << 1
     CheckAll = CheckFirst | CheckSecond
 
 

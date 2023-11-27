@@ -143,7 +143,7 @@ def test_active_set_project_deriv(rosenbrock_instance):
 @pytest.mark.parametrize("step_solver_type", step_solver_types)
 @pytest.mark.parametrize("linear_solver_type", linear_solver_types)
 def test_newton_step_unconstrained(
-                rosenbrock_instance, newton_type, step_solver_type, linear_solver_type
+    rosenbrock_instance, newton_type, step_solver_type, linear_solver_type
 ):
     problem, x_0, y_0 = rosenbrock_instance
 
@@ -177,7 +177,7 @@ def test_newton_step_unconstrained(
 @pytest.mark.parametrize("step_solver_type", step_solver_types)
 @pytest.mark.parametrize("linear_solver_type", linear_solver_types)
 def test_newton_step_constrained(
-                rosenbrock_instance, newton_type, step_solver_type, linear_solver_type
+    rosenbrock_instance, newton_type, step_solver_type, linear_solver_type
 ):
     problem, x_0, y_0 = rosenbrock_instance
 

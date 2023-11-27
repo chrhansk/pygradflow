@@ -52,7 +52,9 @@ class ScaledStepSolver(StepSolver):
 
         return (b0, b1, b2)
 
-    def solve_scaled(self, b0, b1, b2t) -> Tuple[np.ndarray, np.ndarray, Optional[float]]:
+    def solve_scaled(
+        self, b0, b1, b2t
+    ) -> Tuple[np.ndarray, np.ndarray, Optional[float]]:
         raise NotImplementedError()
 
     def reset_deriv(self) -> None:

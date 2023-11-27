@@ -18,7 +18,7 @@ def test_detect_unbounded():
             return x[0]
 
         def obj_grad(self, x):
-            return np.array([1.] + [0.] * (num_vars - 1))
+            return np.array([1.0] + [0.0] * (num_vars - 1))
 
         def cons(self, x):
             return np.array([])
@@ -27,13 +27,13 @@ def test_detect_unbounded():
             return sp.sparse.coo_matrix((0, num_vars))
 
         def lag_hess(self, x, lag):
-            return sp.sparse.diags([0.]*num_vars)
+            return sp.sparse.diags([0.0] * num_vars)
 
     problem = UnboundedProblem()
 
     solver = Solver(problem)
 
-    x0 = np.array([0.0]*num_vars)
+    x0 = np.array([0.0] * num_vars)
     y0 = np.array([])
 
     result = solver.solve(x0, y0)
@@ -55,25 +55,25 @@ def test_detect_infeasible():
             return x[0]
 
         def obj_grad(self, x):
-            return np.array([1.] + [0.] * (num_vars - 1))
+            return np.array([1.0] + [0.0] * (num_vars - 1))
 
         def cons(self, x):
             x = x.item()
-            return np.array([x*x + 1])
+            return np.array([x * x + 1])
 
         def cons_jac(self, x):
             x = x.item()
-            jac = np.array([[2*x]])
+            jac = np.array([[2 * x]])
             return sp.sparse.coo_matrix(jac)
 
         def lag_hess(self, x, lag):
-            return sp.sparse.diags([2.]*num_vars)
+            return sp.sparse.diags([2.0] * num_vars)
 
     problem = InfeasibleProblem()
 
     solver = Solver(problem)
 
-    x0 = np.array([0.0]*num_vars)
+    x0 = np.array([0.0] * num_vars)
     y0 = np.array([0.0])
 
     result = solver.solve(x0, y0)

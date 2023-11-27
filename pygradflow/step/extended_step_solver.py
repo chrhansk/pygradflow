@@ -52,22 +52,20 @@ class ExtendedStepSolver(ScaledStepSolver):
         m = self.m
 
         active_rows = np.arange(active_set_size)
-        active_data = np.ones((active_set_size,),
-                              dtype=self.params.dtype)
+        active_data = np.ones((active_set_size,), dtype=self.params.dtype)
 
         trans_active_mat = sp.sparse.coo_matrix(
-            (active_data, (active_rows, active_indices)),
-            shape=(active_set_size, n)
+            (active_data, (active_rows, active_indices)), shape=(active_set_size, n)
         )
 
-        lower_mat = sp.sparse.diags([-lamb / (1.0 + lamb * rho)],
-                                    shape=(m, m),
-                                    dtype=self.params.dtype)
+        lower_mat = sp.sparse.diags(
+            [-lamb / (1.0 + lamb * rho)], shape=(m, m), dtype=self.params.dtype
+        )
 
         jac = self.jac
-        hess = self.hess + sp.sparse.diags([lamb],
-                                           shape=(n, n),
-                                           dtype=self.params.dtype)
+        hess = self.hess + sp.sparse.diags(
+            [lamb], shape=(n, n), dtype=self.params.dtype
+        )
 
         filtered_hess = self.extract_rows(hess, inactive_indices)
         trans_filtered_jac = self.extract_rows(jac.T, inactive_indices)

@@ -40,8 +40,7 @@ class AsymmetricStepSolver(ScaledStepSolver):
         self.active_set = copy.copy(active_set)
         self.reset_deriv()
 
-    def overwrite_active_rows(self,
-                              matrix):
+    def overwrite_active_rows(self, matrix):
         m = self.m
         n = self.n
 
@@ -71,8 +70,8 @@ class AsymmetricStepSolver(ScaledStepSolver):
 
             k = np.searchsorted(curr_cols, j)
 
-            curr_data[:] = 0.
-            curr_data[k] = 1.
+            curr_data[:] = 0.0
+            curr_data[k] = 1.0
             curr_cols[k] = j
 
             assert (curr_cols[:-1] <= curr_cols[1:]).all()
@@ -89,13 +88,11 @@ class AsymmetricStepSolver(ScaledStepSolver):
         jac = self.jac
         hess = self.hess
 
-        hess += sp.sparse.diags([lamb],
-                                shape=(n, n),
-                                dtype=self.params.dtype)
+        hess += sp.sparse.diags([lamb], shape=(n, n), dtype=self.params.dtype)
 
-        lower_mat = sp.sparse.diags([-lamb / (1.0 + lamb * rho)],
-                                    shape=(m, m),
-                                    dtype=self.params.dtype)
+        lower_mat = sp.sparse.diags(
+            [-lamb / (1.0 + lamb * rho)], shape=(m, m), dtype=self.params.dtype
+        )
 
         deriv = sp.sparse.bmat(
             [
@@ -158,8 +155,7 @@ class AsymmetricStepSolver(ScaledStepSolver):
 
         initial_sol = self.initial_sol(b0, b1, b2t)
 
-        sol = self.solver.solve(rhs,
-                                initial_sol=initial_sol)
+        sol = self.solver.solve(rhs, initial_sol=initial_sol)
 
         m = self.m
         n = self.n

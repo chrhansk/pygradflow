@@ -22,9 +22,7 @@ class MINRESSolver(LinearSolver):
         if initial_sol is not None:
             initial_sol = initial_sol()
 
-        result = sp.sparse.linalg.minres(self.mat,
-                                         rhs,
-                                         x0=initial_sol)
+        result = sp.sparse.linalg.minres(self.mat, rhs, x0=initial_sol)
 
         (sol, info) = result
 
@@ -44,9 +42,7 @@ class GMRESSolver(LinearSolver):
         if initial_sol is not None:
             initial_sol = initial_sol()
 
-        result = sp.sparse.linalg.gmres(mat,
-                                        rhs,
-                                        x0=initial_sol)
+        result = sp.sparse.linalg.gmres(mat, rhs, x0=initial_sol)
 
         (sol, info) = result
 
@@ -62,7 +58,7 @@ class LUSolver(LinearSolver):
         self.solver = sp.sparse.linalg.splu(mat)
 
     def solve(self, rhs: ndarray, trans=False, initial_sol=None) -> ndarray:
-        trans_str = 'T' if trans else 'N'
+        trans_str = "T" if trans else "N"
         return self.solver.solve(rhs, trans=trans_str)
 
 
