@@ -1,5 +1,6 @@
 import time
 from enum import Enum, auto
+from typing import Any, Dict
 
 import numpy as np
 
@@ -10,7 +11,12 @@ from pygradflow.newton import newton_method
 from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
-from pygradflow.step.step_control import StepController, StepResult, step_controller
+from pygradflow.step.step_control import (
+    StepController,
+    StepControlResult,
+    StepResult,
+    step_controller,
+)
 
 
 class SolverStatus(Enum):
@@ -68,7 +74,7 @@ class Solver:
 
     def compute_step(
         self, controller: StepController, iterate: Iterate, dt: float
-    ) -> StepResult:
+    ) -> StepControlResult:
         problem = self.problem
         params = self.params
         assert self.rho != -1.0
@@ -229,7 +235,7 @@ class Solver:
                 last_time = curr_time
                 line_diff += 1
 
-                state = dict()
+                state: Dict[str, Any] = dict()
                 state["iterate"] = iterate
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
