@@ -12,9 +12,9 @@ class DerivError(ValueError):
         self.actual_value = actual_value
         self.atol = atol
 
-        self.invalid_deriv = np.isclose(self.expected_value,
-                                        self.actual_value,
-                                        atol=self.atol)
+        self.invalid_deriv = np.isclose(
+            self.expected_value, self.actual_value, atol=self.atol
+        )
 
         self.invalid_deriv = np.logical_not(self.invalid_deriv)
         self.invalid_indices = np.where(self.invalid_deriv)[0]
@@ -34,11 +34,13 @@ class DerivError(ValueError):
     def __str__(self):
         num_invalid_indices = self.invalid_indices.size
 
-        message = (f"Expected derivative: {self.expected_value} "
-                   f"and actual (findiff) derivative: {self.actual_value} "
-                   f"differ at the {num_invalid_indices} "
-                   f"indices: {self.invalid_indices} "
-                   f"(max diff: {self.max_deriv_diff}, tolerance: {self.atol})")
+        message = (
+            f"Expected derivative: {self.expected_value} "
+            f"and actual (findiff) derivative: {self.actual_value} "
+            f"differ at the {num_invalid_indices} "
+            f"indices: {self.invalid_indices} "
+            f"(max diff: {self.max_deriv_diff}, tolerance: {self.atol})"
+        )
 
         return message
 

@@ -1,13 +1,13 @@
 import copy
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import numpy as np
 
 from pygradflow.implicit_func import ScaledImplicitFunc
-from pygradflow.step.step_solver import StepSolver, StepResult
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.step.step_solver import StepResult, StepSolver
 
 
 class ScaledStepSolver(StepSolver):
@@ -52,7 +52,9 @@ class ScaledStepSolver(StepSolver):
 
         return (b0, b1, b2)
 
-    def solve_scaled(self, b0, b1, b2t) -> Tuple[np.ndarray, np.ndarray, Optional[float]]:
+    def solve_scaled(
+        self, b0, b1, b2t
+    ) -> Tuple[np.ndarray, np.ndarray, Optional[float]]:
         raise NotImplementedError()
 
     def reset_deriv(self) -> None:

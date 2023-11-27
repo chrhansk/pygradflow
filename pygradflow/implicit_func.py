@@ -1,6 +1,8 @@
 import abc
+
 import numpy as np
 import scipy as sp
+
 from pygradflow.iterate import Iterate
 from pygradflow.problem import Problem
 
@@ -136,8 +138,7 @@ class ImplicitFunc(_Func):
         F_21 = -dt * jac
         F_22 = sp.sparse.eye(m, dtype=params.dtype)
 
-        deriv = sp.sparse.bmat([[F_11, F_12], [F_21, F_22]],
-                               format="csc")
+        deriv = sp.sparse.bmat([[F_11, F_12], [F_21, F_22]], format="csc")
 
         assert deriv.dtype == params.dtype
 

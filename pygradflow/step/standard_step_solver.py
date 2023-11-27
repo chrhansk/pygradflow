@@ -3,10 +3,10 @@ import copy
 import numpy as np
 
 from pygradflow.implicit_func import ImplicitFunc
-from pygradflow.step.step_solver import StepSolver, StepResult
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.step.step_solver import StepResult, StepSolver
 
 
 class StandardStepSolver(StepSolver):

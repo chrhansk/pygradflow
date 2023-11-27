@@ -22,11 +22,13 @@ class StepResult:
     def iterate(self):
         iterate = self.orig_iterate
 
-        return Iterate(iterate.problem,
-                       iterate.params,
-                       iterate.x - self.dx,
-                       iterate.y - self.dy,
-                       iterate.eval)
+        return Iterate(
+            iterate.problem,
+            iterate.params,
+            iterate.x - self.dx,
+            iterate.y - self.dy,
+            iterate.eval,
+        )
 
     @functools.cached_property
     def diff(self):
@@ -46,9 +48,7 @@ class StepSolver(abc.ABC):
         solver_type = self.params.linear_solver_type
         return linear_solver(mat, solver_type)
 
-    def estimate_rcond(self,
-                       mat: sp.sparse.spmatrix,
-                       solver: LinearSolver) -> float:
+    def estimate_rcond(self, mat: sp.sparse.spmatrix, solver: LinearSolver) -> float:
         from .cond_estimate import ConditionEstimator
 
         estimator = ConditionEstimator(mat, solver, self.params)
