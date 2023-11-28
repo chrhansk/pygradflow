@@ -20,6 +20,8 @@ from pygradflow.step.step_control import (
 
 
 class SolverStatus(Enum):
+    description: str
+
     Converged = (auto(), "Convergence achieved")
     IterationLimit = (auto(), "Reached iteration limit")
     TimeLimit = (auto(), "Reached time limit")
