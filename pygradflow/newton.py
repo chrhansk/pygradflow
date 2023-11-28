@@ -218,5 +218,6 @@ def newton_method(
         return SimplifiedNewtonMethod(problem, iterate, dt, rho, solver)
     elif params.newton_type == NewtonType.Full:
         return FullNewtonMethod(problem, iterate, dt, rho, solver)
-    elif params.newton_type == NewtonType.ActiveSet:
+    else:
+        assert params.newton_type == NewtonType.ActiveSet
         return ActiveSetNewtonMethod(problem, iterate, dt, rho, solver)

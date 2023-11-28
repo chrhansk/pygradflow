@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum, Flag, auto
+from typing import Callable, Optional
 
 import numpy as np
+
+from pygradflow.step.step_solver import StepSolver
 
 
 class NewtonType(Enum):
@@ -77,7 +80,7 @@ class Params:
 
     step_control_type: StepControlType = StepControlType.DistanceRatio
 
-    step_solver: object = None
+    step_solver: Optional[Callable[[], StepSolver]] = None
     step_solver_type: StepSolverType = StepSolverType.Symmetric
     linear_solver_type: LinearSolverType = LinearSolverType.LU
     penalty_update: PenaltyUpdate = PenaltyUpdate.DualNorm

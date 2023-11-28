@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import numpy as np
 import scipy as sp
@@ -55,7 +56,7 @@ class ConditionEstimator:
         norm = np.linalg.norm(vec)
         return (vec / norm).astype(self.params.dtype)
 
-    def estimate_rcond(self) -> float:
+    def estimate_rcond(self) -> np.floating[Any]:
         mat = self.mat
         trans_mat = mat.T
         linear_solver = self.linear_solver
@@ -70,8 +71,8 @@ class ConditionEstimator:
         yprod = np.copy(y)
 
         # Factors to prevent over- or underflow
-        xfac = 1.0
-        yfac = 1.0
+        xfac = self.params.dtype(1.0)
+        yfac = self.params.dtype(1.0)
 
         logger.debug("Number of iterations: %s", num_its)
 
@@ -102,12 +103,12 @@ class ConditionEstimator:
         ydot = math.pow(ydot, pow_fac)
 
         if np.isinf(xdot) or np.isinf(ydot):
-            return 0.0
+            return self.params.dtype(0.0)
 
         cond = xdot * ydot
 
         if np.isinf(cond):
-            return 0.0
+            return self.params.dtype(0.0)
 
         rcond = 1.0 / cond
 

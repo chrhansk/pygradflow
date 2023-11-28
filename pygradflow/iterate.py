@@ -1,4 +1,5 @@
 import functools
+from typing import Any, Optional
 
 import numpy as np
 import scipy as sp
@@ -22,7 +23,7 @@ class Iterate:
         params: Params,
         x: np.ndarray,
         y: np.ndarray,
-        eval: Evaluator = None,
+        eval: Optional[Evaluator] = None,
     ):
         assert x.shape == (problem.num_vars,)
         assert y.shape == (problem.num_cons,)
@@ -110,7 +111,7 @@ class Iterate:
 
         infeas_opt_res = self.cons_jac.T.dot(self.cons)
 
-        return np.linalg.norm(infeas_opt_res, ord=np.inf) <= local_infeas_tol
+        return bool(np.linalg.norm(infeas_opt_res, ord=np.inf) <= local_infeas_tol)
 
     @functools.cached_property
     def active_set(self) -> ActiveSet:
@@ -130,7 +131,7 @@ class Iterate:
         return d
 
     @functools.cached_property
-    def bound_violation(self) -> float:
+    def bound_violation(self) -> np.floating[Any]:
         lb = self.problem.var_lb
         ub = self.problem.var_ub
         x = self.x
@@ -141,14 +142,14 @@ class Iterate:
         return max(lower, upper)
 
     @functools.cached_property
-    def cons_violation(self) -> float:
+    def cons_violation(self) -> np.floating[Any]:
         c = self.cons
         if c.size == 0:
-            return 0.0
+            return self.params.dtype(0.0)
         return np.linalg.norm(c, np.inf)
 
     @functools.cached_property
-    def stat_res(self) -> float:
+    def stat_res(self) -> np.floating[Any]:
         r = self.obj_grad + self.cons_jac.T.dot(self.y) + self.bound_duals
         return np.linalg.norm(r, np.inf)
 
@@ -156,5 +157,5 @@ class Iterate:
         return (self.cons_violation <= tol) and (self.bound_violation <= tol)
 
     @property
-    def total_res(self) -> float:
+    def total_res(self) -> np.floating[Any]:
         return max(self.cons_violation, self.bound_violation, self.stat_res)
