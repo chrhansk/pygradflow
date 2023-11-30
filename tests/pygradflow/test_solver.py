@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-import scipy as sp
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
@@ -15,8 +14,7 @@ from pygradflow.params import (
     StepControlType,
     StepSolverType,
 )
-from pygradflow.problem import Problem
-from pygradflow.solver import Solver, SolverStatus
+from pygradflow.solver import Solver
 
 from .hs71 import HS71
 from .rosenbrock import Rosenbrock
@@ -109,6 +107,20 @@ def test_step_control(hs71_instance, step_control_type):
 def test_solve_hs71(hs71_instance):
     problem, x_0, y_0 = hs71_instance
     solver = Solver(problem)
+
+    result = solver.solve(x_0, y_0)
+
+    assert result.success
+
+
+@pytest.mark.parametrize(
+    "penalty_update",
+    [PenaltyUpdate.Constant, PenaltyUpdate.DualNorm, PenaltyUpdate.ParetoDecrease],
+)
+def test_penalty_update(hs71_instance, penalty_update):
+    problem, x_0, y_0 = hs71_instance
+    params = Params(penalty_update=penalty_update)
+    solver = Solver(problem, params)
 
     result = solver.solve(x_0, y_0)
 
