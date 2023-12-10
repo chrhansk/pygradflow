@@ -1,3 +1,6 @@
+[![PyPI version](https://badge.fury.io/py/pygradflow.svg)](https://badge.fury.io/py/pygradflow)
+[![Documentation Status](https://readthedocs.org/projects/pygradflow/badge/?version=latest)](https://pygradflow.readthedocs.io/en/latest/?badge=latest)
+
 # PyGradFlow
 
 PyGradFlow is a simple implementation of the sequential homotopy method to
