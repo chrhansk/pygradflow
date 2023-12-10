@@ -1,0 +1,38 @@
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+import sys, os
+sys.path.append(os.path.abspath('..'))
+
+project = 'pygradflow'
+copyright = '2023, Christoph Hansknecht'
+author = 'Christoph Hansknecht'
+release = '0.2.10'
+
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.autosummary',
+              'sphinx.ext.napoleon',
+              'sphinx.ext.mathjax',
+              'sphinx.ext.intersphinx']
+
+templates_path = ['_templates']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+intersphinx_mapping = {'python': ('http://docs.python.org/2', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy', None),
+                       'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
+                       'matplotlib': ('http://matplotlib.org/stable', None)}
+
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+html_theme = 'alabaster'
+html_static_path = ['_static']
