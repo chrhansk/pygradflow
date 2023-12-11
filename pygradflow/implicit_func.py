@@ -1,4 +1,5 @@
 import abc
+from typing import Optional
 
 import numpy as np
 import scipy as sp
@@ -16,19 +17,34 @@ class _Func(abc.ABC):
         self.n = problem.num_vars
         self.m = problem.num_cons
 
-    def compute_active_set(self, x, lb, ub):
+    def compute_active_set(self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray):
         """
         Compute the active set at the given point with respect to the
-        given bounds. The active set has boolean entries, where a
-        value of `True` at index `j`
-        indicates that the input x_j is outside [lb_j, ub_j]
-        and should be clipped to the interval in the projection.
+        given bounds.
+
+        Parameters
+        ----------
+
+        x: np.ndarray
+            A primal point in :math:`\\mathbb{R}^{n}`
+        lb, ub: np.ndarray
+            Bounds in :math:`\\mathbb{R}^{n}`
+
+        Returns
+        -------
+        np.ndarray
+            A vector with boolean entries, where a value of `True`
+            at index `j` indicates that :math:`x_j` is
+            outside the interval  :math:`[l_j, u_j]` and should be
+            clipped to it during the projection.
         """
         assert (lb <= ub).all()
 
         return np.logical_or(x < lb - 1e-8, x > ub + 1e-8)
 
-    def project(self, x, lb, ub, active_set):
+    def project(
+        self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray, active_set: np.ndarray
+    ):
         assert active_set.dtype == bool
         assert active_set.shape == lb.shape
         assert (lb <= ub).all()
@@ -43,7 +59,7 @@ class _Func(abc.ABC):
         return p
 
     @abc.abstractmethod
-    def value_at(self, iterate, rho, active_set=None):
+    def value_at(self, iterate: Iterate, rho, active_set: Optional[np.ndarray] = None):
         raise NotImplementedError
 
 
@@ -51,25 +67,25 @@ class ImplicitFunc(_Func):
     def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
         super().__init__(problem, iterate, dt)
 
-    def project(self, x, active_set):
+    def project(self, x: np.ndarray, active_set: np.ndarray):
         problem = self.problem
         lb = problem.var_lb
         ub = problem.var_ub
 
         return super().project(x, lb, ub, active_set)
 
-    def compute_active_set(self, x):
+    def compute_active_set(self, x: np.ndarray):
         problem = self.problem
         lb = problem.var_lb
         ub = problem.var_ub
         return super().compute_active_set(x, lb, ub)
 
-    def projection_initial(self, iterate, rho):
+    def projection_initial(self, iterate: Iterate, rho: float):
         x_0 = self.orig_iterate.x
         dt = self.dt
         return x_0 - dt * iterate.aug_lag_deriv_x(rho)
 
-    def apply_project_deriv(self, mat, active_set):
+    def apply_project_deriv(self, mat: sp.sparse.spmatrix, active_set: np.ndarray):
         problem = self.problem
         lb = problem.var_lb
         ub = problem.var_ub
@@ -106,6 +122,7 @@ class ImplicitFunc(_Func):
 
         return proj_mat
 
+    # @override
     def value_at(self, iterate, rho, active_set=None):
         y_0 = self.orig_iterate.y
         dt = self.dt
@@ -119,7 +136,9 @@ class ImplicitFunc(_Func):
         yval = iterate.y - (y_0 + dt * iterate.aug_lag_deriv_y())
         return np.concatenate([xval, yval])
 
-    def deriv(self, jac, hess, active_set):
+    def deriv(
+        self, jac: sp.sparse.spmatrix, hess: sp.sparse.spmatrix, active_set: np.ndarray
+    ):
         n = self.n
         m = self.m
         dt = self.dt
@@ -144,7 +163,9 @@ class ImplicitFunc(_Func):
 
         return deriv
 
-    def deriv_at(self, iterate, rho, active_set=None):
+    def deriv_at(
+        self, iterate: Iterate, rho: float, active_set: Optional[np.ndarray] = None
+    ):
         if active_set is None:
             p = self.projection_initial(iterate, rho)
             active_set = self.compute_active_set(p)
@@ -163,6 +184,7 @@ class ScaledImplicitFunc(_Func):
         self.lb = (self.lamb * problem.var_lb).astype(params.dtype)
         self.ub = (self.lamb * problem.var_ub).astype(params.dtype)
 
+    # @override
     def value_at(self, iterate, rho, active_set=None):
         y_0 = self.orig_iterate.y
         lamb = self.lamb
@@ -177,14 +199,14 @@ class ScaledImplicitFunc(_Func):
 
         return np.concatenate([xval, yval])
 
-    def projection_initial(self, iterate, rho):
+    def projection_initial(self, iterate: Iterate, rho: float):
         x_0 = self.orig_iterate.x
         lamb = self.lamb
 
         return lamb * x_0 - iterate.aug_lag_deriv_x(rho)
 
-    def project(self, x, active_set):
+    def project(self, x: np.ndarray, active_set: np.ndarray):
         return super().project(x, self.lb, self.ub, active_set)
 
-    def compute_active_set(self, x):
+    def compute_active_set(self, x: np.ndarray):
         return super().compute_active_set(x, self.lb, self.ub)
