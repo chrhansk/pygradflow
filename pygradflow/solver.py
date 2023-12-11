@@ -28,17 +28,59 @@ class SolverStatus(Enum):
 
     @staticmethod
     def success(status):
+        """
+        Returns
+        -------
+        bool
+            Whether the status indicates a successful solve
+        """
         return status == SolverStatus.Converged
 
 
 class SolverResult:
-    def __init__(self, x, y, d, status):
-        self.x = x
-        self.y = y
-        self.d = d
-        self.status = status
+    """
+    The result of a solution of a :py:class:`pygradflow.problem.Problem`
+    instance with a :py:class:`pygradflow.solver.Solver`
+    """
 
-    def __repr__(self):
+    def __init__(
+        self, x: np.ndarray, y: np.ndarray, d: np.ndarray, status: SolverStatus
+    ):
+        self._x = x
+        self._y = y
+        self._d = d
+        self._status = status
+
+    @property
+    def status(self) -> SolverStatus:
+        """
+        The status of the solve as a :py:class:`pygradflow.solver.SolverStatus`
+        """
+        return self._status
+
+    @property
+    def x(self) -> np.ndarray:
+        """
+        The primal solution :math:`x \\in \\mathbb{R}^{n}`
+        """
+        return self._x
+
+    @property
+    def y(self) -> np.ndarray:
+        """
+        The dual solution :math:`y \\in \\mathbb{R}^{m}`
+        """
+        return self._y
+
+    @property
+    def d(self) -> np.ndarray:
+        """
+        The dual solution :math:`d \\in \\mathbb{R}^{n}`
+        with respect to the variable bounds
+        """
+        return self._d
+
+    def __repr__(self) -> str:
         return "SolverResult(status={0})".format(self.status)
 
     @property
@@ -50,7 +92,41 @@ header_interval = 25
 
 
 class Solver:
+    """
+    Solves a :py:class:`pygradflow.problem.Problem` instance according
+    to the given :py:class:`pygradflow.params.Params`.
+    The solver attempts to find a solution given by
+    vectors :math:`x \\in \\mathbb{R}^{n}`,
+    :math:`y \\in \\mathbb{R}^{m}`, and :math:`d \\in \\mathbb{R}^{n}`,
+    approximately satisfying the stationarity
+     .. math::
+        \\begin{align}
+            \\nabla_x f(x) + y^{T} J_c(x) + d = 0
+        \\end{align}
+    and complementarity
+     .. math::
+        \\begin{align}
+            d_j
+            \\begin{cases}
+                \\geq 0 & \\text{ if } x_j = u_j \\\\
+                \\leq 0 & \\text{ if } x_j = l_j \\\\
+                = 0 & \\text{ otherwise }
+            \\end{cases}
+        \\end{align}
+    conditions.
+    """
+
     def __init__(self, problem: Problem, params: Params = Params()) -> None:
+        """
+        Creates a new solver
+
+        Parameters
+        ----------
+        problem: pygradflow.problem.Problem
+            The problem to be solved
+        params: pygradflow.params.Params
+            Parameters used by the solver
+        """
         self.problem = problem
         self.params = params
 
@@ -141,15 +217,31 @@ class Solver:
         logger.info("%30s: %30e", "Constraint violation", iterate.cons_violation)
         logger.info("%30s: %30e", "Dual violation", iterate.stat_res)
 
-    def solve(self, x_0: np.ndarray, y_0: np.ndarray) -> SolverResult:
+    def solve(self, x0: np.ndarray, y0: np.ndarray) -> SolverResult:
+        """
+        Solves the problem starting from the given primal / dual point
+
+        Parameters
+        ----------
+        x0: np.ndarray
+            The initial primal point :math:`x_0 \\in \\mathbb{R}^{n}`
+        y0: np.ndarray
+            The initial dual point :math:`y_0 \\in \\mathbb{R}^{m}`
+
+        Returns
+        -------
+        pygradflow.solver.SolverResult
+            The result of the solving process, including primal and dual
+            solutions
+        """
         problem = self.problem
         params = self.params
         dtype = params.dtype
 
         display = problem_display(problem, params)
 
-        x = x_0.astype(dtype)
-        y = y_0.astype(dtype)
+        x = x0.astype(dtype)
+        y = y0.astype(dtype)
 
         (n,) = x.shape
         (m,) = y.shape
