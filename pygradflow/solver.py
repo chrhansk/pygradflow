@@ -1,5 +1,6 @@
 import time
 from enum import Enum, auto
+from typing import Optional
 
 import numpy as np
 
@@ -15,10 +16,34 @@ from pygradflow.step.step_control import StepController, StepResult, step_contro
 
 class SolverStatus(Enum):
     Converged = (auto(), "Convergence achieved")
+    """
+    The algorithm has converged to a solution satisfying
+    the optimality conditions according to given tolerances
+    """
+
     IterationLimit = (auto(), "Reached iteration limit")
+    """
+    Reached the iteration limit precribed by the algorithmic
+    parameters
+    """
+
     TimeLimit = (auto(), "Reached time limit")
+    """
+    Reached the time limit precribed by the algorithmic
+    parameters
+    """
+
     Unbounded = (auto(), "Unbounded")
+    """
+    Problem appearst unbounded (found feasible point with extremely
+    small objective value)
+    """
+
     LocallyInfeasible = (auto(), "Local infeasibility detected")
+    """
+    Local infeasibility detected (found infeasible point being
+    a local minimum with respect to constraint violation)
+    """
 
     def __new__(cls, value, description):
         obj = object.__new__(cls)
@@ -217,7 +242,9 @@ class Solver:
         logger.info("%30s: %30e", "Constraint violation", iterate.cons_violation)
         logger.info("%30s: %30e", "Dual violation", iterate.stat_res)
 
-    def solve(self, x0: np.ndarray, y0: np.ndarray) -> SolverResult:
+    def solve(
+        self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None
+    ) -> SolverResult:
         """
         Solves the problem starting from the given primal / dual point
 
@@ -240,11 +267,21 @@ class Solver:
 
         display = problem_display(problem, params)
 
+        n = problem.num_vars
+        m = problem.num_cons
+
+        if x0 is None:
+            x0 = np.zeros((n,), dtype=dtype)
+            x0 = np.clip(x0, problem.var_lb, problem.var_ub)
+
+        if y0 is None:
+            y0 = np.zeros((m,), dtype=dtype)
+
         x = x0.astype(dtype)
         y = y0.astype(dtype)
 
-        (n,) = x.shape
-        (m,) = y.shape
+        assert (n,) == x.shape
+        assert (m,) == y.shape
 
         logger.info("Solving problem with {0} variables, {1} constraints".format(n, m))
 

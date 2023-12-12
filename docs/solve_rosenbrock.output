@@ -1,0 +1,14 @@
+INFO:gradflow:Solving problem with 2 variables, 0 constraints
+INFO:gradflow: Iter      Aug Lag          Cons inf         Dual inf       Primal step       Dual step          Lambda        Type  
+INFO:gradflow:     9   6.76695301e-01   0.00000000e+00   1.73055080e+00   5.24163592e-02   0.00000000e+00   1.82519554e+01 accepted
+INFO:gradflow:                        Status:           Convergence achieved
+INFO:gradflow:                    Iterations:                             30
+INFO:gradflow:                Accepted steps:                             25
+INFO:gradflow:               Distance factor:                   1.045707e+00
+INFO:gradflow:                     Objective:                   1.723984e-13
+INFO:gradflow:             Aug Lag violation:                   0.000000e+00
+INFO:gradflow:                  Aug Lag dual:                   0.000000e+00
+INFO:gradflow:               Bound violation:                   0.000000e+00
+INFO:gradflow:          Constraint violation:                   0.000000e+00
+INFO:gradflow:                Dual violation:                   3.320413e-07
+[0.99999959 0.99999917]

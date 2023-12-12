@@ -13,6 +13,30 @@ Welcome to pygradflow's documentation!
 .. automodule:: pygradflow
    :members:
 
+The `pygradflow` package is designed to solve nonlinear optimization
+problems given by an objective
+:math:`f : \mathbb{R}^{n} \\to \mathbb{R}`,
+a set of smooth
+nonlinear constraints
+:math:`c : \mathbb{R}^{n} \\to \mathbb{R}^{m}`,
+and variable bounds :math:`x_l, x_u \in \mathbb{R}^{n}`,
+yielding the problem
+ .. math::
+    \begin{align}
+        \min_{x \in \mathbb{R}^{n}} \quad & f(x) \\
+        \text{s.t.} \quad & c(x) = 0 \\
+                          & l^x \leq x \leq u^x
+    \end{align}
+
+The method works by iterating towards a primal / dual solution
+approximately satisfying the
+`KKT conditions <https://en.wikipedia.org/wiki/Karush%E2%80%93Kuhn%E2%80%93Tucker_conditions>`_.
+
+Examples
+========
+
+.. include:: examples.rst
+
 Indices and tables
 ==================
 
