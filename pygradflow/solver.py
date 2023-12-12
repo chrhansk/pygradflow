@@ -1,5 +1,6 @@
 import time
 from enum import Enum, auto
+from typing import Optional
 
 import numpy as np
 
@@ -217,7 +218,9 @@ class Solver:
         logger.info("%30s: %30e", "Constraint violation", iterate.cons_violation)
         logger.info("%30s: %30e", "Dual violation", iterate.stat_res)
 
-    def solve(self, x0: np.ndarray, y0: np.ndarray) -> SolverResult:
+    def solve(
+        self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None
+    ) -> SolverResult:
         """
         Solves the problem starting from the given primal / dual point
 
@@ -240,11 +243,21 @@ class Solver:
 
         display = problem_display(problem, params)
 
+        n = problem.num_vars
+        m = problem.num_cons
+
+        if x0 is None:
+            x0 = np.zeros((n,), dtype=dtype)
+            x0 = np.clip(x0, problem.var_lb, problem.var_ub)
+
+        if y0 is None:
+            y0 = np.zeros((m,), dtype=dtype)
+
         x = x0.astype(dtype)
         y = y0.astype(dtype)
 
-        (n,) = x.shape
-        (m,) = y.shape
+        assert (n,) == x.shape
+        assert (m,) == y.shape
 
         logger.info("Solving problem with {0} variables, {1} constraints".format(n, m))
 
