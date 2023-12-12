@@ -16,10 +16,34 @@ from pygradflow.step.step_control import StepController, StepResult, step_contro
 
 class SolverStatus(Enum):
     Converged = (auto(), "Convergence achieved")
+    """
+    The algorithm has converged to a solution satisfying
+    the optimality conditions according to given tolerances
+    """
+
     IterationLimit = (auto(), "Reached iteration limit")
+    """
+    Reached the iteration limit precribed by the algorithmic
+    parameters
+    """
+
     TimeLimit = (auto(), "Reached time limit")
+    """
+    Reached the time limit precribed by the algorithmic
+    parameters
+    """
+
     Unbounded = (auto(), "Unbounded")
+    """
+    Problem appearst unbounded (found feasible point with extremely
+    small objective value)
+    """
+
     LocallyInfeasible = (auto(), "Local infeasibility detected")
+    """
+    Local infeasibility detected (found infeasible point being
+    a local minimum with respect to constraint violation)
+    """
 
     def __new__(cls, value, description):
         obj = object.__new__(cls)
