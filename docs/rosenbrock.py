@@ -46,20 +46,3 @@ class Rosenbrock(Problem):
         )
 
         return sp.sparse.coo_matrix(h)
-
-
-import logging
-
-import numpy as np
-
-from pygradflow.solver import Solver
-
-logging.basicConfig(level=logging.INFO)
-
-rosenbrock = Rosenbrock()
-solver = Solver(problem=rosenbrock)
-
-solution = solver.solve()
-
-print(solution.x)
-print(solution.status)
