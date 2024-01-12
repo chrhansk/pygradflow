@@ -323,7 +323,7 @@ class Solver:
         initial_iterate = iterate
         accepted_steps = 0
 
-        for iteration in range(params.num_it):
+        for iteration in range(params.iteration_limit):
             if line_diff == header_interval:
                 line_diff = 0
                 logger.info(display.header)

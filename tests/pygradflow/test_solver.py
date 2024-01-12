@@ -74,7 +74,7 @@ def test_custom_step_solver(rosenbrock_instance):
 
 def test_solve_rosenbrock(rosenbrock_instance):
     problem, x_0, y_0 = rosenbrock_instance
-    params = Params(num_it=100)
+    params = Params(iteration_limit=100)
 
     solver = Solver(problem, params)
 
@@ -138,7 +138,7 @@ def test_solve_hs71_single(
         precision=Precision.Single,
         newton_type=newton_type,
         step_solver_type=step_solver_type,
-        num_it=10,
+        iteration_limit=10,
         report_rcond=True,
         linear_solver_type=linear_solver_type,
     )
