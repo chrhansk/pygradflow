@@ -23,26 +23,28 @@ class DerivError(ValueError):
         self.max_deriv_diff = self.deriv_diffs.max()
 
         (num_rows, _) = self.deriv_diffs.shape
-
-        invalid_indices = np.zeros((num_rows, 2), dtype=int)
-        invalid_indices[:, 0] = self.invalid_indices
-        invalid_indices[:, 1] = col_index
-
-        self.invalid_indices = invalid_indices
+        num_invalid_indices = self.invalid_indices.size
         self.col_index = col_index
 
     def __str__(self):
-        num_invalid_indices = self.invalid_indices.size
+        num_invalid_indices = self.invalid_indices.shape[0]
 
         message = (
-            f"Expected derivative: {self.expected_value} "
-            f"and actual (findiff) derivative: {self.actual_value} "
-            f"differ at the {num_invalid_indices} "
-            f"indices: {self.invalid_indices} "
-            f"(max diff: {self.max_deriv_diff}, tolerance: {self.atol})"
+            f"Expected and actual (findiff) derivative "
+            f"differ at {num_invalid_indices} indices:\n"
         )
 
-        return message
+        diffs = []
+
+        for invalid_index in self.invalid_indices:
+            expected = self.expected_value[invalid_index].item()
+            actual = self.actual_value[invalid_index].item()
+
+            diffs.append(f"{invalid_index} | {expected} != {actual}")
+
+        diffs = "\n".join(diffs)
+
+        return message + diffs
 
 
 def deriv_check(

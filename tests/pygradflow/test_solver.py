@@ -263,4 +263,5 @@ def test_cons_errors():
     invalid_row = jac.row[invalid_index]
     invalid_col = jac.col[invalid_index]
 
-    assert (e.invalid_indices == [[invalid_row, invalid_col]]).all()
+    assert e.invalid_indices == [invalid_row]
+    assert e.col_index == invalid_col
