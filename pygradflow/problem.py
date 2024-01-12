@@ -102,7 +102,6 @@ class Problem(abc.ABC):
         """
         raise NotImplementedErrror()
 
-    @abc.abstractmethod
     def cons(self, x: np.ndarray) -> np.ndarray:
         """
         Parameters
@@ -118,7 +117,6 @@ class Problem(abc.ABC):
         """
         raise NotImplementedErrror()
 
-    @abc.abstractmethod
     def cons_jac(self, x: np.ndarray) -> sp.sparse.spmatrix:
         """
         Parameters

@@ -69,9 +69,15 @@ class SimpleEvaluator(Evaluator):
         return astype(self.problem.obj_grad(x), self.dtype)
 
     def cons(self, x: np.ndarray) -> np.ndarray:
+        if self.problem.num_cons == 0:
+            return np.array([], dtype=self.dtype)
+
         return astype(self.problem.cons(x), self.dtype)
 
     def cons_jac(self, x: np.ndarray) -> sp.sparse.spmatrix:
+        if self.problem.num_cons == 0:
+            return sp.sparse.csr_matrix((0, self.problem.num_vars), dtype=self.dtype)
+
         return astype(self.problem.cons_jac(x), self.dtype)
 
     def lag_hess(self, x: np.ndarray, lag: np.ndarray) -> sp.sparse.spmatrix:
@@ -105,6 +111,9 @@ class ValidatingEvaluator(Evaluator):
         return astype(grad, self.dtype)
 
     def cons(self, x: np.ndarray) -> np.ndarray:
+        if self.num_cons == 0:
+            return np.array([], dtype=self.dtype)
+
         cons = self.problem.cons(x)
 
         if cons.shape != (self.num_cons,):
@@ -116,6 +125,9 @@ class ValidatingEvaluator(Evaluator):
         return astype(cons, self.dtype)
 
     def cons_jac(self, x: np.ndarray) -> sp.sparse.spmatrix:
+        if self.num_cons == 0:
+            return sp.sparse.csr_matrix((0, self.num_vars), dtype=self.dtype)
+
         cons_jac = self.problem.cons_jac(x)
 
         if cons_jac.shape != (self.num_cons, self.num_vars):
