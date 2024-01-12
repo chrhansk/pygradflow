@@ -215,6 +215,7 @@ class Solver:
 
     def print_result(
         self,
+        total_time: float,
         status: SolverStatus,
         iterate: Iterate,
         iterations: int,
@@ -229,6 +230,7 @@ class Solver:
         status_name = Format.bold("{:>30s}".format("Status"))
 
         logger.info("%30s: %30s", status_name, status_desc)
+        logger.info("%30s: %30s", "Time", f"{total_time:.2f}s")
         logger.info("%30s: %30d", "Iterations", iterations)
         logger.info("%30s: %30d", "Accepted steps", accepted_steps)
 
@@ -397,6 +399,9 @@ class Solver:
             status = SolverStatus.IterationLimit
             logger.debug("Iteration limit reached")
 
+        curr_time = time.time()
+        total_time = curr_time - start_time
+
         direct_dist = iterate.dist(initial_iterate)
 
         assert path_dist >= direct_dist
@@ -406,6 +411,7 @@ class Solver:
         assert status is not None
 
         self.print_result(
+            total_time=total_time,
             status=status,
             iterate=iterate,
             iterations=iteration,
