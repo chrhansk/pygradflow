@@ -15,39 +15,40 @@ from pygradflow.step.step_control import StepController, StepResult, step_contro
 
 
 class SolverStatus(Enum):
-    Converged = (auto(), "Convergence achieved")
+    Converged = (auto(), "optimal", "Convergence achieved")
     """
     The algorithm has converged to a solution satisfying
     the optimality conditions according to given tolerances
     """
 
-    IterationLimit = (auto(), "Reached iteration limit")
+    IterationLimit = (auto(), "iteration_limit", "Reached iteration limit")
     """
     Reached the iteration limit precribed by the algorithmic
     parameters
     """
 
-    TimeLimit = (auto(), "Reached time limit")
+    TimeLimit = (auto(), "time_limit", "Reached time limit")
     """
     Reached the time limit precribed by the algorithmic
     parameters
     """
 
-    Unbounded = (auto(), "Unbounded")
+    Unbounded = (auto(), "unbouneded", "Unbounded")
     """
     Problem appearst unbounded (found feasible point with extremely
     small objective value)
     """
 
-    LocallyInfeasible = (auto(), "Local infeasibility detected")
+    LocallyInfeasible = (auto(), "infeas", "Local infeasibility detected")
     """
     Local infeasibility detected (found infeasible point being
     a local minimum with respect to constraint violation)
     """
 
-    def __new__(cls, value, description):
+    def __new__(cls, value, short_name, description):
         obj = object.__new__(cls)
         obj._value_ = value
+        obj.short_name = short_name
         obj.description = description
         return obj
 
@@ -69,12 +70,24 @@ class SolverResult:
     """
 
     def __init__(
-        self, x: np.ndarray, y: np.ndarray, d: np.ndarray, status: SolverStatus
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        d: np.ndarray,
+        status: SolverStatus,
+        iterations: int,
+        num_accepted_steps: int,
+        total_time: float,
+        dist_factor: float,
     ):
         self._x = x
         self._y = y
         self._d = d
         self._status = status
+        self.iterations = iterations
+        self.num_accepted_steps = num_accepted_steps
+        self.total_time = total_time
+        self.dist_factor = dist_factor
 
     @property
     def status(self) -> SolverStatus:
@@ -407,6 +420,7 @@ class Solver:
         assert path_dist >= direct_dist
 
         dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
+        iterations = iteration
 
         assert status is not None
 
@@ -414,7 +428,7 @@ class Solver:
             total_time=total_time,
             status=status,
             iterate=iterate,
-            iterations=iteration,
+            iterations=iterations,
             accepted_steps=accepted_steps,
             dist_factor=dist_factor,
         )
@@ -423,4 +437,13 @@ class Solver:
         y = iterate.y
         d = iterate.bound_duals
 
-        return SolverResult(x, y, d, status)
+        return SolverResult(
+            x,
+            y,
+            d,
+            status,
+            iterations=iterations,
+            num_accepted_steps=accepted_steps,
+            total_time=total_time,
+            dist_factor=dist_factor,
+        )
