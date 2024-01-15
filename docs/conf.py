@@ -27,6 +27,10 @@ extensions = [
     "sphinx.ext.intersphinx",
 ]
 
+autodoc_default_options = {
+    "special-members": "__init__",
+}
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
