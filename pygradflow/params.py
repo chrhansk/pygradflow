@@ -128,8 +128,6 @@ class Params:
 
     rho: float = 1e2
 
-    num_it: int = 1000
-
     theta_max: float = 0.9
     theta_ref: float = 0.5
 
@@ -167,6 +165,7 @@ class Params:
 
     validate_input: bool = True
 
+    iteration_limit: int = 1000
     time_limit: float = np.inf
     display_interval: float = 0.1
 

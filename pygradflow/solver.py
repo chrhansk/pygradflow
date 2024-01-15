@@ -4,6 +4,7 @@ from typing import Optional
 
 import numpy as np
 
+from pygradflow.cons_problem import ConstrainedProblem
 from pygradflow.display import Format, problem_display
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
@@ -15,39 +16,40 @@ from pygradflow.step.step_control import StepController, StepResult, step_contro
 
 
 class SolverStatus(Enum):
-    Converged = (auto(), "Convergence achieved")
+    Converged = (auto(), "optimal", "Convergence achieved")
     """
     The algorithm has converged to a solution satisfying
     the optimality conditions according to given tolerances
     """
 
-    IterationLimit = (auto(), "Reached iteration limit")
+    IterationLimit = (auto(), "iteration_limit", "Reached iteration limit")
     """
     Reached the iteration limit precribed by the algorithmic
     parameters
     """
 
-    TimeLimit = (auto(), "Reached time limit")
+    TimeLimit = (auto(), "time_limit", "Reached time limit")
     """
     Reached the time limit precribed by the algorithmic
     parameters
     """
 
-    Unbounded = (auto(), "Unbounded")
+    Unbounded = (auto(), "unbouneded", "Unbounded")
     """
     Problem appearst unbounded (found feasible point with extremely
     small objective value)
     """
 
-    LocallyInfeasible = (auto(), "Local infeasibility detected")
+    LocallyInfeasible = (auto(), "infeas", "Local infeasibility detected")
     """
     Local infeasibility detected (found infeasible point being
     a local minimum with respect to constraint violation)
     """
 
-    def __new__(cls, value, description):
+    def __new__(cls, value, short_name, description):
         obj = object.__new__(cls)
         obj._value_ = value
+        obj.short_name = short_name
         obj.description = description
         return obj
 
@@ -69,12 +71,24 @@ class SolverResult:
     """
 
     def __init__(
-        self, x: np.ndarray, y: np.ndarray, d: np.ndarray, status: SolverStatus
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        d: np.ndarray,
+        status: SolverStatus,
+        iterations: int,
+        num_accepted_steps: int,
+        total_time: float,
+        dist_factor: float,
     ):
         self._x = x
         self._y = y
         self._d = d
         self._status = status
+        self.iterations = iterations
+        self.num_accepted_steps = num_accepted_steps
+        self.total_time = total_time
+        self.dist_factor = dist_factor
 
     @property
     def status(self) -> SolverStatus:
@@ -126,15 +140,27 @@ class Solver:
     approximately satisfying the stationarity
      .. math::
         \\begin{align}
-            \\nabla_x f(x) + y^{T} J_c(x) + d = 0
+            \\nabla_x f(x) + y^{T} J_c(x) + d = 0,
+        \\end{align}
+    feasibility
+    .. math::
+        \\begin{align}
+            \\quad & l \\leq c(x) \\leq u \\\\
+            \\quad & l^x \\leq x \\leq u^x \\\\
         \\end{align}
     and complementarity
      .. math::
         \\begin{align}
+            y_i
+            \\begin{cases}
+                \\geq 0 & \\text{ if } c(x)_i = u_i \\\\
+                \\leq 0 & \\text{ if } c(x)_i = l_i \\\\
+                = 0 & \\text{ otherwise }
+            \\end{cases} \\\\
             d_j
             \\begin{cases}
-                \\geq 0 & \\text{ if } x_j = u_j \\\\
-                \\leq 0 & \\text{ if } x_j = l_j \\\\
+                \\geq 0 & \\text{ if } x_j = u^x_j \\\\
+                \\leq 0 & \\text{ if } x_j = l^x_j \\\\
                 = 0 & \\text{ otherwise }
             \\end{cases}
         \\end{align}
@@ -152,19 +178,21 @@ class Solver:
         params: pygradflow.params.Params
             Parameters used by the solver
         """
-        self.problem = problem
+        self.orig_problem = problem
         self.params = params
+
+        self.problem = ConstrainedProblem(problem)
 
         if params.validate_input:
             from .eval import ValidatingEvaluator
 
-            self.evaluator = ValidatingEvaluator(problem, params)
+            self.evaluator = ValidatingEvaluator(self.problem, params)
         else:
             from .eval import SimpleEvaluator
 
-            self.evaluator = SimpleEvaluator(problem, params)
+            self.evaluator = SimpleEvaluator(self.problem, params)
 
-        self.penalty = penalty_strategy(problem, params)
+        self.penalty = penalty_strategy(self.problem, params)
         self.rho = -1.0
 
     def compute_step(
@@ -215,6 +243,7 @@ class Solver:
 
     def print_result(
         self,
+        total_time: float,
         status: SolverStatus,
         iterate: Iterate,
         iterations: int,
@@ -229,6 +258,7 @@ class Solver:
         status_name = Format.bold("{:>30s}".format("Status"))
 
         logger.info("%30s: %30s", status_name, status_desc)
+        logger.info("%30s: %30s", "Time", f"{total_time:.2f}s")
         logger.info("%30s: %30d", "Iterations", iterations)
         logger.info("%30s: %30d", "Accepted steps", accepted_steps)
 
@@ -270,12 +300,18 @@ class Solver:
         n = problem.num_vars
         m = problem.num_cons
 
+        orig_problem = self.orig_problem
+
         if x0 is None:
-            x0 = np.zeros((n,), dtype=dtype)
-            x0 = np.clip(x0, problem.var_lb, problem.var_ub)
+            orig_n = orig_problem.num_vars
+            x0 = np.zeros((orig_n,), dtype=dtype)
+            x0 = np.clip(x0, orig_problem.var_lb, orig_problem.var_ub)
 
         if y0 is None:
+            orig_m = orig_problem.num_cons
             y0 = np.zeros((m,), dtype=dtype)
+
+        (x0, y0) = problem.transform_sol(x0, y0)
 
         x = x0.astype(dtype)
         y = y0.astype(dtype)
@@ -308,7 +344,7 @@ class Solver:
         initial_iterate = iterate
         accepted_steps = 0
 
-        for iteration in range(params.num_it):
+        for iteration in range(params.iteration_limit):
             if line_diff == header_interval:
                 line_diff = 0
                 logger.info(display.header)
@@ -397,18 +433,23 @@ class Solver:
             status = SolverStatus.IterationLimit
             logger.debug("Iteration limit reached")
 
+        curr_time = time.time()
+        total_time = curr_time - start_time
+
         direct_dist = iterate.dist(initial_iterate)
 
         assert path_dist >= direct_dist
 
         dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
+        iterations = iteration
 
         assert status is not None
 
         self.print_result(
+            total_time=total_time,
             status=status,
             iterate=iterate,
-            iterations=iteration,
+            iterations=iterations,
             accepted_steps=accepted_steps,
             dist_factor=dist_factor,
         )
@@ -417,4 +458,15 @@ class Solver:
         y = iterate.y
         d = iterate.bound_duals
 
-        return SolverResult(x, y, d, status)
+        (x, y, d) = problem.restore_sol(x, y, d)
+
+        return SolverResult(
+            x,
+            y,
+            d,
+            status,
+            iterations=iterations,
+            num_accepted_steps=accepted_steps,
+            total_time=total_time,
+            dist_factor=dist_factor,
+        )

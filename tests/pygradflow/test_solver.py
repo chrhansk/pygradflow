@@ -17,6 +17,7 @@ from pygradflow.params import (
 from pygradflow.solver import Solver
 
 from .hs71 import HS71
+from .hs71_cons import HS71Constrained
 from .rosenbrock import Rosenbrock
 from .tame import Tame
 
@@ -74,7 +75,7 @@ def test_custom_step_solver(rosenbrock_instance):
 
 def test_solve_rosenbrock(rosenbrock_instance):
     problem, x_0, y_0 = rosenbrock_instance
-    params = Params(num_it=100)
+    params = Params(iteration_limit=100)
 
     solver = Solver(problem, params)
 
@@ -113,6 +114,24 @@ def test_solve_hs71(hs71_instance):
     assert result.success
 
 
+def test_solve_hs71_constrained():
+    problem = HS71Constrained()
+    solver = Solver(problem)
+
+    x_0 = np.array([1.0, 5.0, 5.0, 1.0])
+    y_0 = np.array([0.0, 0.0])
+
+    result = solver.solve(x_0, y_0)
+
+    assert result.success
+
+    x_opt = np.array([1.0, 4.74299964, 3.82114998, 1.37940829])
+    y_opt = np.array([-0.55229366, 0.16146857])
+
+    assert np.allclose(result.x, x_opt)
+    assert np.allclose(result.y, y_opt)
+
+
 @pytest.mark.parametrize(
     "penalty_update",
     [PenaltyUpdate.Constant, PenaltyUpdate.DualNorm, PenaltyUpdate.ParetoDecrease],
@@ -138,7 +157,7 @@ def test_solve_hs71_single(
         precision=Precision.Single,
         newton_type=newton_type,
         step_solver_type=step_solver_type,
-        num_it=10,
+        iteration_limit=10,
         report_rcond=True,
         linear_solver_type=linear_solver_type,
     )
@@ -263,4 +282,5 @@ def test_cons_errors():
     invalid_row = jac.row[invalid_index]
     invalid_col = jac.col[invalid_index]
 
-    assert (e.invalid_indices == [[invalid_row, invalid_col]]).all()
+    assert e.invalid_indices == [invalid_row]
+    assert e.col_index == invalid_col

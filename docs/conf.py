@@ -27,11 +27,15 @@ extensions = [
     "sphinx.ext.intersphinx",
 ]
 
+autodoc_default_options = {
+    "special-members": "__init__",
+}
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 intersphinx_mapping = {
-    "python": ("http://docs.python.org/2", None),
+    "python": ("http://docs.python.org/3", None),
     "numpy": ("http://docs.scipy.org/doc/numpy", None),
     "scipy": ("http://docs.scipy.org/doc/scipy/reference", None),
     "matplotlib": ("http://matplotlib.org/stable", None),
