@@ -17,6 +17,7 @@ from pygradflow.params import (
 from pygradflow.solver import Solver
 
 from .hs71 import HS71
+from .hs71_cons import HS71Constrained
 from .rosenbrock import Rosenbrock
 from .tame import Tame
 
@@ -111,6 +112,24 @@ def test_solve_hs71(hs71_instance):
     result = solver.solve(x_0, y_0)
 
     assert result.success
+
+
+def test_solve_hs71_constrained():
+    problem = HS71Constrained()
+    solver = Solver(problem)
+
+    x_0 = np.array([1.0, 5.0, 5.0, 1.0])
+    y_0 = np.array([0.0, 0.0])
+
+    result = solver.solve(x_0, y_0)
+
+    assert result.success
+
+    x_opt = np.array([1.0, 4.74299964, 3.82114998, 1.37940829])
+    y_opt = np.array([-0.55229366, 0.16146857])
+
+    assert np.allclose(result.x, x_opt)
+    assert np.allclose(result.y, y_opt)
 
 
 @pytest.mark.parametrize(

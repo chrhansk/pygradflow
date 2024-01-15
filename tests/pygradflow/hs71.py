@@ -5,10 +5,16 @@ from pygradflow.problem import Problem
 
 
 class HS71(Problem):
+    """
+    HS71 test problem from Hock-Schittkowski test suite.
+    Contains an additional slack variable to make the nonlinear
+    constraints equations.
+    """
+
     def __init__(self):
         lb = np.array([1.0, 1.0, 1.0, 1.0, 0.0])
         ub = np.array([5.0, 5.0, 5.0, 5.0, np.inf])
-        super().__init__(lb, ub, 2)
+        super().__init__(lb, ub, num_cons=2)
 
     def obj(self, x):
         xx = x[:-1]

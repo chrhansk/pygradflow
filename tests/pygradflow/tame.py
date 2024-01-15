@@ -8,7 +8,7 @@ class Tame(Problem):
     def __init__(self):
         lb = np.array([-np.inf, -np.inf])
         ub = np.array([np.inf, np.inf])
-        super().__init__(lb, ub, 1)
+        super().__init__(lb, ub, num_cons=1)
 
     def obj(self, z):
         (x, y) = z

@@ -4,6 +4,7 @@ from typing import Optional
 
 import numpy as np
 
+from pygradflow.cons_problem import ConstrainedProblem
 from pygradflow.display import Format, problem_display
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
@@ -139,15 +140,27 @@ class Solver:
     approximately satisfying the stationarity
      .. math::
         \\begin{align}
-            \\nabla_x f(x) + y^{T} J_c(x) + d = 0
+            \\nabla_x f(x) + y^{T} J_c(x) + d = 0,
+        \\end{align}
+    feasibility
+    .. math::
+        \\begin{align}
+            \\quad & l \\leq c(x) \\leq u \\\\
+            \\quad & l^x \\leq x \\leq u^x \\\\
         \\end{align}
     and complementarity
      .. math::
         \\begin{align}
+            y_i
+            \\begin{cases}
+                \\geq 0 & \\text{ if } c(x)_i = u_i \\\\
+                \\leq 0 & \\text{ if } c(x)_i = l_i \\\\
+                = 0 & \\text{ otherwise }
+            \\end{cases} \\\\
             d_j
             \\begin{cases}
-                \\geq 0 & \\text{ if } x_j = u_j \\\\
-                \\leq 0 & \\text{ if } x_j = l_j \\\\
+                \\geq 0 & \\text{ if } x_j = u^x_j \\\\
+                \\leq 0 & \\text{ if } x_j = l^x_j \\\\
                 = 0 & \\text{ otherwise }
             \\end{cases}
         \\end{align}
@@ -165,19 +178,21 @@ class Solver:
         params: pygradflow.params.Params
             Parameters used by the solver
         """
-        self.problem = problem
+        self.orig_problem = problem
         self.params = params
+
+        self.problem = ConstrainedProblem(problem)
 
         if params.validate_input:
             from .eval import ValidatingEvaluator
 
-            self.evaluator = ValidatingEvaluator(problem, params)
+            self.evaluator = ValidatingEvaluator(self.problem, params)
         else:
             from .eval import SimpleEvaluator
 
-            self.evaluator = SimpleEvaluator(problem, params)
+            self.evaluator = SimpleEvaluator(self.problem, params)
 
-        self.penalty = penalty_strategy(problem, params)
+        self.penalty = penalty_strategy(self.problem, params)
         self.rho = -1.0
 
     def compute_step(
@@ -285,12 +300,18 @@ class Solver:
         n = problem.num_vars
         m = problem.num_cons
 
+        orig_problem = self.orig_problem
+
         if x0 is None:
-            x0 = np.zeros((n,), dtype=dtype)
-            x0 = np.clip(x0, problem.var_lb, problem.var_ub)
+            orig_n = orig_problem.num_vars
+            x0 = np.zeros((orig_n,), dtype=dtype)
+            x0 = np.clip(x0, orig_problem.var_lb, orig_problem.var_ub)
 
         if y0 is None:
+            orig_m = orig_problem.num_cons
             y0 = np.zeros((m,), dtype=dtype)
+
+        (x0, y0) = problem.transform_sol(x0, y0)
 
         x = x0.astype(dtype)
         y = y0.astype(dtype)
@@ -436,6 +457,8 @@ class Solver:
         x = iterate.x
         y = iterate.y
         d = iterate.bound_duals
+
+        (x, y, d) = problem.restore_sol(x, y, d)
 
         return SolverResult(
             x,
