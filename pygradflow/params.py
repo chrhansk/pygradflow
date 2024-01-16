@@ -1,4 +1,7 @@
+import dataclasses
 from dataclasses import dataclass
+
+import enum
 from enum import Enum, Flag, auto
 
 import numpy as np
@@ -175,6 +178,41 @@ class Params:
 
     report_rcond: bool = False
 
+    def __post_init__(self):
+        # Convert enum strings to enum values
+        for key, attr in self.annotations():
+            if isinstance(attr, enum.EnumType):
+                val = getattr(self, key)
+                if isinstance(val, str):
+                    setattr(self, key, attr[val])
+
     @property
     def dtype(self):
         return np.float32 if self.precision == Precision.Single else np.float64
+
+    def write(self, filename):
+        import yaml
+
+        class Dumper(yaml.SafeDumper):
+
+            def __init__(self, stream, **args):
+                super().__init__(stream, **args)
+
+            def represent_data(self, data):
+                if isinstance(data, Enum):
+                    return self.represent_data(data.name)
+                return super().represent_data(data)
+
+        with open(filename, "w") as f:
+            yaml.dump(dataclasses.asdict(self), f, Dumper=Dumper)
+
+    def annotations(self):
+        return type(self).__annotations__.items()
+
+    @staticmethod
+    def read(filename):
+        import yaml
+
+        with open(filename, "r") as f:
+            data = yaml.safe_load(f)
+            return Params(**data)
