@@ -181,7 +181,7 @@ class Params:
     def __post_init__(self):
         # Convert enum strings to enum values
         for key, attr in self.annotations():
-            if isinstance(attr, enum.EnumType):
+            if isinstance(attr, enum.EnumMeta):
                 val = getattr(self, key)
                 if isinstance(val, str):
                     setattr(self, key, attr[val])

@@ -32,7 +32,7 @@ class Runner(ABC):
 
         for key, attr in params.annotations():
             value = getattr(args, key)
-            if isinstance(attr, enum.EnumType):
+            if isinstance(attr, enum.EnumMeta):
                 value = attr[value]
             setattr(params, key, value)
 
@@ -107,7 +107,7 @@ class Runner(ABC):
 
         for key, attr in default_params.annotations():
             name = f'--{key}'
-            if isinstance(attr, enum.EnumType):
+            if isinstance(attr, enum.EnumMeta):
                 default_value = getattr(default_params, key).name
                 group.add_argument(name,
                                    default=default_value,
