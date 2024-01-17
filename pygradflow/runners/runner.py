@@ -55,16 +55,23 @@ class Runner(ABC):
         def log_filename(instance):
             return self.output_filename(args, f"{instance.name}.log")
 
-        if args.parallel:
+        if args.parallel is not None:
             import itertools
-            from multiprocessing import Pool
+            from multiprocessing import Pool, cpu_count
+
+            if args.parallel is True:
+                num_procs = cpu_count()
+            else:
+                num_procs = args.parallel
+
+            run_logger.info("Solving in parallel with up to %d processes", num_procs)
 
             all_params = itertools.repeat(params)
             all_log_filenames = [log_filename(instance) for instance in instances]
 
             solve_args = zip(instances, all_params, all_log_filenames)
 
-            with Pool() as pool:
+            with Pool(num_procs) as pool:
                 results = pool.starmap(try_solve_instance, solve_args)
 
         else:
@@ -100,7 +107,7 @@ class Runner(ABC):
         parser.add_argument("--output", type=str)
         parser.add_argument("--max_size", type=int)
         parser.add_argument("--name", type=str)
-        parser.add_argument("--parallel", action="store_true")
+        parser.add_argument("--parallel", nargs="?", type=int, const=True)
 
         group = parser.add_argument_group(title="parameters")
 
