@@ -11,6 +11,7 @@ scipy = "^1.10.1"
 matplotlib = "^3.7.1"
 termcolor = "^2.3.0"
 numpy = "^1.20"
+pyyaml = "^6.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -20,6 +21,13 @@ pytest-black = "^0.3.12"
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.2.6"
 sphinx-rtd-theme = "^2.0.0"
+
+[tool.poetry.group.bench]
+optional = true
+
+[tool.poetry.group.bench.dependencies]
+pyqplib = "^0.1.0"
+pycutest = "^1.5.1"
 
 [build-system]
 requires = ["poetry-core"]
