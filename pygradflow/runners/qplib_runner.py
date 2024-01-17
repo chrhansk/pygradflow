@@ -53,16 +53,16 @@ class QPLIBInstance(Instance):
     def filename(self):
         return self.description.filename
 
+    def solve(self, params):
+        qproblem = pyqplib.read_problem(self.filename)
+        problem = QPLIBProblem(qproblem)
+        solver = Solver(problem, params)
+        return solver.solve(problem.x0, problem.y0)
+
 
 class QPLIBRunner(Runner):
     def __init__(self):
         super().__init__(name="qplib")
-
-    def solve_instance(self, instance, params):
-        qproblem = pyqplib.read_problem(instance.filename)
-        problem = QPLIBProblem(qproblem)
-        solver = Solver(problem, params)
-        return solver.solve(problem.x0, problem.y0)
 
     def get_instances(self, args):
         instances = []

@@ -102,13 +102,8 @@ class CUTestInstance(Instance):
 
         super().__init__(instance, num_vars, num_cons)
 
-
-class CUTestRunner(Runner):
-    def __init__(self):
-        super().__init__(name="cutest")
-
-    def solve_instance(self, instance, params):
-        problem = pycutest.import_problem(instance.name, drop_fixed_variables=True)
+    def solve(self, params):
+        problem = pycutest.import_problem(self.name, drop_fixed_variables=True)
 
         if problem.m == 0:
             problem = UnconstrainedCUTEstProblem(problem)
@@ -117,6 +112,11 @@ class CUTestRunner(Runner):
 
         solver = Solver(problem, params)
         return solver.solve(problem.x0, problem.y0)
+
+
+class CUTestRunner(Runner):
+    def __init__(self):
+        super().__init__(name="cutest")
 
     def get_instances(self, args):
         instances = pycutest.find_problems()
