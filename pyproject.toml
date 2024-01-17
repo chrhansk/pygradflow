@@ -22,6 +22,13 @@ pytest-black = "^0.3.12"
 sphinx = "^7.2.6"
 sphinx-rtd-theme = "^2.0.0"
 
+[tool.poetry.group.bench]
+optional = true
+
+[tool.poetry.group.bench.dependencies]
+pyqplib = "^0.1.0"
+pycutest = "^1.5.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
