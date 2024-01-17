@@ -12,13 +12,23 @@ run_logger = logging.getLogger(__name__)
 formatter = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
 
 
+def try_solve_instance(instance, params, log_filename):
+    try:
+        handler = logging.FileHandler(log_filename)
+        handler.setFormatter(formatter)
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        return instance.solve(params)
+    except Exception as exc:
+        logger.error("Error solving %s", instance.name)
+        logger.exception(exc, exc_info=(type(exc), exc, exc.__traceback__))
+        return None
+
+
 class Runner(ABC):
     def __init__(self, name):
         self.name = name
-
-    @abstractmethod
-    def solve_instance(self, instance, params):
-        raise NotImplementedError()
 
     @abstractmethod
     def get_instances(self, args):
@@ -42,31 +52,26 @@ class Runner(ABC):
 
         params = self.create_params(args)
 
-        def try_solve_instance(instance):
-            try:
-                filename = self.output_filename(args, f"{instance.name}.log")
-
-                handler = logging.FileHandler(filename)
-                handler.setFormatter(formatter)
-                logger.handlers.clear()
-                logger.addHandler(handler)
-                logger.setLevel(logging.INFO)
-
-                return self.solve_instance(instance, params)
-            except Exception as exc:
-                logger.error("Error solving %s", instance.name)
-                logger.exception(exc, exc_info=(type(exc), exc, exc.__traceback__))
-                return None
+        def log_filename(instance):
+            return self.output_filename(args, f"{instance.name}.log")
 
         if args.parallel:
+            import itertools
             from multiprocessing import Pool
 
+            all_params = itertools.repeat(params)
+            all_log_filenames = [log_filename(instance) for instance in instances]
+
+            solve_args = zip(instances, all_params, all_log_filenames)
+
             with Pool() as pool:
-                results = pool.map(try_solve_instance, instances)
+                results = pool.starmap(try_solve_instance, solve_args)
 
         else:
             for instance in instances:
-                results.append(try_solve_instance(instance))
+                results.append(
+                    try_solve_instance(instance, params, log_filename(instance))
+                )
 
         self.write_results(args, params, instances, results)
 
