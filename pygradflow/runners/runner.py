@@ -122,10 +122,11 @@ class Runner(ABC):
                 )
             else:
                 default_value = getattr(default_params, key)
+
                 group.add_argument(
                     name,
                     default=default_value,
-                    type=type(attr),
+                    type=attr,
                     help="Default: %(default)s",
                 )
 
