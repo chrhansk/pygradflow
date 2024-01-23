@@ -1,4 +1,5 @@
 import scipy as sp
+import numpy as np
 from numpy import ndarray
 
 from pygradflow.params import LinearSolverType
@@ -26,7 +27,7 @@ class MINRESSolver(LinearSolver):
 
         (sol, info) = result
 
-        if info < 0:
+        if info != 0:
             raise LinearSolverError("MINRES failed with error code {}".format(info))
 
         return sol
@@ -42,11 +43,25 @@ class GMRESSolver(LinearSolver):
         if initial_sol is not None:
             initial_sol = initial_sol()
 
-        result = sp.sparse.linalg.gmres(mat, rhs, x0=initial_sol, atol=0.0)
+        (n, _) = mat.shape
+
+        atol = 1e-8
+
+        # Workaround for scipy bug
+        if initial_sol is not None:
+            res = rhs - mat @ initial_sol
+            if np.linalg.norm(res, ord=np.inf) < atol:
+                return initial_sol
+
+        result = sp.sparse.linalg.gmres(mat,
+                                        rhs,
+                                        maxiter=n,
+                                        x0=initial_sol,
+                                        atol=atol)
 
         (sol, info) = result
 
-        if info < 0:
+        if info != 0:
             raise LinearSolverError("GMRES failed with error code {}".format(info))
 
         return sol
