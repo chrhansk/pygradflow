@@ -322,7 +322,7 @@ class Solver:
 
         if y0 is None:
             orig_m = orig_problem.num_cons
-            y0 = np.zeros((m,), dtype=dtype)
+            y0 = np.zeros((orig_m,), dtype=dtype)
 
         (x0, y0) = problem.transform_sol(x0, y0)
 
