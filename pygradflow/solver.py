@@ -265,25 +265,25 @@ class Solver:
     ) -> None:
         rho = self.rho
 
-        desc = "{:>30s}".format(SolverStatus.description(status))
+        desc = "{:>45s}".format(SolverStatus.description(status))
 
         status_desc = Format.redgreen(desc, SolverStatus.success(status), bold=True)
-        status_name = Format.bold("{:>30s}".format("Status"))
+        status_name = Format.bold("{:>20s}".format("Status"))
 
-        logger.info("%30s: %30s", status_name, status_desc)
-        logger.info("%30s: %30s", "Time", f"{total_time:.2f}s")
-        logger.info("%30s: %30d", "Iterations", iterations)
-        logger.info("%30s: %30d", "Accepted steps", accepted_steps)
+        logger.info("%20s: %45s", status_name, status_desc)
+        logger.info("%20s: %45s", "Time", f"{total_time:.2f}s")
+        logger.info("%20s: %45d", "Iterations", iterations)
+        logger.info("%20s: %45d", "Accepted steps", accepted_steps)
 
-        logger.info("%30s: %30e", "Distance factor", dist_factor)
+        logger.info("%20s: %45e", "Distance factor", dist_factor)
 
-        logger.info("%30s: %30e", "Objective", iterate.obj)
-        logger.info("%30s: %30e", "Aug Lag violation", iterate.aug_lag_violation(rho))
-        logger.info("%30s: %30e", "Aug Lag dual", iterate.aug_lag_dual())
+        logger.info("%20s: %45e", "Objective", iterate.obj)
+        logger.info("%20s: %45e", "Aug Lag violation", iterate.aug_lag_violation(rho))
+        logger.info("%20s: %45e", "Aug Lag dual", iterate.aug_lag_dual())
 
-        logger.info("%30s: %30e", "Bound violation", iterate.bound_violation)
-        logger.info("%30s: %30e", "Constraint violation", iterate.cons_violation)
-        logger.info("%30s: %30e", "Dual violation", iterate.stat_res)
+        logger.info("%20s: %45e", "Bound violation", iterate.bound_violation)
+        logger.info("%20s: %45e", "Constraint violation", iterate.cons_violation)
+        logger.info("%20s: %45e", "Dual violation", iterate.stat_res)
 
     def solve(
         self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None
