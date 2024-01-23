@@ -1,24 +1,16 @@
-name: Python deployment
+name: publish
+run-name: Publish to PyPI
 
 on:
-  push:
-    branches: [ "main" ]
-
-  workflow_run:
-    workflows: ["Python tests"]
-    branches: [main]
-    types:
-      - completed
+  workflow_call
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
+    - uses: actions/checkout@v4
+    - name: Set up Python
       uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
     - name: Install poetry
       uses: abatilo/actions-poetry@v2
     - name: Setup a local virtual environment (if no poetry.toml file)
