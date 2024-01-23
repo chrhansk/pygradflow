@@ -9,4 +9,4 @@ jobs:
     uses: ./.github/workflows/test.yml
   deploy:
     uses: ./.github/workflows/publish.yml
-    needs: [tests]
+    needs: [test]
