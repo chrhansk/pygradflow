@@ -16,42 +16,55 @@ from pygradflow.step.step_control import StepController, StepResult, step_contro
 
 
 class SolverStatus(Enum):
-    Converged = (auto(), "optimal", "Convergence achieved")
+    Optimal = auto()
     """
     The algorithm has converged to a solution satisfying
     the optimality conditions according to given tolerances
     """
 
-    IterationLimit = (auto(), "iteration_limit", "Reached iteration limit")
+    IterationLimit = auto()
     """
     Reached the iteration limit precribed by the algorithmic
     parameters
     """
 
-    TimeLimit = (auto(), "time_limit", "Reached time limit")
+    TimeLimit = auto()
     """
     Reached the time limit precribed by the algorithmic
     parameters
     """
 
-    Unbounded = (auto(), "unbouneded", "Unbounded")
+    Unbounded = auto()
     """
     Problem appearst unbounded (found feasible point with extremely
     small objective value)
     """
 
-    LocallyInfeasible = (auto(), "infeas", "Local infeasibility detected")
+    LocallyInfeasible = auto()
     """
     Local infeasibility detected (found infeasible point being
     a local minimum with respect to constraint violation)
     """
 
-    def __new__(cls, value, short_name, description):
-        obj = object.__new__(cls)
-        obj._value_ = value
-        obj.short_name = short_name
-        obj.description = description
-        return obj
+    @staticmethod
+    def short_name(status):
+        return {
+            SolverStatus.Optimal: "optimal",
+            SolverStatus.IterationLimit: "iteration_limit",
+            SolverStatus.TimeLimit: "time_limit",
+            SolverStatus.Unbounded: "unbounded",
+            SolverStatus.LocallyInfeasible: "infeasible",
+        }[status]
+
+    @staticmethod
+    def description(status):
+        return {
+            SolverStatus.Optimal: "Converged to first-order optimal solution",
+            SolverStatus.IterationLimit: "Reached iteration limit",
+            SolverStatus.TimeLimit: "Reached time limit",
+            SolverStatus.Unbounded: "Problem appears unbounded",
+            SolverStatus.LocallyInfeasible: "Local infeasibility detected",
+        }[status]
 
     @staticmethod
     def success(status):
@@ -61,7 +74,7 @@ class SolverStatus(Enum):
         bool
             Whether the status indicates a successful solve
         """
-        return status == SolverStatus.Converged
+        return status == SolverStatus.Optimal
 
 
 class SolverResult:
@@ -252,7 +265,7 @@ class Solver:
     ) -> None:
         rho = self.rho
 
-        desc = "{:>30s}".format(status.description)
+        desc = "{:>30s}".format(SolverStatus.description(status))
 
         status_desc = Format.redgreen(desc, SolverStatus.success(status), bold=True)
         status_name = Format.bold("{:>30s}".format("Status"))
@@ -351,7 +364,7 @@ class Solver:
 
             if iterate.total_res <= params.opt_tol:
                 logger.debug("Convergence achieved")
-                status = SolverStatus.Converged
+                status = SolverStatus.Optimal
                 break
 
             if iterate.locally_infeasible(params.opt_tol, params.local_infeas_tol):
@@ -426,7 +439,7 @@ class Solver:
 
                 if (lamb <= params.lamb_term) and (delta <= params.opt_tol):
                     logger.debug("Convergence achieved")
-                    status = SolverStatus.Converged
+                    status = SolverStatus.Optimal
                     break
 
         else:

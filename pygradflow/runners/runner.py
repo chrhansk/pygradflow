@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 from pygradflow.log import logger
 from pygradflow.params import Params
+from pygradflow.solver import SolverStatus
 
 run_logger = logging.getLogger(__name__)
 
@@ -197,7 +198,7 @@ class Runner(ABC):
                     writer.writerow(
                         {
                             **info,
-                            "status": result.status.short_name,
+                            "status": SolverStatus.short_name(result),
                             "total_time": result.total_time,
                             "iterations": result.iterations,
                             "num_accepted_steps": result.num_accepted_steps,
