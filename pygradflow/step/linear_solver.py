@@ -1,3 +1,4 @@
+import numpy as np
 import scipy as sp
 from numpy import ndarray
 
@@ -5,6 +6,13 @@ from pygradflow.params import LinearSolverType
 
 
 class LinearSolverError(Exception):
+    """
+
+    Error signaling that the linear solver failed, e.g. because the
+    matrix is (near) singular. The solver attempts to recover by
+    reducing the step size
+    """
+
     pass
 
 
@@ -26,7 +34,7 @@ class MINRESSolver(LinearSolver):
 
         (sol, info) = result
 
-        if info < 0:
+        if info != 0:
             raise LinearSolverError("MINRES failed with error code {}".format(info))
 
         return sol
@@ -42,11 +50,21 @@ class GMRESSolver(LinearSolver):
         if initial_sol is not None:
             initial_sol = initial_sol()
 
-        result = sp.sparse.linalg.gmres(mat, rhs, x0=initial_sol, atol="legacy")
+        (n, _) = mat.shape
+
+        atol = 1e-8
+
+        # Workaround for scipy bug
+        if initial_sol is not None:
+            res = rhs - mat @ initial_sol
+            if np.linalg.norm(res, ord=np.inf) < atol:
+                return initial_sol
+
+        result = sp.sparse.linalg.gmres(mat, rhs, maxiter=n, x0=initial_sol, atol=atol)
 
         (sol, info) = result
 
-        if info < 0:
+        if info != 0:
             raise LinearSolverError("GMRES failed with error code {}".format(info))
 
         return sol
