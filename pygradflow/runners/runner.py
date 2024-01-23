@@ -26,6 +26,11 @@ def try_solve_instance(instance, params, log_filename):
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
 
+        logging.captureWarnings(True)
+        warn_logger = logging.getLogger("py.warnings")
+        warn_logger.addHandler(handler)
+        warn_logger.setLevel(logging.WARN)
+
         def solve():
             return instance.solve(params)
 
