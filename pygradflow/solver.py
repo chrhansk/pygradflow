@@ -356,8 +356,9 @@ class Solver:
         path_dist = 0.0
         initial_iterate = iterate
         accepted_steps = 0
+        iteration = 0
 
-        for iteration in range(params.iteration_limit):
+        while True:
             if line_diff == header_interval:
                 line_diff = 0
                 logger.info(display.header)
@@ -442,9 +443,14 @@ class Solver:
                     status = SolverStatus.Optimal
                     break
 
-        else:
-            status = SolverStatus.IterationLimit
-            logger.debug("Iteration limit reached")
+            iteration += 1
+
+            if (params.iteration_limit is not None) and (
+                iteration >= params.iteration_limit
+            ):
+                status = SolverStatus.IterationLimit
+                logger.debug("Iteration limit reached")
+                break
 
         curr_time = time.time()
         total_time = curr_time - start_time

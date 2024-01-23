@@ -2,6 +2,7 @@ import dataclasses
 import enum
 from dataclasses import dataclass
 from enum import Enum, Flag, auto
+from typing import Optional
 
 import numpy as np
 
@@ -167,7 +168,7 @@ class Params:
 
     validate_input: bool = True
 
-    iteration_limit: int = 1000
+    iteration_limit: Optional[int] = None
     time_limit: float = np.inf
     display_interval: float = 0.1
 
