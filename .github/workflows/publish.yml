@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: production
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
@@ -27,6 +29,8 @@ jobs:
     - name: Build
       run: poetry build
     - name: Publish
+      with:
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
       run: |
-        poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+        poetry config pypi-token.pypi ${{ pypi_token }}
         poetry publish
