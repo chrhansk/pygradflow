@@ -1,8 +1,13 @@
 import datetime
 import enum
+import itertools
 import logging
 import os
 from abc import ABC, abstractmethod
+from multiprocessing import Pool, TimeoutError, cpu_count
+from multiprocessing.pool import ThreadPool
+
+import numpy as np
 
 from pygradflow.log import logger
 from pygradflow.params import Params
@@ -20,7 +25,24 @@ def try_solve_instance(instance, params, log_filename):
         logger.handlers.clear()
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
-        return instance.solve(params)
+
+        def solve():
+            return instance.solve(params)
+
+        # No time limit
+        if params.time_limit == np.inf:
+            return solve()
+
+        # Solve in thread pool so we can
+        # await the result
+        thread_pool = ThreadPool(1)
+
+        try:
+            res = thread_pool.apply_async(solve)
+            return res.get(params.time_limit)
+        except TimeoutError:
+            logger.error("Reached timeout, aborting")
+            return "timeout"
     except Exception as exc:
         logger.error("Error solving %s", instance.name)
         logger.exception(exc, exc_info=(type(exc), exc, exc.__traceback__))
@@ -57,9 +79,6 @@ class Runner(ABC):
             return self.output_filename(args, f"{instance.name}.log")
 
         if args.parallel is not None:
-            import itertools
-            from multiprocessing import Pool, cpu_count
-
             if args.parallel is True:
                 num_procs = cpu_count()
             else:
@@ -72,7 +91,7 @@ class Runner(ABC):
 
             solve_args = zip(instances, all_params, all_log_filenames)
 
-            with Pool(num_procs) as pool:
+            with Pool(num_procs, maxtasksperchild=1) as pool:
                 results = pool.starmap(try_solve_instance, solve_args)
 
         else:
