@@ -1,5 +1,5 @@
-import scipy as sp
 import numpy as np
+import scipy as sp
 from numpy import ndarray
 
 from pygradflow.params import LinearSolverType
@@ -53,11 +53,7 @@ class GMRESSolver(LinearSolver):
             if np.linalg.norm(res, ord=np.inf) < atol:
                 return initial_sol
 
-        result = sp.sparse.linalg.gmres(mat,
-                                        rhs,
-                                        maxiter=n,
-                                        x0=initial_sol,
-                                        atol=atol)
+        result = sp.sparse.linalg.gmres(mat, rhs, maxiter=n, x0=initial_sol, atol=atol)
 
         (sol, info) = result
 

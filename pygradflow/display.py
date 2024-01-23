@@ -42,6 +42,14 @@ class StepFormatter:
         return Format.redgreen(accept_str, accepted, bold=True)
 
 
+class RCondFormatter:
+    def __call__(self, state):
+        if state is None:
+            return "-"
+
+        return "{:5.0e}".format(state)
+
+
 class Column:
     def __init__(self, name: str, width: int, format, attr):
         self.name = name
@@ -110,7 +118,7 @@ def problem_display(problem: Problem, params: Params):
     cols.append(Column("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
 
     if params.report_rcond:
-        cols.append(Column("Rcond", 5, "{:5.0e}", StateAttr("rcond")))
+        cols.append(Column("Rcond", 5, RCondFormatter(), StateAttr("rcond")))
 
     cols.append(Column("Type", 8, StepFormatter(), StateAttr("step_accept")))
 

@@ -224,7 +224,7 @@ class Solver:
                 yield next_step
                 curr_iterate = next_step.iterate
 
-        return controller.step(iterate, self.rho, dt, next_steps())
+        return controller.compute_step(iterate, self.rho, dt, next_steps())
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
