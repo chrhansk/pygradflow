@@ -42,7 +42,7 @@ class GMRESSolver(LinearSolver):
         if initial_sol is not None:
             initial_sol = initial_sol()
 
-        result = sp.sparse.linalg.gmres(mat, rhs, x0=initial_sol, atol="legacy")
+        result = sp.sparse.linalg.gmres(mat, rhs, x0=initial_sol, atol=0.0)
 
         (sol, info) = result
 
