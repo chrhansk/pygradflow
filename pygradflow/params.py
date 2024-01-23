@@ -116,7 +116,7 @@ class DerivCheck(Flag):
     """
     CheckSecond = 1 << 1
     """
-    Check Hessian of Lagrangian (:math:`\\nabla_{xx} \mathcal{L}(x, y)`)
+    Check Hessian of Lagrangian (:math:`\\nabla_{xx} \\mathcal{L}(x, y)`)
     """
     CheckAll = CheckFirst | CheckSecond
 
