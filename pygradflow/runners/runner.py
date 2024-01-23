@@ -24,7 +24,7 @@ def try_solve_instance(instance, params, log_filename):
     except Exception as exc:
         logger.error("Error solving %s", instance.name)
         logger.exception(exc, exc_info=(type(exc), exc, exc.__traceback__))
-        return None
+        return "error"
 
 
 class Runner(ABC):
@@ -138,7 +138,9 @@ class Runner(ABC):
 
     def main(self):
         run_logger.setLevel(logging.INFO)
-        run_logger.addHandler(logging.StreamHandler())
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        run_logger.addHandler(handler)
 
         args = self.parser().parse_args()
 
@@ -184,7 +186,18 @@ class Runner(ABC):
                     "size": instance.size,
                 }
 
-                if result is None:
+                if result == "timeout":
+                    writer.writerow(
+                        {
+                            **info,
+                            "status": "timeout",
+                            "total_time": args.time_limit,
+                            "iterations": 0,
+                            "num_accepted_steps": 0,
+                        }
+                    )
+
+                elif result == "error":
                     writer.writerow(
                         {
                             **info,
@@ -198,7 +211,7 @@ class Runner(ABC):
                     writer.writerow(
                         {
                             **info,
-                            "status": SolverStatus.short_name(result),
+                            "status": SolverStatus.short_name(result.status),
                             "total_time": result.total_time,
                             "iterations": result.iterations,
                             "num_accepted_steps": result.num_accepted_steps,
