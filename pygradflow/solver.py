@@ -254,6 +254,8 @@ class Solver:
                 params,
             )
 
+        logger.info("Finished derivative check")
+
     def print_result(
         self,
         total_time: float,
