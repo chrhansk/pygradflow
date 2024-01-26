@@ -23,9 +23,7 @@ class Rosenbrock(Problem):
         [x, y] = v
         a = self.a
         b = self.b
-        return np.array(
-            [4 * (x**2 - y) * b * x - 2 * a + 2 * x, -2 * (x**2 - y) * b]
-        )
+        return np.array([4 * (x**2 - y) * b * x - 2 * a + 2 * x, -2 * (x**2 - y) * b])
 
     def cons(self, v):
         return np.array([])
