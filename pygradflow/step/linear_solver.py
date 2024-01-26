@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 from numpy import ndarray
 
+from pygradflow.log import logger
 from pygradflow.params import LinearSolverType
 
 
@@ -73,7 +74,11 @@ class GMRESSolver(LinearSolver):
 class LUSolver(LinearSolver):
     def __init__(self, mat: sp.sparse.spmatrix) -> None:
         self.mat = mat
-        self.solver = sp.sparse.linalg.splu(mat)
+        try:
+            self.solver = sp.sparse.linalg.splu(mat)
+        except RuntimeError as err:
+            logger.warn("LU decomposition failed: %s", err)
+            raise LinearSolverError("LU decomposition failed")
 
     def solve(self, rhs: ndarray, trans=False, initial_sol=None) -> ndarray:
         trans_str = "T" if trans else "N"
