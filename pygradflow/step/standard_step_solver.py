@@ -78,4 +78,4 @@ class StandardStepSolver(StepSolver):
         if params.report_rcond:
             rcond = self.estimate_rcond(self.deriv, self.solver)
 
-        return StepResult(iterate, dx, dy, rcond)
+        return StepResult(iterate, dx, dy, self.active_set, rcond)

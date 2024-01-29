@@ -100,6 +100,39 @@ class IterateAttr:
         return getattr(iterate, self.name)
 
 
+class ActiveSetColumn:
+    def __init__(self):
+        self.width = 10
+        self.name = "Active set"
+
+    @property
+    def header(self):
+        return "{:^{}s}".format(self.name, self.width)
+
+    def empty(self):
+        return "{:^{}s}".format("--", self.width)
+
+    def content(self, state):
+        curr_active_set = state["curr_active_set"]()
+        last_active_set = state["last_active_set"]()
+
+        if curr_active_set is None:
+            return self.empty()
+
+        display_curr = False
+
+        if last_active_set is None:
+            display_curr = True
+        elif curr_active_set != last_active_set:
+            display_curr = True
+
+        if display_curr:
+            num_active = curr_active_set.sum()
+            return "{:^{}d}".format(num_active, self.width)
+        else:
+            return "{:^{}s}".format("--", self.width)
+
+
 def problem_display(problem: Problem, params: Params):
     is_bounded = problem.var_bounded
 
@@ -116,6 +149,9 @@ def problem_display(problem: Problem, params: Params):
     cols.append(Column("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm")))
     cols.append(Column("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm")))
     cols.append(Column("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
+
+    if problem.var_bounded:
+        cols.append(ActiveSetColumn())
 
     if params.report_rcond:
         cols.append(Column("Rcond", 5, RCondFormatter(), StateAttr("rcond")))

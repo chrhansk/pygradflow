@@ -360,6 +360,9 @@ class Solver:
         accepted_steps = 0
         iteration = 0
 
+        last_active_set = None
+        last_display_iteration = -1
+
         while True:
             if line_diff == header_interval:
                 line_diff = 0
@@ -413,6 +416,14 @@ class Solver:
                 state = dict()
                 state["iterate"] = iterate
 
+                def compute_last_active_set():
+                    if last_display_iteration + 1 == iteration:
+                        return last_active_set
+                    return None
+
+                state["last_active_set"] = compute_last_active_set
+                state["curr_active_set"] = lambda: step_result.active_set
+
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["iter"] = lambda: iteration + 1
                 state["primal_step_norm"] = lambda: primal_step_norm
@@ -422,6 +433,7 @@ class Solver:
                 state["rcond"] = lambda: step_result.rcond
 
                 logger.info(display.row(state))
+                last_display_iteration = iteration
 
             if accept:
                 # Accept
@@ -446,6 +458,8 @@ class Solver:
                     break
 
             iteration += 1
+            last_active_set = step_result.active_set
+            # last_active_set = iterate.active_set
 
             if (params.iteration_limit is not None) and (
                 iteration >= params.iteration_limit

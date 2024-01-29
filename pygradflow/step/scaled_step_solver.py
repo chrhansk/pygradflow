@@ -92,4 +92,4 @@ class ScaledStepSolver(StepSolver):
         dx = sx
         dy = fact * (sy - rho * b2)
 
-        return StepResult(iterate, dx, dy, rcond)
+        return StepResult(iterate, dx, dy, self.active_set, rcond)

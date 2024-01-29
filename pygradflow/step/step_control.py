@@ -1,4 +1,5 @@
 import abc
+import math
 from typing import Iterator, Optional
 
 import numpy as np
@@ -15,12 +16,19 @@ from pygradflow.step.step_solver import StepResult
 
 class StepControlResult:
     def __init__(
-        self, iterate: Iterate, lamb: float, rcond: Optional[float], accepted: bool
+                    self, iterate: Iterate, lamb: float, active_set, rcond: Optional[float], accepted: bool
     ) -> None:
         self.iterate = iterate
         self.lamb = lamb
+        self.active_set = active_set
         self.rcond = rcond
         self.accepted = accepted
+
+    @staticmethod
+    def from_step_result(step_result: StepResult, lamb: float, accepted: bool) -> "StepControlResult":
+        return StepControlResult(
+            step_result.iterate, lamb, step_result.active_set, step_result.rcond, accepted
+        )
 
 
 class StepController(abc.ABC):
@@ -47,12 +55,14 @@ class StepController(abc.ABC):
             logger.debug("Linear solver error during step computation: %s", e)
             lamb = 1.0 / dt
             lamb = self.update_stepsize_after_fail(lamb)
-            return StepControlResult(iterate, lamb, None, False)
+            return StepControlResult(iterate, lamb, None, None, False)
 
 
 class ExactController(StepController):
-    def __init__(self, problem, params):
+    def __init__(self, problem, params, max_num_it=10, rate_bound=0.5):
         super().__init__(problem, params)
+        self.max_num_it = max_num_it
+        self.rate_bound = rate_bound
 
     def step(self, iterate, rho, dt, next_steps):
         assert dt > 0.0
@@ -63,13 +73,15 @@ class ExactController(StepController):
         def func_val(iterate):
             return np.linalg.norm(func.value_at(iterate, rho))
 
-        cur_func_val = func_val(iterate)
+        curr_func_val = func_val(iterate)
 
         rcond = None
+        active_set = None
 
-        for i in range(10):
+        for i in range(self.max_num_it):
             next_step = next(next_steps)
             next_iterate = next_step.iterate
+            active_set = next_step.active_set
             rcond = next_step.rcond
 
             next_func_val = func_val(next_iterate)
@@ -77,13 +89,23 @@ class ExactController(StepController):
 
             if next_func_val <= self.params.newton_tol:
                 logger.debug("Newton method converged in %d iterations", i + 1)
-                return StepControlResult(next_iterate, 0.5 * lamb, rcond, True)
-            elif next_func_val > cur_func_val:
+                return StepControlResult(next_iterate, 0.5 * lamb, active_set, rcond, True)
+
+            rate_est = next_func_val / curr_func_val
+
+            if rate_est > self.rate_bound:
+                logger.debug(
+                    "Newton convergence rate (%f) exceeds allorw (%f)",
+                    rate_est,
+                    self.rate_bound,
+                )
                 break
 
-        logger.debug("Newton method did not converge")
+            curr_func_val = next_func_val
 
-        return StepControlResult(next_iterate, 2.0 * lamb, rcond, False)
+        logger.debug("Newton method did not convergein %d iterations", self.max_num_it)
+
+        return StepControlResult(next_iterate, 2.0 * lamb, active_set, rcond, False)
 
 
 class ResiduumRatioController(StepController):
@@ -109,7 +131,7 @@ class ResiduumRatioController(StepController):
         if mid_norm <= params.newton_tol:
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
             logger.debug("Newton converged during first iteration, lamb_n = %f", lamb_n)
-            return StepControlResult(mid_iterate, lamb_n, mid_step.rcond, True)
+            return StepControlResult.from_step_result(mid_step, lamb, True)
 
         orig_norm = np.linalg.norm(func.value_at(iterate, rho))
 
@@ -133,7 +155,7 @@ class ResiduumRatioController(StepController):
         )
 
         self.lamb = lamb_n
-        return StepControlResult(mid_iterate, lamb_n, mid_step.rcond, accepted)
+        return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
 
 
 class DistanceRatioController(StepController):
@@ -159,20 +181,19 @@ class DistanceRatioController(StepController):
         if mid_func_norm <= params.newton_tol:
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
             logger.debug("Newton converged during first iteration, lamb_n = %f", lamb_n)
-            return StepControlResult(mid_iterate, lamb_n, mid_step.rcond, True)
+            return StepControlResult.from_step_result(mid_step, lamb_n, True)
 
         first_diff = mid_step.diff
 
         if first_diff == 0.0:
-            return StepControlResult(mid_iterate, lamb, mid_step.rcond, True)
+            return StepControlResult.from_step_result(mid_step, lamb, True)
 
         final_step = next(next_steps)
-        final_iterate = final_step.iterate
 
         second_diff = final_step.diff
 
         if second_diff == 0.0:
-            return StepControlResult(final_iterate, lamb, final_step.rcond, True)
+            return StepControlResult.from_step_result(final_step, lamb, True)
 
         logger.debug("First distance: %e, second distance: %e", first_diff, second_diff)
 
@@ -197,8 +218,7 @@ class DistanceRatioController(StepController):
         )
 
         self.lamb = lamb_n
-
-        return StepControlResult(final_iterate, lamb_n, final_step.rcond, accepted)
+        return StepControlResult.from_step_result(final_step, lamb_n, accepted)
 
 
 def step_controller(problem: Problem, params: Params) -> StepController:
