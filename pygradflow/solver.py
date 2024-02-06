@@ -209,7 +209,7 @@ class Solver:
         self.rho = -1.0
 
     def compute_step(
-        self, controller: StepController, iterate: Iterate, dt: float
+        self, controller: StepController, iterate: Iterate, dt: float, display: bool
     ) -> StepResult:
         problem = self.problem
         params = self.params
@@ -224,7 +224,7 @@ class Solver:
                 yield next_step
                 curr_iterate = next_step.iterate
 
-        return controller.compute_step(iterate, self.rho, dt, next_steps())
+        return controller.compute_step(iterate, self.rho, dt, next_steps(), display)
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
@@ -360,6 +360,9 @@ class Solver:
         accepted_steps = 0
         iteration = 0
 
+        last_active_set = None
+        last_display_iteration = -1
+
         while True:
             if line_diff == header_interval:
                 line_diff = 0
@@ -382,7 +385,12 @@ class Solver:
                 status = SolverStatus.Unbounded
                 break
 
-            step_result = self.compute_step(controller, iterate, 1.0 / lamb)
+            curr_time = time.time()
+            display_iterate = curr_time - last_time >= params.display_interval
+
+            step_result = self.compute_step(
+                controller, iterate, 1.0 / lamb, display_iterate
+            )
 
             x = iterate.x
             y = iterate.y
@@ -399,19 +407,25 @@ class Solver:
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
 
-            curr_time = time.time()
-
             if curr_time - start_time >= params.time_limit:
                 logger.debug("Reached time limit")
                 status = SolverStatus.TimeLimit
                 break
 
-            if curr_time - last_time >= params.display_interval:
+            if display_iterate:
                 last_time = curr_time
                 line_diff += 1
 
                 state = dict()
                 state["iterate"] = iterate
+
+                def compute_last_active_set():
+                    if last_display_iteration + 1 == iteration:
+                        return last_active_set
+                    return None
+
+                state["last_active_set"] = compute_last_active_set
+                state["curr_active_set"] = lambda: step_result.active_set
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["iter"] = lambda: iteration + 1
@@ -422,6 +436,7 @@ class Solver:
                 state["rcond"] = lambda: step_result.rcond
 
                 logger.info(display.row(state))
+                last_display_iteration = iteration
 
             if accept:
                 # Accept
@@ -446,6 +461,8 @@ class Solver:
                     break
 
             iteration += 1
+            last_active_set = step_result.active_set
+            # last_active_set = iterate.active_set
 
             if (params.iteration_limit is not None) and (
                 iteration >= params.iteration_limit

@@ -12,10 +12,11 @@ from pygradflow.util import norm_mult
 
 
 class StepResult:
-    def __init__(self, orig_iterate, dx, dy, rcond=None):
+    def __init__(self, orig_iterate, dx, dy, active_set, rcond=None):
         self.orig_iterate = orig_iterate
         self.dx = dx
         self.dy = dy
+        self.active_set = active_set
         self.rcond = rcond
 
     @functools.cached_property
