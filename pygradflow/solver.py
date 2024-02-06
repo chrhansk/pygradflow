@@ -209,7 +209,7 @@ class Solver:
         self.rho = -1.0
 
     def compute_step(
-        self, controller: StepController, iterate: Iterate, dt: float
+        self, controller: StepController, iterate: Iterate, dt: float, display: bool
     ) -> StepResult:
         problem = self.problem
         params = self.params
@@ -224,7 +224,7 @@ class Solver:
                 yield next_step
                 curr_iterate = next_step.iterate
 
-        return controller.compute_step(iterate, self.rho, dt, next_steps())
+        return controller.compute_step(iterate, self.rho, dt, next_steps(), display)
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
@@ -385,7 +385,12 @@ class Solver:
                 status = SolverStatus.Unbounded
                 break
 
-            step_result = self.compute_step(controller, iterate, 1.0 / lamb)
+            curr_time = time.time()
+            display_iterate = curr_time - last_time >= params.display_interval
+
+            step_result = self.compute_step(
+                controller, iterate, 1.0 / lamb, display_iterate
+            )
 
             x = iterate.x
             y = iterate.y
@@ -402,14 +407,12 @@ class Solver:
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
 
-            curr_time = time.time()
-
             if curr_time - start_time >= params.time_limit:
                 logger.debug("Reached time limit")
                 status = SolverStatus.TimeLimit
                 break
 
-            if curr_time - last_time >= params.display_interval:
+            if display_iterate:
                 last_time = curr_time
                 line_diff += 1
 

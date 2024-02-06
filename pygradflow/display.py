@@ -123,7 +123,7 @@ class ActiveSetColumn:
 
         if last_active_set is None:
             display_curr = True
-        elif curr_active_set != last_active_set:
+        elif (curr_active_set != last_active_set).any():
             display_curr = True
 
         if display_curr:
@@ -157,5 +157,16 @@ def problem_display(problem: Problem, params: Params):
         cols.append(Column("Rcond", 5, RCondFormatter(), StateAttr("rcond")))
 
     cols.append(Column("Type", 8, StepFormatter(), StateAttr("step_accept")))
+
+    return Display(cols)
+
+
+def inner_display(problem: Problem, params: Params):
+    cols = []
+
+    cols.append(Column("Iter", 6, BoldFormatter("{:5d}"), StateAttr("iter")))
+    cols.append(Column("Residuum", 16, "{:16.8e}", StateAttr("residuum")))
+    cols.append(Column("Dist", 16, "{:16.8e}", StateAttr("dist")))
+    cols.append(Column("Active set", 10, "{:10d}", StateAttr("active_set_size")))
 
     return Display(cols)
