@@ -16,9 +16,15 @@ from pygradflow.params import (
 )
 from pygradflow.solver import Solver
 
-from .hs71 import HS71
 from .hs71_cons import HS71Constrained
-from .rosenbrock import Rosenbrock
+
+from .instances import (
+    hs71_constrained_instance,
+    hs71_instance,
+    rosenbrock_instance,
+    tame_instance,
+)
+
 from .tame import Tame
 
 rho = 1.0
@@ -29,20 +35,12 @@ step_solver_types = list(StepSolverType)
 step_control_types = list(StepControlType)
 
 
-@pytest.fixture
-def rosenbrock_instance():
-    problem = Rosenbrock()
-
-    x_0 = np.array([0.0, 0.0])
-    y_0 = np.array([])
-
-    return (problem, x_0, y_0)
-
-
 def test_custom_step_solver(rosenbrock_instance):
     from pygradflow.step.symmetric_step_solver import SymmetricStepSolver
 
-    problem, x_0, y_0 = rosenbrock_instance
+    problem = rosenbrock_instance.problem
+    x_0 = rosenbrock_instance.x_0
+    y_0 = rosenbrock_instance.y_0
 
     params = Params(newton_type=NewtonType.Full, step_solver=SymmetricStepSolver)
 
@@ -73,45 +71,41 @@ def test_custom_step_solver(rosenbrock_instance):
     assert np.allclose(next_iterate.y, iterate.y)
 
 
-def test_solve_rosenbrock(rosenbrock_instance):
-    problem, x_0, y_0 = rosenbrock_instance
-    params = Params(iteration_limit=100)
-
-    solver = Solver(problem, params)
-
-    result = solver.solve(x_0, y_0)
+def solve_and_test_instance(instance, solver):
+    result = solver.solve(instance.x_0, instance.y_0)
 
     assert result.success
 
+    x_opt = instance.x_opt
+    y_opt = instance.y_opt
 
-@pytest.fixture
-def hs71_instance():
-    problem = HS71()
+    assert np.allclose(result.x, x_opt, atol=1e-6)
+    assert np.allclose(result.y, y_opt, atol=1e-6)
 
-    x_0 = np.array([1.0, 5.0, 5.0, 1.0, 0.0])
-    y_0 = np.array([0.0, 0.0])
 
-    return (problem, x_0, y_0)
+def test_solve_rosenbrock(rosenbrock_instance):
+    problem = rosenbrock_instance.problem
+
+    params = Params(iteration_limit=100)
+    solver = Solver(problem, params)
+
+    solve_and_test_instance(rosenbrock_instance, solver)
 
 
 @pytest.mark.parametrize("step_control_type", step_control_types)
 def test_step_control(hs71_instance, step_control_type):
-    problem, x_0, y_0 = hs71_instance
+    problem = hs71_instance.problem
     params = Params(step_control_type=step_control_type)
     solver = Solver(problem, params)
 
-    result = solver.solve(x_0, y_0)
-
-    assert result.success
+    solve_and_test_instance(hs71_instance, solver)
 
 
 def test_solve_hs71(hs71_instance):
-    problem, x_0, y_0 = hs71_instance
+    problem = hs71_instance.problem
     solver = Solver(problem)
 
-    result = solver.solve(x_0, y_0)
-
-    assert result.success
+    solve_and_test_instance(hs71_instance, solver)
 
 
 def test_solve_hs71_constrained():
@@ -137,13 +131,11 @@ def test_solve_hs71_constrained():
     [PenaltyUpdate.Constant, PenaltyUpdate.DualNorm, PenaltyUpdate.ParetoDecrease],
 )
 def test_penalty_update(hs71_instance, penalty_update):
-    problem, x_0, y_0 = hs71_instance
+    problem = hs71_instance.problem
     params = Params(penalty_update=penalty_update)
     solver = Solver(problem, params)
 
-    result = solver.solve(x_0, y_0)
-
-    assert result.success
+    solve_and_test_instance(hs71_instance, solver)
 
 
 @pytest.mark.parametrize("newton_type", newton_types)
@@ -152,7 +144,10 @@ def test_penalty_update(hs71_instance, penalty_update):
 def test_solve_hs71_single(
     hs71_instance, newton_type, step_solver_type, linear_solver_type
 ):
-    problem, x_0, y_0 = hs71_instance
+    problem = hs71_instance.problem
+    x_0 = hs71_instance.x_0
+    y_0 = hs71_instance.y_0
+
     params = Params(
         precision=Precision.Single,
         newton_type=newton_type,
@@ -179,8 +174,12 @@ def test_solve_hs71_single(
 @pytest.mark.parametrize("newton_type", newton_types)
 @pytest.mark.parametrize("step_solver_type", step_solver_types)
 @pytest.mark.parametrize("linear_solver_type", linear_solver_types)
-def test_one_step_convergence(newton_type, step_solver_type, linear_solver_type):
-    problem = Tame()
+def test_one_step_convergence(
+    tame_instance, newton_type, step_solver_type, linear_solver_type
+):
+    problem = tame_instance.problem
+    x_0 = tame_instance.x_0
+    y_0 = tame_instance.y_0
 
     params = Params(
         newton_type=newton_type,
@@ -188,8 +187,6 @@ def test_one_step_convergence(newton_type, step_solver_type, linear_solver_type)
         linear_solver_type=linear_solver_type,
     )
 
-    x_0 = np.array([0.0, 0.0])
-    y_0 = np.array([0.0])
     dt = 10.0
 
     iterate = Iterate(problem, params, x_0, y_0)
@@ -201,17 +198,13 @@ def test_one_step_convergence(newton_type, step_solver_type, linear_solver_type)
     assert np.allclose(func.value_at(next_iterate, rho=rho), 0.0)
 
 
-def test_solve_tame():
-    problem = Tame()
-    x_0 = np.array([0.0, 0.0])
-    y_0 = np.array([0.0])
+def test_solve_tame(tame_instance):
+    problem = tame_instance.problem
     params = Params(newton_type=NewtonType.Full, deriv_check=DerivCheck.CheckAll)
 
     solver = Solver(problem, params)
 
-    result = solver.solve(x_0, y_0)
-
-    assert result.success
+    solve_and_test_instance(tame_instance, solver)
 
 
 # TODO: Find out why full Newton does not converge
@@ -219,7 +212,7 @@ def test_solve_tame():
     "newton_type", [NewtonType.ActiveSet, NewtonType.Simplified, NewtonType.Full]
 )
 def test_solve_with_newton_types(hs71_instance, newton_type):
-    problem, x_0, y_0 = hs71_instance
+    problem = hs71_instance.problem
 
     params = Params(
         newton_type=newton_type, rho=1.0, penalty_update=PenaltyUpdate.Constant
@@ -227,23 +220,24 @@ def test_solve_with_newton_types(hs71_instance, newton_type):
 
     solver = Solver(problem, params)
 
-    result = solver.solve(x_0, y_0)
-
-    assert result.success
+    solve_and_test_instance(hs71_instance, solver)
 
 
-def test_grad_errors():
-    problem = Tame()
+def test_grad_errors(tame_instance):
+    problem = tame_instance.problem
+
+    orig_obj_grad = problem.obj_grad
 
     def obj_grad(x):
-        g = Tame().obj_grad(x)
+        g = orig_obj_grad(x)
         g[0] += 1.0
         return g
 
     problem.obj_grad = obj_grad
 
-    x_0 = np.array([0.0, 0.0])
-    y_0 = np.array([0.0])
+    x_0 = tame_instance.x_0
+    y_0 = tame_instance.y_0
+
     params = Params(deriv_check=DerivCheck.CheckAll)
 
     solver = Solver(problem, params)
@@ -255,20 +249,23 @@ def test_grad_errors():
     assert (e.invalid_indices == [[0, 0]]).all()
 
 
-def test_cons_errors():
-    problem = Tame()
+def test_cons_errors(tame_instance):
+    problem = tame_instance.problem
 
     invalid_index = 1
 
+    orig_cons_jac = problem.cons_jac
+
     def cons_jac(x):
-        g = Tame().cons_jac(x)
+        g = orig_cons_jac(x)
         g.data[invalid_index] += 1.0
         return g
 
     problem.cons_jac = cons_jac
 
-    x_0 = np.array([0.0, 0.0])
-    y_0 = np.array([0.0])
+    x_0 = tame_instance.x_0
+    y_0 = tame_instance.y_0
+
     params = Params(deriv_check=DerivCheck.CheckAll)
 
     solver = Solver(problem, params)
