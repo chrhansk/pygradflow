@@ -10,7 +10,7 @@ jobs:
   tag:
     permissions:
       contents: write
-    uses: ./.github/workflows/tag.yml
+    uses: ./.github/workflows/tag_release.yml
     secrets: inherit
     needs: [test]
   deploy:

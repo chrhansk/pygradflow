@@ -23,3 +23,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ env.project_version }}
+      - name: Create GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ format('v{0}', ${{ env.project_version }} ) }}
+          name: Release ${{ env.project_version }}
