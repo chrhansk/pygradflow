@@ -7,6 +7,10 @@ on:
 jobs:
   test:
     uses: ./.github/workflows/test.yml
+  # tag:
+  #   uses: ./.github/workflows/tag.yml
+  #   secrets: inherit
+  #   needs: [test, tag]
   deploy:
     uses: ./.github/workflows/publish.yml
     secrets: inherit
