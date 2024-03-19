@@ -3,8 +3,9 @@ import pytest
 
 from pygradflow.deriv_check import deriv_check
 from pygradflow.iterate import Iterate
-from pygradflow.params import Params
+from pygradflow.params import DerivCheck, Params
 from pygradflow.scale import ScaledProblem, Scaling
+from pygradflow.solver import Solver
 
 from .instances import hs71_constrained_instance, hs71_instance
 
@@ -136,21 +137,20 @@ def test_scale_inverse(hs71_instance, hs71_scaling):
 
 
 def test_nominal():
-    values = [1e-4, .1, 1., 100., 90., -100., 1024., 1e5]
+    values = [1e-4, 0.1, 1.0, 100.0, 90.0, -100.0, 1024.0, 1e5]
     weights = Scaling.weights_from_nominal_values(values)
 
-    scaled_values = values * (2.0 ** weights)
+    scaled_values = values * (2.0**weights)
     scaled_values = np.absolute(scaled_values)
 
-    assert (scaled_values >= 1.).all()
-    assert (scaled_values < 2.).all()
+    assert (scaled_values >= 1.0).all()
+    assert (scaled_values < 2.0).all()
 
 
 def test_residuals(hs71_instance, hs71_scaling):
     instance = hs71_instance
 
     problem = instance.problem
-
     scaling = hs71_scaling
 
     x_opt = instance.x_opt
@@ -170,5 +170,36 @@ def test_residuals(hs71_instance, hs71_scaling):
 
     scaled_opt_iterate = Iterate(scaled_problem, params, scaled_x_opt, scaled_y_opt)
 
+    bounds_dual = opt_iterate.bounds_dual
+    scaled_bounds_dual = scaled_opt_iterate.bounds_dual
+
+    assert np.allclose(bounds_dual, scaling.unscale_bounds_dual(scaled_bounds_dual))
+    assert np.allclose(scaled_bounds_dual, scaling.scale_bounds_dual(bounds_dual))
+
     assert np.allclose(scaled_opt_iterate.stat_res, 0.0, atol=1e-5)
     assert np.allclose(scaled_opt_iterate.cons_violation, 0.0, atol=1e-5)
+
+
+def test_solve_hs71_scaled(hs71_instance):
+    instance = hs71_instance
+
+    problem = instance.problem
+    x_0 = instance.x_0
+    y_0 = instance.y_0
+
+    scaling = Scaling(
+        np.array([1, 2, 3, 2, 1], dtype=int), np.array([2, 3], dtype=int), 0
+    )
+
+    params = Params(iteration_limit=5000, deriv_check=DerivCheck.CheckAll)
+    solver = Solver(problem, params=params, scaling=scaling)
+
+    result = solver.solve(x_0, y_0)
+
+    assert result.success
+
+    x_opt = instance.x_opt
+    y_opt = instance.y_opt
+
+    assert np.allclose(result.x, x_opt, atol=1e-6)
+    assert np.allclose(result.y, y_opt, atol=1e-6)

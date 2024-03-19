@@ -17,14 +17,12 @@ from pygradflow.params import (
 from pygradflow.solver import Solver
 
 from .hs71_cons import HS71Constrained
-
 from .instances import (
     hs71_constrained_instance,
     hs71_instance,
     rosenbrock_instance,
     tame_instance,
 )
-
 from .tame import Tame
 
 rho = 1.0

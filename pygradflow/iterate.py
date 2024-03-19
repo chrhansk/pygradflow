@@ -117,7 +117,7 @@ class Iterate:
         return ActiveSet(self)
 
     @functools.cached_property
-    def bound_duals(self) -> np.ndarray:
+    def bounds_dual(self) -> np.ndarray:
         r = -(self.obj_grad + self.cons_jac.T.dot(self.y))
         d = np.zeros_like(self.x)
 
@@ -149,7 +149,7 @@ class Iterate:
 
     @functools.cached_property
     def stat_res(self) -> float:
-        r = self.obj_grad + self.cons_jac.T.dot(self.y) + self.bound_duals
+        r = self.obj_grad + self.cons_jac.T.dot(self.y) + self.bounds_dual
         return np.linalg.norm(r, np.inf)
 
     def is_feasible(self, tol):

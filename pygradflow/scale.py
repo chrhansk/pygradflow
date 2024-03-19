@@ -17,6 +17,14 @@ class Scaling:
         self.obj_weight = obj_weight
 
     @staticmethod
+    def from_nominal_values(var_values, cons_values, obj_value):
+        var_weights = Scaling.weights_from_nominal_values(var_values)
+        cons_weights = Scaling.weights_from_nominal_values(cons_values)
+        obj_weight = Scaling.weights_from_nominal_values(obj_value)
+
+        return Scaling(var_weights, cons_weights, obj_weight)
+
+    @staticmethod
     def weights_from_nominal_values(values):
         return 1 - np.frexp(values)[1]
 
@@ -35,13 +43,22 @@ class Scaling:
         return np.ldexp(x, -self.var_weights)
 
     def _dual_weights(self):
-        return (self.cons_weights - self.obj_weight)
+        return self.cons_weights - self.obj_weight
+
+    def _bound_weights(self):
+        return self.var_weights - self.obj_weight
 
     def scale_dual(self, y):
         return np.ldexp(y, -self._dual_weights())
 
     def unscale_dual(self, y):
         return np.ldexp(y, self._dual_weights())
+
+    def scale_bounds_dual(self, y):
+        return np.ldexp(y, -self._bound_weights())
+
+    def unscale_bounds_dual(self, y):
+        return np.ldexp(y, self._bound_weights())
 
 
 class ScaledProblem(Problem):
