@@ -1,0 +1,24 @@
+name: release
+run-name: Create GitHub release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get version from poetry
+        run: |
+          echo "VERSION=$(poetry version --short)" >> "$GITHUB_ENV"
+        id: version
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ format('v{0}', ${{ env.VERSION }} ) }}
+          name: Release ${{ env.VERSION }}
