@@ -59,8 +59,10 @@ class StepSolver(abc.ABC):
     def update_active_set(self, active_set: np.ndarray):
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def update_derivs(self, iterate: Iterate):
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def solve(self, iterate: Iterate) -> StepResult:
         raise NotImplementedError()

@@ -4,7 +4,6 @@ from typing import Optional
 
 import numpy as np
 
-from pygradflow.cons_problem import ConstrainedProblem
 from pygradflow.display import Format, problem_display
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
@@ -12,7 +11,9 @@ from pygradflow.newton import newton_method
 from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
+from pygradflow.scale import Scaling
 from pygradflow.step.step_control import StepController, StepResult, step_controller
+from pygradflow.transform import Transformation
 
 
 class SolverStatus(Enum):
@@ -180,7 +181,9 @@ class Solver:
     conditions.
     """
 
-    def __init__(self, problem: Problem, params: Params = Params()) -> None:
+    def __init__(
+        self, problem: Problem, params: Params = Params(), scaling: Scaling = None
+    ) -> None:
         """
         Creates a new solver
 
@@ -193,8 +196,11 @@ class Solver:
         """
         self.orig_problem = problem
         self.params = params
+        self.scaling = scaling
 
-        self.problem = ConstrainedProblem(problem)
+        self.transform = Transformation(problem, params, scaling)
+
+        self.problem = self.transform.trans_problem
 
         if params.validate_input:
             from .eval import ValidatingEvaluator
@@ -287,6 +293,31 @@ class Solver:
         logger.info("%20s: %45e", "Constraint violation", iterate.cons_violation)
         logger.info("%20s: %45e", "Dual violation", iterate.stat_res)
 
+    def _create_initial_iterate(
+        self, x0: Optional[np.ndarray], y0: Optional[np.ndarray]
+    ):
+        params = self.params
+        dtype = params.dtype
+        orig_problem = self.orig_problem
+        problem = self.problem
+
+        if x0 is None:
+            orig_n = orig_problem.num_vars
+            x0 = np.zeros((orig_n,), dtype=dtype)
+            x0 = np.clip(x0, orig_problem.var_lb, orig_problem.var_ub)
+
+        if y0 is None:
+            orig_m = orig_problem.num_cons
+            y0 = np.zeros((orig_m,), dtype=dtype)
+
+        transform = self.transform
+        (x0, y0) = transform.transform_sol(x0, y0)
+
+        x = x0.astype(dtype)
+        y = y0.astype(dtype)
+
+        return Iterate(problem, params, x, y, self.evaluator)
+
     def solve(
         self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None
     ) -> SolverResult:
@@ -308,31 +339,13 @@ class Solver:
         """
         problem = self.problem
         params = self.params
-        dtype = params.dtype
 
         display = problem_display(problem, params)
 
         n = problem.num_vars
         m = problem.num_cons
 
-        orig_problem = self.orig_problem
-
-        if x0 is None:
-            orig_n = orig_problem.num_vars
-            x0 = np.zeros((orig_n,), dtype=dtype)
-            x0 = np.clip(x0, orig_problem.var_lb, orig_problem.var_ub)
-
-        if y0 is None:
-            orig_m = orig_problem.num_cons
-            y0 = np.zeros((orig_m,), dtype=dtype)
-
-        (x0, y0) = problem.transform_sol(x0, y0)
-
-        x = x0.astype(dtype)
-        y = y0.astype(dtype)
-
-        assert (n,) == x.shape
-        assert (m,) == y.shape
+        iterate = self._create_initial_iterate(x0, y0)
 
         logger.info("Solving problem with {0} variables, {1} constraints".format(n, m))
 
@@ -340,9 +353,8 @@ class Solver:
 
         controller = step_controller(problem, params)
 
-        self._deriv_check(x, y)
+        self._deriv_check(iterate.x, iterate.y)
 
-        iterate = Iterate(problem, params, x, y, self.evaluator)
         self.rho = self.penalty.initial(iterate)
 
         logger.debug("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))
@@ -494,9 +506,11 @@ class Solver:
 
         x = iterate.x
         y = iterate.y
-        d = iterate.bound_duals
+        d = iterate.bounds_dual
 
-        (x, y, d) = problem.restore_sol(x, y, d)
+        transform = self.transform
+
+        (x, y, d) = transform.restore_sol(x, y, d)
 
         return SolverResult(
             x,
