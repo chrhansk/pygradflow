@@ -1,0 +1,20 @@
+name: project_version
+run-name: Get version from poetry
+
+on:
+  workflow_call
+
+jobs:
+  runs-on: ubuntu-latest
+  outputs:
+    project_version: ${{ steps.version.outputs.project_version }}
+  steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v3
+    - name: Install poetry
+      uses: abatilo/actions-poetry@v2
+    - name: Get version from poetry
+      id: version
+      run: |
+        echo project_version=$(poetry version --short)" >> "$GITHUB_OUTPUT"
