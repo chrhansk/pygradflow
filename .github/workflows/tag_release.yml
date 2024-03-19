@@ -26,5 +26,5 @@ jobs:
       - name: Create GitHub release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ format('v{0}', ${{ env.project_version }} ) }}
+          tag: ${{ format('v{0}', env.project_version) }}
           name: Release ${{ env.project_version }}
