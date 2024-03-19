@@ -8,7 +8,7 @@ jobs:
   tag:
     permissions:
       contents: write
-    run-on: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Get version from poetry
         run: |
