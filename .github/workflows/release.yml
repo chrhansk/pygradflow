@@ -1,5 +1,4 @@
-name: release
-run-name: Create GitHub release
+name: Create GitHub release
 
 on:
   push:
@@ -13,12 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v3
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
       - name: Get version from poetry
-        run: |
-          echo "VERSION=$(poetry version --short)" >> "$GITHUB_ENV"
         id: version
+        run: |
+          echo "project_version=$(poetry version --short)" >> "$GITHUB_ENV"
       - name: Create a GitHub release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ format('v{0}', ${{ env.VERSION }} ) }}
-          name: Release ${{ env.VERSION }}
+          tag: ${{ format('v{0}', ${{ env.project_version }} ) }}
+          name: Release ${{ env.project_version }}
