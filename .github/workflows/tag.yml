@@ -1,8 +1,7 @@
-name: tag
-run-name: Add git tag
+name: Add version tag
 
 on:
-  workflow_call
+  - workflow_call
 
 jobs:
   tag:
@@ -10,12 +9,17 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v3
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
       - name: Get version from poetry
-        run: |
-          echo "VERSION=$(poetry version --short)" >> "$GITHUB_ENV"
         id: version
+        run: |
+          echo "project_version=$(poetry version --short)" >> "$GITHUB_ENV"
       - name: Create and push version tag
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ env.VERSION }}
+          custom_tag: ${{ env.project_version }}
