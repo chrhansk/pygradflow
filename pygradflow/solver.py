@@ -156,13 +156,17 @@ class Solver:
         \\begin{align}
             \\nabla_x f(x) + y^{T} J_c(x) + d = 0,
         \\end{align}
+
     feasibility
-    .. math::
+
+     .. math::
         \\begin{align}
             \\quad & l \\leq c(x) \\leq u \\\\
             \\quad & l^x \\leq x \\leq u^x \\\\
         \\end{align}
+
     and complementarity
+
      .. math::
         \\begin{align}
             y_i
@@ -178,6 +182,7 @@ class Solver:
                 = 0 & \\text{ otherwise }
             \\end{cases}
         \\end{align}
+
     conditions.
     """
 
