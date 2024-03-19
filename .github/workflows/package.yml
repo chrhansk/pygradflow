@@ -8,10 +8,14 @@ jobs:
   test:
     uses: ./.github/workflows/test.yml
   tag:
+    permissions:
+      contents: write
     uses: ./.github/workflows/tag.yml
     secrets: inherit
     needs: [test]
   deploy:
+    permissions:
+      contents: write
     uses: ./.github/workflows/publish.yml
     secrets: inherit
     needs: [test, tag]
