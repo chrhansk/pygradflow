@@ -1,9 +1,6 @@
 name: project_version
 run-name: Get version from poetry
 
-outputs:
-  project_version: ${{ jobs.job1.outputs.output1 }}
-
 jobs:
   job1:
     runs-on: ubuntu-latest
