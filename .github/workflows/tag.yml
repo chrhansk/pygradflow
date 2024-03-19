@@ -1,0 +1,21 @@
+name: tag
+run-name: Add git tag
+
+on:
+  workflow_call
+
+jobs:
+  tag:
+    permissions:
+      contents: write
+    run-on: ubuntu-latest
+    steps:
+      - name: Get version from poetry
+        run: |
+          echo "VERSION=$(poetry version --short)" >> "$GITHUB_ENV"
+        id: version
+      - name: Create and push version tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ env.VERSION }}
