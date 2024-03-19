@@ -13,13 +13,14 @@ jobs:
       matrix:
         python-version: ["3.9", "3.11", "3.12"]
     steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/workflows/project_version
+      name: Get project version
     - name: Output version
-      needs: project_version
       run: |
         echo "Version:"
-        echo ${{ needs.project_version.outputs.project_version }}
+        echo ${{ steps.project_version.outputs.project_version }}
         echo "Done
-    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
