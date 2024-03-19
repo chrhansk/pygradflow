@@ -47,7 +47,7 @@ class DualNormUpdate(PenaltyStrategy):
         if self.problem.num_cons == 0:
             return self.rho
 
-        ynorm = np.linalg.norm(iterate.y, ord=np.inf)
+        ynorm = float(np.linalg.norm(iterate.y, ord=np.inf))
 
         assert ynorm >= 0.0
 
