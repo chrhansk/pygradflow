@@ -1,3 +1,5 @@
+from typing import Literal
+
 from termcolor import colored
 
 from pygradflow.params import Params
@@ -10,13 +12,15 @@ class Format:
         return colored(s, attrs=["bold"])
 
     @staticmethod
+    def _cond_color(cond: bool) -> Literal["red", "green"]:
+        return "green" if cond else "red"
+
+    @staticmethod
     def redgreen(s: str, cond: bool, bold: bool) -> str:
-        color = "green" if cond else "red"
-
         if bold:
-            return colored(s, color, attrs=["bold"])
+            return colored(s, Format._cond_color(cond), attrs=["bold"])
 
-        return colored(s, color)
+        return colored(s, Format._cond_color(cond))
 
 
 class BoldFormatter:
@@ -63,10 +67,10 @@ class Column:
         self.attr = attr
 
     @property
-    def header(self):
+    def header(self) -> str:
         return "{:^{}s}".format(self.name, self.width)
 
-    def content(self, state):
+    def content(self, state) -> str:
         return self.format(self.attr(state))
 
 
@@ -75,10 +79,10 @@ class Display:
         self.cols = cols
 
     @property
-    def header(self):
+    def header(self) -> str:
         return " ".join([col.header for col in self.cols])
 
-    def row(self, state):
+    def row(self, state) -> str:
         return " ".join([col.content(state) for col in self.cols])
 
 

@@ -60,7 +60,7 @@ class StepController(abc.ABC):
     ) -> StepControlResult:
         raise NotImplementedError()
 
-    def update_stepsize_after_fail(self, lamb) -> None:
+    def update_stepsize_after_fail(self, lamb: float) -> float:
         return 2.0 * lamb
 
     def compute_step(

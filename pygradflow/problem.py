@@ -123,7 +123,7 @@ class Problem(abc.ABC):
         float
             The objective function value :math:`f(x)` at the given primal point :math:`x`
         """
-        raise NotImplementedErrror()
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def obj_grad(self, x: np.ndarray) -> np.ndarray:
@@ -140,7 +140,7 @@ class Problem(abc.ABC):
             The objective function gradient :math:`\\nabla f(x)`
             at the given primal point :math:`x`
         """
-        raise NotImplementedErrror()
+        raise NotImplementedError()
 
     def cons(self, x: np.ndarray) -> np.ndarray:
         """
@@ -155,7 +155,7 @@ class Problem(abc.ABC):
         np.ndarray
             The constraint value :math:`c(x)` at the given primal point :math:`x`
         """
-        raise NotImplementedErrror()
+        raise NotImplementedError()
 
     def cons_jac(self, x: np.ndarray) -> sp.sparse.spmatrix:
         """
@@ -170,7 +170,7 @@ class Problem(abc.ABC):
         sp.sparse.spmatrix
             The constraint Jacobian :math:`J_c(x)` at the given primal point :math:`x`
         """
-        raise NotImplementedErrror()
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def lag_hess(self, x: np.ndarray, y: np.ndarray) -> sp.sparse.spmatrix:
@@ -189,4 +189,4 @@ class Problem(abc.ABC):
             :math:`\\nabla_{xx} \\mathcal{L}(x, y) \\in \\mathbb{R}^{n \\times n}`
             at the given primal / dual points :math:`x` / :math:`y`
         """
-        raise NotImplementedErrror()
+        raise NotImplementedError()

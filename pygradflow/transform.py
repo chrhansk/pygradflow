@@ -1,4 +1,5 @@
 import functools
+from typing import Optional
 
 import numpy as np
 
@@ -9,7 +10,9 @@ from pygradflow.scale import ScaledProblem, Scaling
 
 
 class Transformation:
-    def __init__(self, orig_problem: Problem, params: Params, scaling: Scaling = None):
+    def __init__(
+        self, orig_problem: Problem, params: Params, scaling: Optional[Scaling] = None
+    ):
         self.orig_problem = orig_problem
         self.params = params
         self.scaling = scaling

@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable, Union, cast
 
 import numpy as np
 import scipy as sp
@@ -67,7 +67,7 @@ def deriv_check(
     dsparse = False
 
     if sparse_dval:
-        dval = dval.tocsc()
+        dval = cast(sp.sparse.spmatrix, dval).tocsc()
         dsparse = True
     else:
         dval = np.atleast_2d(dval)

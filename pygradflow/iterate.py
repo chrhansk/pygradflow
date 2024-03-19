@@ -1,4 +1,5 @@
 import functools
+from typing import Optional
 
 import numpy as np
 import scipy as sp
@@ -22,7 +23,7 @@ class Iterate:
         params: Params,
         x: np.ndarray,
         y: np.ndarray,
-        eval: Evaluator = None,
+        eval: Optional[Evaluator] = None,
     ):
         assert x.shape == (problem.num_vars,)
         assert y.shape == (problem.num_cons,)
@@ -81,7 +82,7 @@ class Iterate:
     def aug_lag_deriv_y(self) -> np.ndarray:
         return self.cons
 
-    def aug_lag_deriv_xy(self) -> np.ndarray:
+    def aug_lag_deriv_xy(self) -> sp.sparse.spmatrix:
         return self.cons_jac
 
     def aug_lag_deriv_xx(self, rho: float) -> sp.sparse.spmatrix:
@@ -110,7 +111,7 @@ class Iterate:
 
         infeas_opt_res = self.cons_jac.T.dot(self.cons)
 
-        return np.linalg.norm(infeas_opt_res, ord=np.inf) <= local_infeas_tol
+        return bool(np.linalg.norm(infeas_opt_res, ord=np.inf) <= local_infeas_tol)
 
     @functools.cached_property
     def active_set(self) -> ActiveSet:
@@ -135,8 +136,8 @@ class Iterate:
         ub = self.problem.var_ub
         x = self.x
 
-        lower = np.linalg.norm(np.maximum(lb - x, 0.0), np.inf)
-        upper = np.linalg.norm(np.maximum(x - ub, 0.0), np.inf)
+        lower = float(np.linalg.norm(np.maximum(lb - x, 0.0), np.inf))
+        upper = float(np.linalg.norm(np.maximum(x - ub, 0.0), np.inf))
 
         return max(lower, upper)
 
@@ -145,12 +146,12 @@ class Iterate:
         c = self.cons
         if c.size == 0:
             return 0.0
-        return np.linalg.norm(c, np.inf)
+        return float(np.linalg.norm(c, np.inf))
 
     @functools.cached_property
     def stat_res(self) -> float:
         r = self.obj_grad + self.cons_jac.T.dot(self.y) + self.bounds_dual
-        return np.linalg.norm(r, np.inf)
+        return float(np.linalg.norm(r, np.inf))
 
     def is_feasible(self, tol):
         return (self.cons_violation <= tol) and (self.bound_violation <= tol)

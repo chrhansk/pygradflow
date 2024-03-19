@@ -82,8 +82,8 @@ class ConditionEstimator:
             yprod = linear_solver.solve(yprod, trans=True)
             yprod = linear_solver.solve(yprod)
 
-            xnorm = np.linalg.norm(xprod)
-            ynorm = np.linalg.norm(yprod)
+            xnorm = float(np.linalg.norm(xprod))
+            ynorm = float(np.linalg.norm(yprod))
 
             xfac *= xnorm
             xprod /= xnorm

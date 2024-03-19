@@ -1,10 +1,11 @@
 import time
 from enum import Enum, auto
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 
 from pygradflow.display import Format, problem_display
+from pygradflow.eval import Evaluator, SimpleEvaluator, ValidatingEvaluator
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.newton import newton_method
@@ -12,7 +13,11 @@ from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
 from pygradflow.scale import Scaling
-from pygradflow.step.step_control import StepController, StepResult, step_controller
+from pygradflow.step.step_control import (
+    StepController,
+    StepControlResult,
+    step_controller,
+)
 from pygradflow.transform import Transformation
 
 
@@ -187,7 +192,10 @@ class Solver:
     """
 
     def __init__(
-        self, problem: Problem, params: Params = Params(), scaling: Scaling = None
+        self,
+        problem: Problem,
+        params: Params = Params(),
+        scaling: Optional[Scaling] = None,
     ) -> None:
         """
         Creates a new solver
@@ -208,12 +216,8 @@ class Solver:
         self.problem = self.transform.trans_problem
 
         if params.validate_input:
-            from .eval import ValidatingEvaluator
-
-            self.evaluator = ValidatingEvaluator(self.problem, params)
+            self.evaluator: Evaluator = ValidatingEvaluator(self.problem, params)
         else:
-            from .eval import SimpleEvaluator
-
             self.evaluator = SimpleEvaluator(self.problem, params)
 
         self.penalty = penalty_strategy(self.problem, params)
@@ -221,7 +225,7 @@ class Solver:
 
     def compute_step(
         self, controller: StepController, iterate: Iterate, dt: float, display: bool
-    ) -> StepResult:
+    ) -> StepControlResult:
         problem = self.problem
         params = self.params
         assert self.rho != -1.0
@@ -308,18 +312,22 @@ class Solver:
 
         if x0 is None:
             orig_n = orig_problem.num_vars
-            x0 = np.zeros((orig_n,), dtype=dtype)
-            x0 = np.clip(x0, orig_problem.var_lb, orig_problem.var_ub)
+            x_init = np.zeros((orig_n,), dtype=dtype)
+            x_init = np.clip(x_init, orig_problem.var_lb, orig_problem.var_ub)
+        else:
+            x_init = cast(np.ndarray, x0)
 
         if y0 is None:
             orig_m = orig_problem.num_cons
-            y0 = np.zeros((orig_m,), dtype=dtype)
+            y_init = np.zeros((orig_m,), dtype=dtype)
+        else:
+            y_init = cast(np.ndarray, y0)
 
         transform = self.transform
-        (x0, y0) = transform.transform_sol(x0, y0)
+        (x_init, y_init) = transform.transform_sol(x_init, y_init)
 
-        x = x0.astype(dtype)
-        y = y0.astype(dtype)
+        x = x_init.astype(dtype)
+        y = y_init.astype(dtype)
 
         return Iterate(problem, params, x, y, self.evaluator)
 
