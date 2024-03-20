@@ -13,13 +13,9 @@ build:
   jobs:
     post_create_environment:
       - pip install poetry
-      - poetry config virtualenvs.create false
-    post_install:
-      - poetry install --with docs
-    pre_build:
-      - cd docs; poetry run sphinx-apidoc -o . ../pygradflow
-      - . $(poetry env info --path)/bin/activate
 
+    post_install:
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
