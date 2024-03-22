@@ -1,5 +1,5 @@
-from typing import Literal, List
 from abc import ABC, abstractmethod
+from typing import List, Literal
 
 from termcolor import colored
 
@@ -151,11 +151,15 @@ def problem_display(problem: Problem, params: Params):
     cols.append(AttrColumn("Aug Lag", 16, "{:16.8e}", StateAttr("aug_lag")))
 
     if is_bounded:
-        cols.append(AttrColumn("Bound inf", 16, "{:16.8e}", IterateAttr("bound_violation")))
+        cols.append(
+            AttrColumn("Bound inf", 16, "{:16.8e}", IterateAttr("bound_violation"))
+        )
 
     cols.append(AttrColumn("Cons inf", 16, "{:16.8e}", IterateAttr("cons_violation")))
     cols.append(AttrColumn("Dual inf", 16, "{:16.8e}", IterateAttr("stat_res")))
-    cols.append(AttrColumn("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm")))
+    cols.append(
+        AttrColumn("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm"))
+    )
     cols.append(AttrColumn("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm")))
     cols.append(AttrColumn("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
 
