@@ -1,4 +1,5 @@
-from typing import Literal
+from typing import Literal, List
+from abc import ABC, abstractmethod
 
 from termcolor import colored
 
@@ -54,21 +55,30 @@ class RCondFormatter:
         return "{:5.0e}".format(state)
 
 
-class Column:
-    def __init__(self, name: str, width: int, format, attr):
+class Column(ABC):
+    def __init__(self, name: str, width: int):
         self.name = name
         self.width = width
 
+    @property
+    def header(self) -> str:
+        return "{:^{}s}".format(self.name, self.width)
+
+    @abstractmethod
+    def content(self, state) -> str:
+        pass
+
+
+class AttrColumn(Column):
+    def __init__(self, name: str, width: int, format, attr):
         if isinstance(format, str):
             self.format = StringFormatter(format)
         else:
             self.format = format
 
-        self.attr = attr
+        super().__init__(name, width)
 
-    @property
-    def header(self) -> str:
-        return "{:^{}s}".format(self.name, self.width)
+        self.attr = attr
 
     def content(self, state) -> str:
         return self.format(self.attr(state))
@@ -104,14 +114,9 @@ class IterateAttr:
         return getattr(iterate, self.name)
 
 
-class ActiveSetColumn:
+class ActiveSetColumn(Column):
     def __init__(self):
-        self.width = 10
-        self.name = "Active set"
-
-    @property
-    def header(self):
-        return "{:^{}s}".format(self.name, self.width)
+        super().__init__("Active set", 10)
 
     def empty(self):
         return "{:^{}s}".format("--", self.width)
@@ -140,37 +145,37 @@ class ActiveSetColumn:
 def problem_display(problem: Problem, params: Params):
     is_bounded = problem.var_bounded
 
-    cols = []
+    cols: List[Column] = []
 
-    cols.append(Column("Iter", 6, BoldFormatter("{:6d}"), StateAttr("iter")))
-    cols.append(Column("Aug Lag", 16, "{:16.8e}", StateAttr("aug_lag")))
+    cols.append(AttrColumn("Iter", 6, BoldFormatter("{:6d}"), StateAttr("iter")))
+    cols.append(AttrColumn("Aug Lag", 16, "{:16.8e}", StateAttr("aug_lag")))
 
     if is_bounded:
-        cols.append(Column("Bound inf", 16, "{:16.8e}", IterateAttr("bound_violation")))
+        cols.append(AttrColumn("Bound inf", 16, "{:16.8e}", IterateAttr("bound_violation")))
 
-    cols.append(Column("Cons inf", 16, "{:16.8e}", IterateAttr("cons_violation")))
-    cols.append(Column("Dual inf", 16, "{:16.8e}", IterateAttr("stat_res")))
-    cols.append(Column("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm")))
-    cols.append(Column("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm")))
-    cols.append(Column("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
+    cols.append(AttrColumn("Cons inf", 16, "{:16.8e}", IterateAttr("cons_violation")))
+    cols.append(AttrColumn("Dual inf", 16, "{:16.8e}", IterateAttr("stat_res")))
+    cols.append(AttrColumn("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm")))
+    cols.append(AttrColumn("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm")))
+    cols.append(AttrColumn("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
 
     if problem.var_bounded:
         cols.append(ActiveSetColumn())
 
     if params.report_rcond:
-        cols.append(Column("Rcond", 5, RCondFormatter(), StateAttr("rcond")))
+        cols.append(AttrColumn("Rcond", 5, RCondFormatter(), StateAttr("rcond")))
 
-    cols.append(Column("Type", 8, StepFormatter(), StateAttr("step_accept")))
+    cols.append(AttrColumn("Type", 8, StepFormatter(), StateAttr("step_accept")))
 
     return Display(cols)
 
 
 def inner_display(problem: Problem, params: Params):
-    cols = []
+    cols: List[Column] = []
 
-    cols.append(Column("Iter", 6, BoldFormatter("{:5d}"), StateAttr("iter")))
-    cols.append(Column("Residuum", 16, "{:16.8e}", StateAttr("residuum")))
-    cols.append(Column("Dist", 16, "{:16.8e}", StateAttr("dist")))
-    cols.append(Column("Active set", 10, "{:10d}", StateAttr("active_set_size")))
+    cols.append(AttrColumn("Iter", 6, BoldFormatter("{:5d}"), StateAttr("iter")))
+    cols.append(AttrColumn("Residuum", 16, "{:16.8e}", StateAttr("residuum")))
+    cols.append(AttrColumn("Dist", 16, "{:16.8e}", StateAttr("dist")))
+    cols.append(AttrColumn("Active set", 10, "{:10d}", StateAttr("active_set_size")))
 
     return Display(cols)

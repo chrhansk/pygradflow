@@ -429,8 +429,8 @@ class Solver:
                     f"Inverse step size {lamb} exceeded maximum {params.lamb_max} (incorrect derivatives?)"
                 )
 
-            primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
-            dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
+            primal_step_norm = float(np.linalg.norm(next_iterate.x - iterate.x))
+            dual_step_norm = float(np.linalg.norm(next_iterate.y - iterate.y))
 
             if curr_time - start_time >= params.time_limit:
                 logger.debug("Reached time limit")
