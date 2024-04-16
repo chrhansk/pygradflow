@@ -144,7 +144,7 @@ class ExactController(StepController):
 
             if rate_est > self.rate_bound:
                 logger.debug(
-                    "Newton convergence rate (%f) exceeds allorw (%f)",
+                    "Newton convergence rate (%f) exceeded bound (%f)",
                     rate_est,
                     self.rate_bound,
                 )
@@ -152,7 +152,7 @@ class ExactController(StepController):
 
             curr_func_val = next_func_val
 
-        logger.debug("Newton method did not convergein %d iterations", self.max_num_it)
+        logger.debug("Newton method did not converge in %d iterations", self.max_num_it)
 
         return StepControlResult(next_iterate, 2.0 * lamb, active_set, rcond, False)
 
