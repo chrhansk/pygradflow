@@ -298,7 +298,6 @@ class Solver:
         logger.info("%20s: %45e", "Aug Lag violation", iterate.aug_lag_violation(rho))
         logger.info("%20s: %45e", "Aug Lag dual", iterate.aug_lag_dual())
 
-        logger.info("%20s: %45e", "Bound violation", iterate.bound_violation)
         logger.info("%20s: %45e", "Constraint violation", iterate.cons_violation)
         logger.info("%20s: %45e", "Dual violation", iterate.stat_res)
 
@@ -310,11 +309,18 @@ class Solver:
         orig_problem = self.orig_problem
         problem = self.problem
 
+        orig_lb = orig_problem.var_lb
+        orig_ub = orig_problem.var_ub
+
         if x0 is None:
             orig_n = orig_problem.num_vars
             x_init = np.zeros((orig_n,), dtype=dtype)
-            x_init = np.clip(x_init, orig_problem.var_lb, orig_problem.var_ub)
+            np.clip(x_init, orig_lb, orig_ub, out=x_init)
         else:
+            if (x0 > orig_ub).any() or (x0 < orig_lb).any():
+                logger.warning("Initial point violates variable bounds")
+                x0 = np.clip(x0, orig_lb, orig_ub)
+
             x_init = cast(np.ndarray, x0)
 
         if y0 is None:
@@ -453,6 +459,7 @@ class Solver:
                 state["curr_active_set"] = lambda: step_result.active_set
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
+                state["obj"] = lambda: iterate.obj()
                 state["iter"] = lambda: iteration + 1
                 state["primal_step_norm"] = lambda: primal_step_norm
                 state["dual_step_norm"] = lambda: dual_step_norm

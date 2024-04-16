@@ -42,6 +42,16 @@ class Iterate:
             self.problem, self.params, np.copy(self.x), np.copy(self.y), self.eval
         )
 
+    def clipped(self) -> "Iterate":
+        var_lb = self.problem.var_lb
+        var_ub = self.problem.var_ub
+        x = self.x
+        if np.all(x >= var_lb) and np.all(x <= var_ub):
+            return self
+        xclip = np.empty_like(x)
+        np.clip(x, var_lb, var_ub, out=xclip)
+        return Iterate(self.problem, self.params, xclip, self.y, self.eval)
+
     @functools.cached_property
     def obj(self) -> float:
         return self.eval.obj(self.x)
