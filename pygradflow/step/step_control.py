@@ -209,6 +209,19 @@ class ResiduumRatioController(StepController):
         return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
 
 
+class FixedStepSizeController(StepController):
+    def __init__(self, problem: Problem, params: Params) -> None:
+        super().__init__(problem, params)
+        self.lamb = params.lamb_init
+
+    def step(self, iterate, rho, dt, next_steps, display):
+        assert dt > 0.0
+
+        step = next(next_steps)
+
+        return StepControlResult.from_step_result(step, self.lamb, True)
+
+
 class DistanceRatioController(StepController):
     def __init__(self, problem: Problem, params: Params) -> None:
         super().__init__(problem, params)
@@ -281,6 +294,8 @@ def step_controller(problem: Problem, params: Params) -> StepController:
 
     if step_control_type == StepControlType.Exact:
         return ExactController(problem, params)
+    elif step_control_type == StepControlType.Fixed:
+        return FixedStepSizeController(problem, params)
     elif step_control_type == StepControlType.ResiduumRatio:
         return ResiduumRatioController(problem, params)
     else:
