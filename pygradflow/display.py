@@ -144,9 +144,7 @@ def problem_display(problem: Problem, params: Params):
 
     cols.append(Column("Iter", 6, BoldFormatter("{:6d}"), StateAttr("iter")))
     cols.append(Column("Aug Lag", 16, "{:16.8e}", StateAttr("aug_lag")))
-
-    if is_bounded:
-        cols.append(Column("Bound inf", 16, "{:16.8e}", IterateAttr("bound_violation")))
+    cols.append(Column("Objective", 16, "{:16.8e}", IterateAttr("obj")))
 
     cols.append(Column("Cons inf", 16, "{:16.8e}", IterateAttr("cons_violation")))
     cols.append(Column("Dual inf", 16, "{:16.8e}", IterateAttr("stat_res")))

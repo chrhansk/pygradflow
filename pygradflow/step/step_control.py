@@ -144,7 +144,7 @@ class ExactController(StepController):
 
             if rate_est > self.rate_bound:
                 logger.debug(
-                    "Newton convergence rate (%f) exceeds allorw (%f)",
+                    "Newton convergence rate (%f) exceeded bound (%f)",
                     rate_est,
                     self.rate_bound,
                 )
@@ -152,7 +152,7 @@ class ExactController(StepController):
 
             curr_func_val = next_func_val
 
-        logger.debug("Newton method did not convergein %d iterations", self.max_num_it)
+        logger.debug("Newton method did not converge in %d iterations", self.max_num_it)
 
         return StepControlResult(next_iterate, 2.0 * lamb, active_set, rcond, False)
 
@@ -207,6 +207,19 @@ class ResiduumRatioController(StepController):
 
         self.lamb = lamb_n
         return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
+
+
+class FixedStepSizeController(StepController):
+    def __init__(self, problem: Problem, params: Params) -> None:
+        super().__init__(problem, params)
+        self.lamb = params.lamb_init
+
+    def step(self, iterate, rho, dt, next_steps, display):
+        assert dt > 0.0
+
+        step = next(next_steps)
+
+        return StepControlResult.from_step_result(step, self.lamb, True)
 
 
 class DistanceRatioController(StepController):
@@ -281,6 +294,8 @@ def step_controller(problem: Problem, params: Params) -> StepController:
 
     if step_control_type == StepControlType.Exact:
         return ExactController(problem, params)
+    elif step_control_type == StepControlType.Fixed:
+        return FixedStepSizeController(problem, params)
     elif step_control_type == StepControlType.ResiduumRatio:
         return ResiduumRatioController(problem, params)
     else:

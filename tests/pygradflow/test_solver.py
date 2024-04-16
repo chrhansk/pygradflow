@@ -30,7 +30,11 @@ rho = 1.0
 newton_types = list(NewtonType)
 linear_solver_types = [LinearSolverType.LU, LinearSolverType.GMRES]
 step_solver_types = list(StepSolverType)
-step_control_types = list(StepControlType)
+step_control_types = [
+    StepControlType.Exact,
+    StepControlType.ResiduumRatio,
+    StepControlType.DistanceRatio,
+]
 
 
 def test_custom_step_solver(rosenbrock_instance):
