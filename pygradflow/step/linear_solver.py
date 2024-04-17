@@ -19,7 +19,7 @@ class LinearSolverError(Exception):
 
 class LinearSolver:
     def solve(self, b: ndarray, trans: bool = False) -> ndarray:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class MINRESSolver(LinearSolver):
