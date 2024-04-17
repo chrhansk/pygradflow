@@ -31,6 +31,8 @@ newton_types = list(NewtonType)
 linear_solver_types = [LinearSolverType.LU, LinearSolverType.GMRES]
 step_solver_types = list(StepSolverType)
 step_control_types = [
+    StepControlType.BoxReduced,
+    StepControlType.Optimizing,
     StepControlType.Exact,
     StepControlType.ResiduumRatio,
     StepControlType.DistanceRatio,

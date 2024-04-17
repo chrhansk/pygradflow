@@ -4,7 +4,6 @@ from typing import Iterator, Optional
 
 import numpy as np
 
-from pygradflow.controller import ControllerSettings, LogController
 from pygradflow.display import inner_display
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
@@ -71,6 +70,10 @@ class StepController(abc.ABC):
         next_steps: Iterator[StepResult],
         display: bool,
     ) -> StepControlResult:
+        """
+        Computes next step using the step method, handling
+        linear algebra errors by reducing the step size.
+        """
         try:
             self.display = None
             if display:
@@ -103,201 +106,31 @@ class StepController(abc.ABC):
         logger.debug("     %s", self.display.row(state))
 
 
-class ExactController(StepController):
-    def __init__(self, problem, params, max_num_it=10, rate_bound=0.5):
-        super().__init__(problem, params)
-        self.max_num_it = max_num_it
-        self.rate_bound = rate_bound
-
-    def step(self, iterate, rho, dt, next_steps, display):
-        assert dt > 0.0
-        lamb = 1.0 / dt
-
-        func = ImplicitFunc(self.problem, iterate, dt)
-
-        def func_val(iterate):
-            return np.linalg.norm(func.value_at(iterate, rho))
-
-        curr_func_val = func_val(iterate)
-
-        rcond = None
-        active_set = None
-
-        for i in range(self.max_num_it):
-            next_step = next(next_steps)
-            next_iterate = next_step.iterate
-            active_set = next_step.active_set
-            rcond = next_step.rcond
-
-            self.display_step(i, next_step)
-
-            next_func_val = func_val(next_iterate)
-            logger.debug(f"Func val: {next_func_val}")
-
-            if next_func_val <= self.params.newton_tol:
-                logger.debug("Newton method converged in %d iterations", i + 1)
-                return StepControlResult(
-                    next_iterate, 0.5 * lamb, active_set, rcond, True
-                )
-
-            rate_est = next_func_val / curr_func_val
-
-            if rate_est > self.rate_bound:
-                logger.debug(
-                    "Newton convergence rate (%f) exceeded bound (%f)",
-                    rate_est,
-                    self.rate_bound,
-                )
-                break
-
-            curr_func_val = next_func_val
-
-        logger.debug("Newton method did not converge in %d iterations", self.max_num_it)
-
-        return StepControlResult(next_iterate, 2.0 * lamb, active_set, rcond, False)
-
-
-class ResiduumRatioController(StepController):
-    def __init__(self, problem: Problem, params: Params) -> None:
-        settings = ControllerSettings.from_params(params)
-        self.controller = LogController(settings, params.theta_ref)
-        super().__init__(problem, params)
-
-    def step(self, iterate, rho, dt, next_steps, display):
-        assert dt > 0.0
-        lamb = 1.0 / dt
-
-        problem = self.problem
-        params = self.params
-
-        func = ImplicitFunc(problem, iterate, dt)
-
-        mid_step = next(next_steps)
-        mid_iterate = mid_step.iterate
-
-        mid_norm = np.linalg.norm(func.value_at(mid_iterate, rho))
-
-        self.display_step(0, mid_step)
-
-        if mid_norm <= params.newton_tol:
-            lamb_n = max(lamb * params.lamb_red, params.lamb_min)
-            logger.debug("Newton converged during first iteration, lamb_n = %f", lamb_n)
-            return StepControlResult.from_step_result(mid_step, lamb, True)
-
-        orig_norm = np.linalg.norm(func.value_at(iterate, rho))
-
-        theta = mid_norm / orig_norm
-        accepted = theta <= params.theta_max
-
-        if accepted:
-            lamb_mod = self.controller.update(theta)
-            lamb_n = max(params.lamb_min, lamb / lamb_mod)
-        else:
-            lamb_n = lamb * params.lamb_inc
-            if self.controller.error_sum > 0.0:
-                self.controller.reset()
-
-        logger.debug(
-            "StepController: theta: %e, accepted: %s, lamb: %e, lamb_n: %e",
-            theta,
-            accepted,
-            lamb,
-            lamb_n,
-        )
-
-        self.lamb = lamb_n
-        return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
-
-
-class FixedStepSizeController(StepController):
-    def __init__(self, problem: Problem, params: Params) -> None:
-        super().__init__(problem, params)
-        self.lamb = params.lamb_init
-
-    def step(self, iterate, rho, dt, next_steps, display):
-        assert dt > 0.0
-
-        step = next(next_steps)
-
-        return StepControlResult.from_step_result(step, self.lamb, True)
-
-
-class DistanceRatioController(StepController):
-    def __init__(self, problem: Problem, params: Params) -> None:
-        super().__init__(problem, params)
-        settings = ControllerSettings.from_params(params)
-        self.controller = LogController(settings, params.theta_ref)
-
-    def step(self, iterate, rho, dt, next_steps, display):
-        assert dt > 0.0
-        lamb = 1.0 / dt
-
-        problem = self.problem
-        params = self.params
-
-        func = ImplicitFunc(problem, iterate, dt)
-
-        mid_step = next(next_steps)
-        mid_iterate = mid_step.iterate
-
-        self.display_step(0, mid_step)
-
-        mid_func_norm = np.linalg.norm(func.value_at(mid_iterate, rho))
-
-        if mid_func_norm <= params.newton_tol:
-            lamb_n = max(lamb * params.lamb_red, params.lamb_min)
-            logger.debug("Newton converged during first iteration, lamb_n = %f", lamb_n)
-            return StepControlResult.from_step_result(mid_step, lamb_n, True)
-
-        first_diff = mid_step.diff
-
-        if first_diff == 0.0:
-            return StepControlResult.from_step_result(mid_step, lamb, True)
-
-        final_step = next(next_steps)
-
-        self.display_step(1, final_step)
-
-        second_diff = final_step.diff
-
-        if second_diff == 0.0:
-            return StepControlResult.from_step_result(final_step, lamb, True)
-
-        logger.debug("First distance: %e, second distance: %e", first_diff, second_diff)
-
-        theta = second_diff / first_diff
-
-        accepted = theta <= params.theta_max
-
-        if accepted:
-            lamb_mod = self.controller.update(theta)
-            lamb_n = max(params.lamb_min, lamb / lamb_mod)
-        else:
-            lamb_n = lamb * params.lamb_inc
-            if self.controller.error_sum > 0.0:
-                self.controller.reset()
-
-        logger.debug(
-            "StepController: theta: %e, accepted: %s, lamb: %e, lamb_n: %e",
-            theta,
-            accepted,
-            lamb,
-            lamb_n,
-        )
-
-        self.lamb = lamb_n
-        return StepControlResult.from_step_result(final_step, lamb_n, accepted)
-
-
 def step_controller(problem: Problem, params: Params) -> StepController:
     step_control_type = params.step_control_type
 
     if step_control_type == StepControlType.Exact:
+        from pygradflow.step.exact_control import ExactController
+
         return ExactController(problem, params)
     elif step_control_type == StepControlType.Fixed:
+        from pygradflow.step.fixed_control import FixedStepSizeController
+
         return FixedStepSizeController(problem, params)
     elif step_control_type == StepControlType.ResiduumRatio:
+        from pygradflow.step.residuum_ratio_control import ResiduumRatioController
+
         return ResiduumRatioController(problem, params)
+    elif step_control_type == StepControlType.Optimizing:
+        from pygradflow.step.opti_control import OptimizingController
+
+        return OptimizingController(problem, params)
+    elif step_control_type == StepControlType.BoxReduced:
+        from pygradflow.step.box_control import BoxReducedController
+
+        return BoxReducedController(problem, params)
     else:
         assert step_control_type == StepControlType.DistanceRatio
+        from pygradflow.step.distance_ratio_control import DistanceRatioController
+
         return DistanceRatioController(problem, params)
