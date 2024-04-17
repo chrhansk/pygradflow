@@ -110,22 +110,11 @@ def test_solve_hs71(hs71_instance):
     solve_and_test_instance(hs71_instance, solver)
 
 
-def test_solve_hs71_constrained():
-    problem = HS71Constrained()
+def test_solve_hs71_constrained(hs71_constrained_instance):
+    problem = hs71_constrained_instance.problem
     solver = Solver(problem)
 
-    x_0 = np.array([1.0, 5.0, 5.0, 1.0])
-    y_0 = np.array([0.0, 0.0])
-
-    result = solver.solve(x_0, y_0)
-
-    assert result.success
-
-    x_opt = np.array([1.0, 4.74299964, 3.82114998, 1.37940829])
-    y_opt = np.array([-0.55229366, 0.16146857])
-
-    assert np.allclose(result.x, x_opt)
-    assert np.allclose(result.y, y_opt)
+    solve_and_test_instance(hs71_constrained_instance, solver)
 
 
 @pytest.mark.parametrize(
