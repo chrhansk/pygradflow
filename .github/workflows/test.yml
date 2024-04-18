@@ -36,6 +36,6 @@ jobs:
     - name: Install the project dependencies
       run: poetry install
     - name: Test with pytest
-      run: poetry run pytest -v --isort --black
+      run: poetry run pytest --timeout=300 -v --isort --black
     # - name: Test with mypy
     #   run: poetry run mypy pygradflow
