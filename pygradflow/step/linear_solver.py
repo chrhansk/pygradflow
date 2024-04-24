@@ -8,7 +8,6 @@ from pygradflow.params import LinearSolverType
 
 class LinearSolverError(Exception):
     """
-
     Error signaling that the linear solver failed, e.g. because the
     matrix is (near) singular. The solver attempts to recover by
     reducing the step size

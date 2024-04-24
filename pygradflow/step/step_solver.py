@@ -7,7 +7,7 @@ import scipy as sp
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
-from pygradflow.step.linear_solver import LinearSolver
+from pygradflow.step.linear_solver import LinearSolver, LinearSolverError
 from pygradflow.util import norm_mult
 
 
@@ -53,7 +53,14 @@ class StepSolver(abc.ABC):
         from .cond_estimate import ConditionEstimator
 
         estimator = ConditionEstimator(mat, solver, self.params)
-        return estimator.estimate_rcond()
+        rcond = None
+
+        try:
+            rcond = estimator.estimate_rcond()
+        except LinearSolverError:
+            pass
+
+        return rcond
 
     @abc.abstractmethod
     def update_active_set(self, active_set: np.ndarray):

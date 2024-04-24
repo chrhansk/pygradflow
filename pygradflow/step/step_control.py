@@ -10,8 +10,16 @@ from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.params import Params, StepControlType
 from pygradflow.problem import Problem
-from pygradflow.step.linear_solver import LinearSolverError
 from pygradflow.step.step_solver import StepResult
+
+
+class StepSolverError(Exception):
+    """
+    Error signaling that the step solver failed, e.g. because the
+    Newton matrix is (near) singular.
+    """
+
+    pass
 
 
 class StepControlResult:
@@ -86,7 +94,7 @@ class StepController(abc.ABC):
                 self.display = inner_display(self.problem, self.params)
                 logger.debug("     %s", self.display.header)
             return self.step(iterate, rho, dt, next_steps, display)
-        except LinearSolverError as e:
+        except StepSolverError as e:
             logger.debug("Linear solver error during step computation: %s", e)
             lamb = 1.0 / dt
             lamb = self.update_stepsize_after_fail(lamb)

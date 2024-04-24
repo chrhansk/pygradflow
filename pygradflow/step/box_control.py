@@ -5,6 +5,7 @@ from scipy.optimize import Bounds, minimize
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.step.step_control import StepController, StepControlResult
+from pygradflow.step.step_control import StepSolverError
 
 max_num_it = 10000
 max_num_linesearch_it = 40
@@ -73,6 +74,9 @@ class BoxReducedProblem(cyipopt.Problem):
 
         # Solve using Ipopt
         x, info = super().solve(x0)
+
+        if info["status"] != 0:
+            raise StepSolverError("Ipopt failed to solve the problem")
 
         return x
 

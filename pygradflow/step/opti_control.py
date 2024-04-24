@@ -4,6 +4,7 @@ import numpy as np
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.step.step_control import StepController, StepControlResult
+from pygradflow.step.step_control import StepSolverError
 
 
 class ImplicitProblem(cyipopt.Problem):
@@ -152,6 +153,9 @@ class ImplicitProblem(cyipopt.Problem):
 
         # Solve using Ipopt
         z, info = super().solve(z0)
+
+        if info["status"] != 0:
+            raise StepSolverError("Ipopt failed to solve the problem")
 
         x = z[: self.prob_num_vars]
         w = z[self.prob_num_vars :]

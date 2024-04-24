@@ -4,7 +4,9 @@ import scipy as sp
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.step.linear_solver import LinearSolverError
 from pygradflow.step.scaled_step_solver import ScaledStepSolver
+from pygradflow.step.step_control import StepSolverError
 
 
 class ExtendedStepSolver(ScaledStepSolver):
@@ -96,13 +98,19 @@ class ExtendedStepSolver(ScaledStepSolver):
 
         assert rhs.shape == (n + m,)
 
-        s = self.solver.solve(rhs)
+        try:
+            sol = self.solver.solve(rhs)
+        except LinearSolverError as e:
+            raise StepSolverError from e
 
-        dx = s[:n]
-        dy = s[n:]
+        dx = sol[:n]
+        dy = sol[n:]
 
         rcond = None
         if params.report_rcond:
-            rcond = self.estimate_rcond(self.deriv, self.solver)
+            try:
+                rcond = self.estimate_rcond(self.deriv, self.solver)
+            except LinearSolverError:
+                pass
 
         return (dx, dy, rcond)

@@ -6,6 +6,8 @@ from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.step.linear_solver import LinearSolverError
+from pygradflow.step.step_control import StepSolverError
 from pygradflow.step.step_solver import StepResult, StepSolver
 
 
@@ -62,20 +64,27 @@ class StandardStepSolver(StepSolver):
 
         rhs = self.func.value_at(iterate, self.rho, self.active_set)
 
-        s = self.solver.solve(rhs)
+        try:
+            sol = self.solver.solve(rhs)
+        except LinearSolverError as e:
+            raise StepSolverError from e
 
         n = self.n
         m = self.m
 
-        assert s.shape == (n + m,)
+        assert sol.shape == (n + m,)
 
-        dx = s[:n]
-        dy = s[n:]
+        dx = sol[:n]
+        dy = sol[n:]
 
         params = self.params
 
         rcond = None
+
         if params.report_rcond:
-            rcond = self.estimate_rcond(self.deriv, self.solver)
+            try:
+                rcond = self.estimate_rcond(self.deriv, self.solver)
+            except LinearSolverError:
+                pass
 
         return StepResult(iterate, dx, dy, self.active_set, rcond)
