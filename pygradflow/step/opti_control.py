@@ -3,8 +3,11 @@ import numpy as np
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
-from pygradflow.step.step_control import StepController, StepControlResult
-from pygradflow.step.step_control import StepSolverError
+from pygradflow.step.step_control import (
+    StepController,
+    StepControlResult,
+    StepSolverError,
+)
 
 
 class ImplicitProblem(cyipopt.Problem):

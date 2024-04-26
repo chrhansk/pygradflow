@@ -99,7 +99,7 @@ def test_solve_rosenbrock(rosenbrock_instance):
 @pytest.mark.parametrize("step_control_type", step_control_types)
 def test_step_control(hs71_instance, step_control_type):
     problem = hs71_instance.problem
-    params = Params(step_control_type=step_control_type)
+    params = Params(step_control_type=step_control_type, rho=1e-1)
     solver = Solver(problem, params)
 
     solve_and_test_instance(hs71_instance, solver)

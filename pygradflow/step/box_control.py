@@ -4,8 +4,11 @@ from scipy.optimize import Bounds, minimize
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
-from pygradflow.step.step_control import StepController, StepControlResult
-from pygradflow.step.step_control import StepSolverError
+from pygradflow.step.step_control import (
+    StepController,
+    StepControlResult,
+    StepSolverError,
+)
 
 max_num_it = 10000
 max_num_linesearch_it = 40
@@ -149,7 +152,9 @@ class BoxReducedController(StepController):
             options={"gtol": 1e-8, "ftol": 0.0},
         )
 
-        assert result.success
+        if not result.success:
+            raise StepSolverError("Scipy failed to solve the problem")
+
         return result.x
 
     def step(
@@ -166,13 +171,13 @@ class BoxReducedController(StepController):
         problem = self.problem
         params = self.params
 
-        reduced_problem = BoxReducedProblem(self, iterate, lamb, rho)
-        x = reduced_problem.solve()
+        # reduced_problem = BoxReducedProblem(self, iterate, lamb, rho)
+        # x = reduced_problem.solve()
 
         # TODO: The minimize function shipped with scipy
         # do not consistently produce high-quality solutions,
         # causing the optimization of the overall problem to fail.
-        # x = self.solve_step(iterate, rho, dt)
+        x = self.solve_step(iterate, rho, dt)
 
         cons = problem.cons(x)
         w = (-1 / lamb) * cons
