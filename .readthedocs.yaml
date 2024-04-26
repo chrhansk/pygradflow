@@ -9,6 +9,9 @@ version: 2
 build:
   apt_packages:
     - coinor-libipopt-dev
+    - libopenblas-dev
+    - liblapack-dev
+    - pkg-config
   os: "ubuntu-22.04"
   tools:
     python: "3.12"
