@@ -17,7 +17,9 @@ class _Func(abc.ABC):
         self.n = problem.num_vars
         self.m = problem.num_cons
 
-    def compute_active_set(self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray):
+    def compute_active_set(
+        self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray
+    ) -> np.ndarray:
         """
         Compute the active set at the given point with respect to the
         given bounds.
@@ -44,7 +46,7 @@ class _Func(abc.ABC):
 
     def project(
         self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray, active_set: np.ndarray
-    ):
+    ) -> np.ndarray:
         assert active_set.dtype == bool
         assert active_set.shape == lb.shape
         assert (lb <= ub).all()
@@ -59,8 +61,10 @@ class _Func(abc.ABC):
         return p
 
     @abc.abstractmethod
-    def value_at(self, iterate: Iterate, rho, active_set: Optional[np.ndarray] = None):
-        raise NotImplementedError
+    def value_at(
+        self, iterate: Iterate, rho, active_set: Optional[np.ndarray] = None
+    ) -> np.ndarray:
+        raise NotImplementedError()
 
 
 class ImplicitFunc(_Func):

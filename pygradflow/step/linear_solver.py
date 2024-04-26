@@ -8,7 +8,6 @@ from pygradflow.params import LinearSolverType
 
 class LinearSolverError(Exception):
     """
-
     Error signaling that the linear solver failed, e.g. because the
     matrix is (near) singular. The solver attempts to recover by
     reducing the step size
@@ -19,7 +18,7 @@ class LinearSolverError(Exception):
 
 class LinearSolver:
     def solve(self, b: ndarray, trans: bool = False) -> ndarray:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class MINRESSolver(LinearSolver):

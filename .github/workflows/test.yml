@@ -14,6 +14,10 @@ jobs:
         python-version: ["3.9", "3.11", "3.12"]
     steps:
     - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install coinor-libipopt-dev
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
@@ -32,6 +36,6 @@ jobs:
     - name: Install the project dependencies
       run: poetry install
     - name: Test with pytest
-      run: poetry run pytest -v --isort --black
+      run: poetry run pytest --timeout=300 -o log_level=info -o log_cli=true -v --isort --black
     # - name: Test with mypy
     #   run: poetry run mypy pygradflow

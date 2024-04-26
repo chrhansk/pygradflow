@@ -77,6 +77,8 @@ class LinearSolverType(Enum):
 class StepControlType(Enum):
     Exact = auto()
     Fixed = auto()
+    Optimizing = auto()
+    BoxReduced = auto()
     ResiduumRatio = auto()
     DistanceRatio = auto()
 

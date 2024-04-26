@@ -4,7 +4,9 @@ import scipy as sp
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.step.linear_solver import LinearSolverError
 from pygradflow.step.scaled_step_solver import ScaledStepSolver
+from pygradflow.step.step_control import StepSolverError
 
 
 class SymmetricStepSolver(ScaledStepSolver):
@@ -134,7 +136,12 @@ class SymmetricStepSolver(ScaledStepSolver):
         if self.solver is None:
             self.solver = self.linear_solver(self.deriv)
 
-        return self.solver.solve(rhs)
+        try:
+            sol = self.solver.solve(rhs)
+        except LinearSolverError as e:
+            raise StepSolverError from e
+
+        return sol
 
     def solve_active_set(self, active_set: np.ndarray, rhs: np.ndarray) -> np.ndarray:
         if self.deriv is None:

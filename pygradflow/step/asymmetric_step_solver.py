@@ -6,7 +6,9 @@ import scipy as sp
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.step.linear_solver import LinearSolverError
 from pygradflow.step.scaled_step_solver import ScaledStepSolver
+from pygradflow.step.step_control import StepSolverError
 
 
 class AsymmetricStepSolver(ScaledStepSolver):
@@ -155,7 +157,10 @@ class AsymmetricStepSolver(ScaledStepSolver):
 
         initial_sol = self.initial_sol(b0, b1, b2t)
 
-        sol = self.solver.solve(rhs, initial_sol=initial_sol)
+        try:
+            sol = self.solver.solve(rhs, initial_sol=initial_sol)
+        except LinearSolverError as e:
+            raise StepSolverError from e
 
         m = self.m
         n = self.n
@@ -167,6 +172,9 @@ class AsymmetricStepSolver(ScaledStepSolver):
 
         rcond = None
         if params.report_rcond:
-            rcond = self.estimate_rcond(self.deriv, self.solver)
+            try:
+                rcond = self.estimate_rcond(self.deriv, self.solver)
+            except LinearSolverError:
+                pass
 
         return (var_sol, cons_sol, rcond)
