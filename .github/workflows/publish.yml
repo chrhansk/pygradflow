@@ -11,6 +11,10 @@ jobs:
       name: production
     steps:
     - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install coinor-libipopt-dev
     - name: Set up Python
       uses: actions/setup-python@v5
     - name: Install poetry
