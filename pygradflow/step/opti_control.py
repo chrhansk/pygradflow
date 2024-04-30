@@ -1,3 +1,5 @@
+import math
+
 import cyipopt
 import numpy as np
 
@@ -8,6 +10,10 @@ from pygradflow.step.step_control import (
     StepControlResult,
     StepSolverError,
 )
+
+# Replace w by v = w / sqrt(lambda) in the augmented Lagrangian
+# to avoid numerical issues
+rescaled = True
 
 
 class ImplicitProblem(cyipopt.Problem):
@@ -27,6 +33,9 @@ class ImplicitProblem(cyipopt.Problem):
     """
 
     def __init__(self, iterate, lamb, rho):
+        assert lamb >= 0
+        assert rho >= 0
+
         self.iterate = iterate
         self.lamb = lamb
         self.rho = rho
@@ -73,9 +82,15 @@ class ImplicitProblem(cyipopt.Problem):
         aug_obj = obj + (rho / 2) * np.dot(cons, cons)
 
         xdiff = x - self.iterate.x
-        wdiff = w - self.iterate.y
 
-        aug_obj += lamb / 2 * (np.dot(xdiff, xdiff) + np.dot(wdiff, wdiff))
+        if rescaled:
+            wdiff = w - math.sqrt(lamb) * self.iterate.y
+            aug_obj += (lamb / 2) * np.dot(xdiff, xdiff) + (1 / 2) * np.dot(
+                wdiff, wdiff
+            )
+        else:
+            wdiff = w - self.iterate.y
+            aug_obj += (lamb / 2) * (np.dot(xdiff, xdiff) + np.dot(wdiff, wdiff))
 
         assert np.isfinite(aug_obj)
 
@@ -96,7 +111,11 @@ class ImplicitProblem(cyipopt.Problem):
         cons_prod = cons_jac.T.dot(cons)
 
         gradx = obj_grad + rho * cons_prod + lamb * (x - self.iterate.x)
-        gradw = lamb * (w - self.iterate.y)
+
+        if rescaled:
+            gradw = w - math.sqrt(lamb) * self.iterate.y
+        else:
+            gradw = lamb * (w - self.iterate.y)
         grad = np.concatenate([gradx, gradw])
 
         assert grad.shape == (self.num_vars,)
@@ -111,7 +130,11 @@ class ImplicitProblem(cyipopt.Problem):
 
         prob_cons = self.problem.cons(x)
         lamb = self.lamb
-        cons = prob_cons + lamb * w
+
+        if rescaled:
+            cons = prob_cons + math.sqrt(lamb) * w
+        else:
+            cons = prob_cons + lamb * w
 
         assert cons.shape == (self.num_cons,)
         assert np.isfinite(cons).all()
@@ -127,7 +150,10 @@ class ImplicitProblem(cyipopt.Problem):
         jac_x = problem.cons_jac(x).tocoo()
         data_x = jac_x.data
 
-        data_w = np.full((problem.num_cons,), self.lamb)
+        if rescaled:
+            data_w = np.full((problem.num_cons,), math.sqrt(self.lamb))
+        else:
+            data_w = np.full((problem.num_cons,), self.lamb)
 
         assert self._jac_nnz is not None
 
@@ -179,7 +205,7 @@ class ImplicitProblem(cyipopt.Problem):
 
         logging.getLogger("cyipopt").setLevel(logging.WARNING)
         self.add_option("print_level", 0)
-        # self.add_option("derivative_test", "first-order")
+        self.add_option("derivative_test", "first-order")
         self.add_option("hessian_approximation", "limited-memory")
 
     def solve(self):
@@ -199,7 +225,11 @@ class ImplicitProblem(cyipopt.Problem):
             raise StepSolverError("Ipopt failed to solve the problem")
 
         x = z[: self.prob_num_vars]
-        w = z[self.prob_num_vars :]
+        if rescaled:
+            v = z[self.prob_num_vars :]
+            w = v / math.sqrt(self.lamb)
+        else:
+            w = z[self.prob_num_vars :]
         y = iterate.y - w
 
         return (x, y)
