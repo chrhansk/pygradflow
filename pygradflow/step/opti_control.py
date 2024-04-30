@@ -76,6 +76,9 @@ class ImplicitProblem(cyipopt.Problem):
         wdiff = w - self.iterate.y
 
         aug_obj += lamb / 2 * (np.dot(xdiff, xdiff) + np.dot(wdiff, wdiff))
+
+        assert np.isfinite(aug_obj)
+
         return aug_obj
 
     def gradient(self, z):
@@ -94,15 +97,27 @@ class ImplicitProblem(cyipopt.Problem):
 
         gradx = obj_grad + rho * cons_prod + lamb * (x - self.iterate.x)
         gradw = lamb * (w - self.iterate.y)
-        return np.concatenate([gradx, gradw])
+        grad = np.concatenate([gradx, gradw])
+
+        assert grad.shape == (self.num_vars,)
+        assert np.isfinite(grad).all()
+        assert grad.dtype == np.float64
+
+        return grad
 
     def constraints(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
 
-        cons = self.problem.cons(x)
+        prob_cons = self.problem.cons(x)
         lamb = self.lamb
-        return cons + lamb * w
+        cons = prob_cons + lamb * w
+
+        assert cons.shape == (self.num_cons,)
+        assert np.isfinite(cons).all()
+        assert cons.dtype == np.float64
+
+        return cons
 
     def jacobian(self, z):
         assert z.shape == (self.num_vars,)
@@ -114,7 +129,15 @@ class ImplicitProblem(cyipopt.Problem):
 
         data_w = np.full((problem.num_cons,), self.lamb)
 
-        return np.concatenate([data_x, data_w])
+        assert self._jac_nnz is not None
+
+        data = np.concatenate([data_x, data_w])
+
+        assert data.shape == (self._jac_nnz,)
+        assert np.isfinite(data).all()
+        assert data.dtype == np.float64
+
+        return data
 
     def jacobianstructure(self):
         problem = self.problem
@@ -132,6 +155,19 @@ class ImplicitProblem(cyipopt.Problem):
 
         rows = np.concatenate([r_x, r_w])
         cols = np.concatenate([c_x, c_w])
+
+        self._jac_nnz = rows.size
+
+        assert rows.shape == cols.shape
+        assert rows.ndim == 1
+
+        assert (rows >= 0).all()
+        assert (cols >= 0).all()
+        assert (rows < self.num_cons).all()
+        assert (cols < self.num_vars).all()
+
+        assert rows.dtype == np.int64
+        assert cols.dtype == np.int64
 
         return rows, cols
 
@@ -156,6 +192,8 @@ class ImplicitProblem(cyipopt.Problem):
 
         # Solve using Ipopt
         z, info = super().solve(z0)
+
+        assert np.isfinite(z).all()
 
         if info["status"] != 0:
             raise StepSolverError("Ipopt failed to solve the problem")
