@@ -3,6 +3,7 @@ import math
 import cyipopt
 import numpy as np
 
+from pygradflow.eval import astype
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.step.step_control import (
@@ -37,6 +38,7 @@ class ImplicitProblem(cyipopt.Problem):
         assert rho >= 0
 
         self.iterate = iterate
+        self.eval = iterate.eval
         self.lamb = lamb
         self.rho = rho
 
@@ -76,9 +78,9 @@ class ImplicitProblem(cyipopt.Problem):
         rho = self.rho
         lamb = self.lamb
 
-        problem = self.problem
-        obj = problem.obj(x)
-        cons = problem.cons(x)
+        eval = self.eval
+        obj = eval.obj(x)
+        cons = eval.cons(x)
         aug_obj = obj + (rho / 2) * np.dot(cons, cons)
 
         xdiff = x - self.iterate.x
@@ -94,16 +96,16 @@ class ImplicitProblem(cyipopt.Problem):
 
         assert np.isfinite(aug_obj)
 
-        return aug_obj
+        return float(aug_obj)
 
     def gradient(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
 
-        problem = self.problem
-        obj_grad = problem.obj_grad(x)
-        cons_jac = problem.cons_jac(x)
-        cons = problem.cons(x)
+        eval = self.eval
+        obj_grad = eval.obj_grad(x)
+        cons_jac = eval.cons_jac(x)
+        cons = eval.cons(x)
 
         rho = self.rho
         lamb = self.lamb
@@ -120,15 +122,15 @@ class ImplicitProblem(cyipopt.Problem):
 
         assert grad.shape == (self.num_vars,)
         assert np.isfinite(grad).all()
-        assert grad.dtype == np.float64
 
-        return grad
+        return astype(grad, np.float64)
 
     def constraints(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
 
-        prob_cons = self.problem.cons(x)
+        eval = self.eval
+        prob_cons = eval.cons(x)
         lamb = self.lamb
 
         if rescaled:
@@ -138,16 +140,16 @@ class ImplicitProblem(cyipopt.Problem):
 
         assert cons.shape == (self.num_cons,)
         assert np.isfinite(cons).all()
-        assert cons.dtype == np.float64
 
-        return cons
+        return astype(cons, np.float64)
 
     def jacobian(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
 
+        eval = self.eval
         problem = self.problem
-        jac_x = problem.cons_jac(x).tocoo()
+        jac_x = eval.cons_jac(x).tocoo()
         data_x = jac_x.data
 
         if rescaled:
@@ -161,16 +163,16 @@ class ImplicitProblem(cyipopt.Problem):
 
         assert data.shape == (self._jac_nnz,)
         assert np.isfinite(data).all()
-        assert data.dtype == np.float64
 
-        return data
+        return astype(data, np.float64)
 
     def jacobianstructure(self):
         problem = self.problem
         iterate = self.iterate
         x = iterate.x
 
-        jac_x = problem.cons_jac(x).tocoo()
+        eval = self.eval
+        jac_x = eval.cons_jac(x).tocoo()
 
         (r_x, c_x) = (jac_x.row, jac_x.col)
         (r_w, c_w) = np.diag_indices(problem.num_cons)

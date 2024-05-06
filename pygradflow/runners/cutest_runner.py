@@ -70,7 +70,6 @@ class ConstrainedCUTEstProblem(Problem):
 
     def cons(self, x):
         return self.instance.cons(x)
-        raise NotImplementedError("Unconstrained problem")
 
     def cons_jac(self, x):
         cons, jac = self.instance.scons(x, gradient=True)
