@@ -14,7 +14,7 @@ class ResiduumRatioController(StepController):
         self.controller = LogController(settings, params.theta_ref)
         super().__init__(problem, params)
 
-    def step(self, iterate, rho, dt, next_steps, display):
+    def step(self, iterate, rho, dt, next_steps, display, timer):
         assert dt > 0.0
         lamb = 1.0 / dt
 

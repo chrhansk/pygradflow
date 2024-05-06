@@ -202,7 +202,7 @@ class ImplicitProblem(cyipopt.Problem):
     def hessian(self, x, lagrange, obj_factor):
         raise NotImplementedError()
 
-    def set_options(self):
+    def set_options(self, timer):
         import logging
 
         logging.getLogger("cyipopt").setLevel(logging.WARNING)
@@ -210,10 +210,15 @@ class ImplicitProblem(cyipopt.Problem):
         self.add_option("derivative_test", "first-order")
         self.add_option("hessian_approximation", "limited-memory")
 
-    def solve(self):
+        remaining = timer.remaining()
+
+        if remaining is not None:
+            self.add_option("max_wall_time", remaining)
+
+    def solve(self, timer):
         iterate = self.iterate
 
-        self.set_options()
+        self.set_options(timer)
         x0 = iterate.x
         y0 = iterate.y
         z0 = np.concatenate([x0, y0])
@@ -238,21 +243,14 @@ class ImplicitProblem(cyipopt.Problem):
 
 
 class OptimizingController(StepController):
-    def step(
-        self,
-        iterate,
-        rho: float,
-        dt: float,
-        next_steps,
-        display: bool,
-    ) -> StepControlResult:
+    def step(self, iterate, rho, dt, next_steps, display, timer) -> StepControlResult:
 
         problem = self.problem
         params = self.params
 
         lamb = 1.0 / dt
         implicit_problem = ImplicitProblem(iterate, lamb, rho)
-        (x, y) = implicit_problem.solve()
+        (x, y) = implicit_problem.solve(timer=timer)
 
         next_iterate = Iterate(problem, params, x, y, iterate.eval)
 

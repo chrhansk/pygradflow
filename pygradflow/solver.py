@@ -18,6 +18,7 @@ from pygradflow.step.step_control import (
     StepControlResult,
     step_controller,
 )
+from pygradflow.timer import Timer
 from pygradflow.transform import Transformation
 
 
@@ -224,7 +225,12 @@ class Solver:
         self.rho = -1.0
 
     def compute_step(
-        self, controller: StepController, iterate: Iterate, dt: float, display: bool
+        self,
+        controller: StepController,
+        iterate: Iterate,
+        dt: float,
+        display: bool,
+        timer: Timer,
     ) -> StepControlResult:
         problem = self.problem
         params = self.params
@@ -239,7 +245,9 @@ class Solver:
                 yield next_step
                 curr_iterate = next_step.iterate
 
-        return controller.compute_step(iterate, self.rho, dt, next_steps(), display)
+        return controller.compute_step(
+            iterate, self.rho, dt, next_steps(), display, timer
+        )
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
@@ -394,6 +402,8 @@ class Solver:
         last_active_set = None
         last_display_iteration = -1
 
+        timer = Timer(params.time_limit)
+
         while True:
             if line_diff == header_interval:
                 line_diff = 0
@@ -420,7 +430,7 @@ class Solver:
             display_iterate = curr_time - last_time >= params.display_interval
 
             step_result = self.compute_step(
-                controller, iterate, 1.0 / lamb, display_iterate
+                controller, iterate, 1.0 / lamb, display_iterate, timer
             )
 
             x = iterate.x
@@ -438,7 +448,7 @@ class Solver:
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
 
-            if curr_time - start_time >= params.time_limit:
+            if timer.reached_time_limit():
                 logger.debug("Reached time limit")
                 status = SolverStatus.TimeLimit
                 break
@@ -503,8 +513,7 @@ class Solver:
                 logger.debug("Iteration limit reached")
                 break
 
-        curr_time = time.time()
-        total_time = curr_time - start_time
+        total_time = timer.elapsed()
 
         direct_dist = iterate.dist(initial_iterate)
 
