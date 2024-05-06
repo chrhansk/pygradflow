@@ -72,7 +72,7 @@ class BoxReducedProblem(cyipopt.Problem):
         self.add_option("hessian_approximation", "limited-memory")
 
         remaining = timer.remaining()
-        if remaining is not None:
+        if np.isfinite(remaining):
             self.add_option("max_wall_time", remaining)
 
     def solve(self, timer):

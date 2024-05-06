@@ -212,7 +212,7 @@ class ImplicitProblem(cyipopt.Problem):
 
         remaining = timer.remaining()
 
-        if remaining is not None:
+        if np.isfinite(remaining):
             self.add_option("max_wall_time", remaining)
 
     def solve(self, timer):
