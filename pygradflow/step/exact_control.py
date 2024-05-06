@@ -2,7 +2,11 @@ import numpy as np
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.log import logger
-from pygradflow.step.step_control import StepController, StepControlResult
+from pygradflow.step.step_control import (
+    StepController,
+    StepControlResult,
+    StepSolverError,
+)
 
 
 class ExactController(StepController):
@@ -11,7 +15,7 @@ class ExactController(StepController):
         self.max_num_it = max_num_it
         self.rate_bound = rate_bound
 
-    def step(self, iterate, rho, dt, next_steps, display):
+    def step(self, iterate, rho, dt, next_steps, display, timer):
         assert dt > 0.0
         lamb = 1.0 / dt
 
@@ -30,6 +34,9 @@ class ExactController(StepController):
             next_iterate = next_step.iterate
             active_set = next_step.active_set
             rcond = next_step.rcond
+
+            if timer.reached_time_limit():
+                raise StepSolverError("Time limit reached")
 
             self.display_step(i, next_step)
 

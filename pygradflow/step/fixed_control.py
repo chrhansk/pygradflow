@@ -8,7 +8,7 @@ class FixedStepSizeController(StepController):
         super().__init__(problem, params)
         self.lamb = params.lamb_init
 
-    def step(self, iterate, rho, dt, next_steps, display):
+    def step(self, iterate, rho, dt, next_steps, display, timer):
         assert dt > 0.0
 
         step = next(next_steps)

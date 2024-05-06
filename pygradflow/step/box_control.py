@@ -1,3 +1,5 @@
+import time
+
 import cyipopt
 import numpy as np
 from scipy.optimize import Bounds, minimize
@@ -61,7 +63,7 @@ class BoxReducedProblem(cyipopt.Problem):
     def jacobian(self, x):
         return np.empty((0, self.num_vars))
 
-    def set_options(self):
+    def set_options(self, timer):
         import logging
 
         logging.getLogger("cyipopt").setLevel(logging.WARNING)
@@ -69,10 +71,14 @@ class BoxReducedProblem(cyipopt.Problem):
         # self.add_option("derivative_test", "first-order")
         self.add_option("hessian_approximation", "limited-memory")
 
-    def solve(self):
+        remaining = timer.remaining()
+        if np.isfinite(remaining):
+            self.add_option("max_wall_time", remaining)
+
+    def solve(self, timer):
         iterate = self.iterate
 
-        self.set_options()
+        self.set_options(timer)
         x0 = iterate.x
 
         # Solve using Ipopt
@@ -117,7 +123,7 @@ class BoxReducedController(StepController):
         cons_jac_factor = (rho + (1 / lamb)) * cons + yhat
         return obj_grad + lamb * dx + cons_jac.T.dot(cons_jac_factor)
 
-    def solve_step(self, iterate, rho, dt):
+    def solve_step(self, iterate, rho, dt, timer):
         problem = self.problem
 
         x = iterate.x
@@ -143,6 +149,10 @@ class BoxReducedController(StepController):
         def gradient(x):
             return self.gradient(iterate, x, lamb, rho)
 
+        def callback(x):
+            if timer.reached_time_limit():
+                raise StopIteration()
+
         result = minimize(
             objective,
             x,
@@ -150,6 +160,7 @@ class BoxReducedController(StepController):
             bounds=Bounds(lb, ub),
             method="TNC",
             options={"gtol": 1e-8, "ftol": 0.0},
+            callback=callback,
         )
 
         if not result.success:
@@ -158,12 +169,7 @@ class BoxReducedController(StepController):
         return result.x
 
     def step(
-        self,
-        iterate,
-        rho: float,
-        dt: float,
-        next_steps,
-        display: bool,
+        self, iterate, rho: float, dt: float, next_steps, display: bool, timer
     ) -> StepControlResult:
 
         lamb = 1.0 / dt
@@ -172,12 +178,12 @@ class BoxReducedController(StepController):
         params = self.params
 
         # reduced_problem = BoxReducedProblem(self, iterate, lamb, rho)
-        # x = reduced_problem.solve()
+        # x = reduced_problem.solve(timer=timer)
 
         # TODO: The minimize function shipped with scipy
         # do not consistently produce high-quality solutions,
         # causing the optimization of the overall problem to fail.
-        x = self.solve_step(iterate, rho, dt)
+        x = self.solve_step(iterate, rho, dt, timer=timer)
 
         cons = problem.cons(x)
         w = (-1 / lamb) * cons

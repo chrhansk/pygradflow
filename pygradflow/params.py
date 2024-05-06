@@ -172,7 +172,7 @@ class Params:
     validate_input: bool = True
 
     iteration_limit: Optional[int] = None
-    time_limit: float = np.inf
+    time_limit: float = float(np.inf)
     display_interval: float = 0.1
 
     # lower bound on objective function value,

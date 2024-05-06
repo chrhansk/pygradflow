@@ -11,6 +11,7 @@ from pygradflow.log import logger
 from pygradflow.params import Params, StepControlType
 from pygradflow.problem import Problem
 from pygradflow.step.step_solver import StepResult
+from pygradflow.timer import Timer
 
 
 class StepSolverError(Exception):
@@ -64,6 +65,7 @@ class StepController(abc.ABC):
         dt: float,
         next_steps: Iterator[StepResult],
         display: bool,
+        timer: Timer,
     ) -> StepControlResult:
         raise NotImplementedError()
 
@@ -77,6 +79,7 @@ class StepController(abc.ABC):
         dt: float,
         next_steps: Iterator[StepResult],
         display: bool,
+        timer: Timer,
     ) -> StepControlResult:
         """
         Computes next step using the step method, handling
@@ -93,7 +96,7 @@ class StepController(abc.ABC):
                 self.res_func = res_func
                 self.display = inner_display(self.problem, self.params)
                 logger.debug("     %s", self.display.header)
-            return self.step(iterate, rho, dt, next_steps, display)
+            return self.step(iterate, rho, dt, next_steps, display, timer)
         except StepSolverError as e:
             logger.debug("Linear solver error during step computation: %s", e)
             lamb = 1.0 / dt
