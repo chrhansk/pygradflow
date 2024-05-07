@@ -4,7 +4,8 @@ import itertools
 import logging
 import os
 from abc import ABC, abstractmethod
-from multiprocessing import Pool, TimeoutError, cpu_count
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from multiprocessing import TimeoutError, cpu_count
 from multiprocessing.pool import ThreadPool
 
 import numpy as np
@@ -43,7 +44,7 @@ def try_solve_instance(instance, params, log_filename, verbose):
 
         # No time limit
         if params.time_limit == np.inf:
-            return solve()
+            return (instance, solve())
 
         # Solve in thread pool so we can
         # await the result
@@ -51,14 +52,15 @@ def try_solve_instance(instance, params, log_filename, verbose):
 
         try:
             res = thread_pool.apply_async(solve)
-            return res.get(params.time_limit)
+            result = res.get(params.time_limit)
+            return (instance, result)
         except TimeoutError:
             logger.error("Reached timeout, aborting")
-            return "timeout"
+            return (instance, "timeout")
     except Exception as exc:
         logger.error("Error solving %s", instance.name)
         logger.exception(exc, exc_info=(type(exc), exc, exc.__traceback__))
-        return "error"
+        return (instance, "error")
 
 
 class Runner(ABC):
@@ -80,44 +82,58 @@ class Runner(ABC):
 
         return params
 
-    def solve(self, instances, args):
+    def log_filename(self, args, instance):
+        return self.output_filename(args, f"{instance.name}.log")
+
+    def solve_instances_sequential(self, instances, args, params):
+        verbose = args.verbose
+        for instance in instances:
+            log_filename = self.log_filename(args, instance)
+            yield try_solve_instance(instance, params, log_filename, verbose)
+
+    def solve_instances_parallel(self, instances, args, params):
+        verbose = args.verbose
+
+        if args.parallel is True:
+            num_procs = cpu_count()
+        else:
+            num_procs = args.parallel
+
+        run_logger.info("Solving in parallel with up to %d processes", num_procs)
+
+        all_params = itertools.repeat(params)
+        all_log_filenames = [
+            self.log_filename(args, instance) for instance in instances
+        ]
+        all_verbose = itertools.repeat(verbose)
+
+        solve_args = zip(instances, all_params, all_log_filenames, all_verbose)
+
+        with ProcessPoolExecutor(num_procs, max_tasks_per_child=1) as pool:
+            futures = [
+                pool.submit(try_solve_instance, *solve_arg) for solve_arg in solve_args
+            ]
+
+            while len(futures) != 0:
+                done, futures = wait(futures, return_when=FIRST_COMPLETED)
+
+                for item in done:
+                    yield item.result()
+
+    def solve_instances(self, instances, args):
+        # yields sequence of tuples of (instance, result) for each instance
         results = []
 
         run_logger.info("Solving %d instances", len(instances))
 
         params = self.create_params(args)
 
-        def log_filename(instance):
-            return self.output_filename(args, f"{instance.name}.log")
-
         verbose = args.verbose
 
         if args.parallel is not None:
-            if args.parallel is True:
-                num_procs = cpu_count()
-            else:
-                num_procs = args.parallel
-
-            run_logger.info("Solving in parallel with up to %d processes", num_procs)
-
-            all_params = itertools.repeat(params)
-            all_log_filenames = [log_filename(instance) for instance in instances]
-            all_verbose = itertools.repeat(verbose)
-
-            solve_args = zip(instances, all_params, all_log_filenames, all_verbose)
-
-            with Pool(num_procs, maxtasksperchild=1) as pool:
-                results = pool.starmap(try_solve_instance, solve_args)
-
+            yield from self.solve_instances_parallel(instances, args, params)
         else:
-            for instance in instances:
-                results.append(
-                    try_solve_instance(
-                        instance, params, log_filename(instance), verbose
-                    )
-                )
-
-        self.write_results(args, params, instances, results)
+            yield from self.solve_instances_sequential(instances, args, params)
 
     def filter_instances(self, args):
         instances = []
@@ -191,8 +207,44 @@ class Runner(ABC):
 
         self.solve(instances, args)
 
-    def write_results(self, args, params, instances, results):
+    def create_csv_row(self, args, instance, result):
+        info = {
+            "instance": instance.name,
+            "num_vars": instance.num_vars,
+            "num_cons": instance.num_cons,
+            "size": instance.size,
+        }
+
+        if result == "timeout":
+            return {
+                **info,
+                "status": "timeout",
+                "total_time": args.time_limit,
+                "iterations": 0,
+                "num_accepted_steps": 0,
+            }
+
+        elif result == "error":
+            return {
+                **info,
+                "status": "error",
+                "total_time": 0.0,
+                "iterations": 0,
+                "num_accepted_steps": 0,
+            }
+        else:
+            return {
+                **info,
+                "status": SolverStatus.short_name(result.status),
+                "total_time": result.total_time,
+                "iterations": result.iterations,
+                "num_accepted_steps": result.num_accepted_steps,
+            }
+
+    def solve(self, instances, args):
         import csv
+
+        params = self.create_params(args)
 
         params.write(self.output_filename(args, "params.yml"))
 
@@ -215,44 +267,7 @@ class Runner(ABC):
             writer = csv.DictWriter(output_file, fieldnames=fieldnames)
             writer.writeheader()
 
-            for instance, result in zip(instances, results):
-                info = {
-                    "instance": instance.name,
-                    "num_vars": instance.num_vars,
-                    "num_cons": instance.num_cons,
-                    "size": instance.size,
-                }
-
-                if result == "timeout":
-                    writer.writerow(
-                        {
-                            **info,
-                            "status": "timeout",
-                            "total_time": args.time_limit,
-                            "iterations": 0,
-                            "num_accepted_steps": 0,
-                        }
-                    )
-
-                elif result == "error":
-                    writer.writerow(
-                        {
-                            **info,
-                            "status": "error",
-                            "total_time": 0.0,
-                            "iterations": 0,
-                            "num_accepted_steps": 0,
-                        }
-                    )
-                else:
-                    writer.writerow(
-                        {
-                            **info,
-                            "status": SolverStatus.short_name(result.status),
-                            "total_time": result.total_time,
-                            "iterations": result.iterations,
-                            "num_accepted_steps": result.num_accepted_steps,
-                        }
-                    )
-
+            for instance, result in self.solve_instances(instances, args):
+                run_logger.info("Finished instance %s", instance.name)
+                writer.writerow(self.create_csv_row(args, instance, result))
                 output_file.flush()
