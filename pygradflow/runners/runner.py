@@ -18,12 +18,19 @@ run_logger = logging.getLogger(__name__)
 formatter = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
 
 
-def try_solve_instance(instance, params, log_filename):
+def try_solve_instance(instance, params, log_filename, verbose):
     try:
+        logger.handlers.clear()
+
         handler = logging.FileHandler(log_filename)
         handler.setFormatter(formatter)
-        logger.handlers.clear()
         logger.addHandler(handler)
+
+        if verbose:
+            handler = logging.StreamHandler()
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
         logger.setLevel(logging.INFO)
 
         logging.captureWarnings(True)
@@ -83,6 +90,8 @@ class Runner(ABC):
         def log_filename(instance):
             return self.output_filename(args, f"{instance.name}.log")
 
+        verbose = args.verbose
+
         if args.parallel is not None:
             if args.parallel is True:
                 num_procs = cpu_count()
@@ -93,8 +102,9 @@ class Runner(ABC):
 
             all_params = itertools.repeat(params)
             all_log_filenames = [log_filename(instance) for instance in instances]
+            all_verbose = itertools.repeat(verbose)
 
-            solve_args = zip(instances, all_params, all_log_filenames)
+            solve_args = zip(instances, all_params, all_log_filenames, all_verbose)
 
             with Pool(num_procs, maxtasksperchild=1) as pool:
                 results = pool.starmap(try_solve_instance, solve_args)
@@ -102,7 +112,9 @@ class Runner(ABC):
         else:
             for instance in instances:
                 results.append(
-                    try_solve_instance(instance, params, log_filename(instance))
+                    try_solve_instance(
+                        instance, params, log_filename(instance), verbose
+                    )
                 )
 
         self.write_results(args, params, instances, results)
@@ -132,6 +144,7 @@ class Runner(ABC):
         parser.add_argument("--output", type=str)
         parser.add_argument("--max_size", type=int)
         parser.add_argument("--name", type=str)
+        parser.add_argument("--verbose", action="store_true")
         parser.add_argument("--parallel", nargs="?", type=int, const=True)
 
         group = parser.add_argument_group(title="parameters")

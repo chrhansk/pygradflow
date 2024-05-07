@@ -228,16 +228,11 @@ class ImplicitProblem(cyipopt.Problem):
 
         assert np.isfinite(z).all()
 
-        if info["status"] != 0:
+        if info["status"] not in [0, 1]:
             raise StepSolverError("Ipopt failed to solve the problem")
 
         x = z[: self.prob_num_vars]
-        if rescaled:
-            v = z[self.prob_num_vars :]
-            w = v / math.sqrt(self.lamb)
-        else:
-            w = z[self.prob_num_vars :]
-        y = iterate.y - w
+        y = info["mult_g"]
 
         return (x, y)
 
@@ -260,11 +255,6 @@ class OptimizingController(StepController):
 
         residuum = np.linalg.norm(value)
 
-        if residuum <= 1e-6:
-            return StepControlResult(
-                next_iterate, 0.5 * lamb, active_set=None, rcond=None, accepted=True
-            )
-
         return StepControlResult(
-            next_iterate, 2.0 * lamb, active_set=None, rcond=None, accepted=False
+            next_iterate, 0.5 * lamb, active_set=None, rcond=None, accepted=True
         )
