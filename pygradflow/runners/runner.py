@@ -211,8 +211,8 @@ class Runner(ABC):
             "num_accepted_steps",
         ]
 
-        with open(filename, "w") as file:
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
+        with open(filename, "w") as output_file:
+            writer = csv.DictWriter(output_file, fieldnames=fieldnames)
             writer.writeheader()
 
             for instance, result in zip(instances, results):
@@ -254,3 +254,5 @@ class Runner(ABC):
                             "num_accepted_steps": result.num_accepted_steps,
                         }
                     )
+
+                output_file.flush()
