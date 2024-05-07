@@ -212,8 +212,10 @@ class ImplicitProblem(cyipopt.Problem):
 
         remaining = timer.remaining()
 
-        if np.isfinite(remaining):
-            self.add_option("max_wall_time", remaining)
+        if remaining <= 0.0:
+            raise StepSolverError("Time limit reached")
+        elif np.isfinite(remaining):
+            self.add_option("max_cpu_time", remaining)
 
     def solve(self, timer):
         iterate = self.iterate
