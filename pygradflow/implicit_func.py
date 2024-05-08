@@ -8,7 +8,7 @@ from pygradflow.iterate import Iterate
 from pygradflow.problem import Problem
 
 
-class _Func(abc.ABC):
+class StepFunc(abc.ABC):
     def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
         self.problem = problem
         self.orig_iterate = iterate
@@ -64,28 +64,13 @@ class _Func(abc.ABC):
     ) -> np.ndarray:
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def projection_initial(self, iterate: Iterate, rho: float) -> np.ndarray:
+        raise NotImplementedError()
 
-class ImplicitFunc(_Func):
-    def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
-        super().__init__(problem, iterate, dt)
-
-    def project(self, x: np.ndarray, active_set: np.ndarray):
-        problem = self.problem
-        lb = problem.var_lb
-        ub = problem.var_ub
-
-        return super().project_box(x, lb, ub, active_set)
-
-    def compute_active_set(self, x: np.ndarray):
-        problem = self.problem
-        lb = problem.var_lb
-        ub = problem.var_ub
-        return super().compute_active_set_box(x, lb, ub)
-
-    def projection_initial(self, iterate: Iterate, rho: float):
-        x_0 = self.orig_iterate.x
-        dt = self.dt
-        return x_0 - dt * iterate.aug_lag_deriv_x(rho)
+    @abc.abstractmethod
+    def compute_active_set(self, x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError()
 
     def apply_project_deriv(self, mat: sp.sparse.spmatrix, active_set: np.ndarray):
         problem = self.problem
@@ -123,6 +108,29 @@ class ImplicitFunc(_Func):
         assert inactive_set[proj_mat.row].all()
 
         return proj_mat
+
+
+class ImplicitFunc(StepFunc):
+    def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
+        super().__init__(problem, iterate, dt)
+
+    def project(self, x: np.ndarray, active_set: np.ndarray):
+        problem = self.problem
+        lb = problem.var_lb
+        ub = problem.var_ub
+
+        return super().project_box(x, lb, ub, active_set)
+
+    def compute_active_set(self, x: np.ndarray):
+        problem = self.problem
+        lb = problem.var_lb
+        ub = problem.var_ub
+        return super().compute_active_set_box(x, lb, ub)
+
+    def projection_initial(self, iterate: Iterate, rho: float):
+        x_0 = self.orig_iterate.x
+        dt = self.dt
+        return x_0 - dt * iterate.aug_lag_deriv_x(rho)
 
     # @override
     def value_at(self, iterate, rho, active_set=None):
@@ -178,7 +186,7 @@ class ImplicitFunc(_Func):
         return self.deriv(jac, hess, active_set)
 
 
-class ScaledImplicitFunc(_Func):
+class ScaledImplicitFunc(StepFunc):
     def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
         super().__init__(problem, iterate, dt)
         self.lamb = 1.0 / dt
@@ -212,3 +220,46 @@ class ScaledImplicitFunc(_Func):
 
     def compute_active_set(self, x: np.ndarray):
         return super().compute_active_set_box(x, self.lb, self.ub)
+
+    def deriv(
+        self, jac: sp.sparse.spmatrix, hess: sp.sparse.spmatrix, active_set: np.ndarray
+    ):
+        n = self.n
+        m = self.m
+        dt = self.dt
+        lamb = 1.0 / dt
+
+        assert active_set is not None
+        params = self.orig_iterate.params
+
+        F_11 = sp.sparse.diags([lamb], shape=(n, n), dtype=params.dtype)
+
+        F_11 = lamb * sp.sparse.eye(n, dtype=params.dtype)
+        F_11 += self.apply_project_deriv(hess, active_set)
+
+        F_12 = self.apply_project_deriv(jac.T, active_set)
+
+        assert F_11.dtype == params.dtype
+        assert F_12.dtype == params.dtype
+
+        F_21 = -jac
+
+        F_22 = sp.sparse.diags([lamb], shape=(m, m), dtype=params.dtype)
+
+        deriv = sp.sparse.bmat([[F_11, F_12], [F_21, F_22]], format="csc")
+
+        assert deriv.dtype == params.dtype
+
+        return deriv
+
+    def deriv_at(
+        self, iterate: Iterate, rho: float, active_set: Optional[np.ndarray] = None
+    ):
+        if active_set is None:
+            p = self.projection_initial(iterate, rho)
+            active_set = self.compute_active_set(p)
+
+        hess = iterate.aug_lag_deriv_xx(rho)
+        jac = iterate.aug_lag_deriv_xy()
+
+        return self.deriv(jac, hess, active_set)
