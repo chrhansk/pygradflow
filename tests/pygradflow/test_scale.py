@@ -3,7 +3,7 @@ import pytest
 
 from pygradflow.deriv_check import deriv_check
 from pygradflow.iterate import Iterate
-from pygradflow.params import DerivCheck, Params
+from pygradflow.params import DerivCheck, Params, ScalingType
 from pygradflow.scale import ScaledProblem, Scaling
 from pygradflow.solver import Solver
 
@@ -191,8 +191,14 @@ def test_solve_hs71_scaled(hs71_instance):
         np.array([1, 2, 3, 2, 1], dtype=int), np.array([2, 3], dtype=int), 0
     )
 
-    params = Params(iteration_limit=5000, deriv_check=DerivCheck.CheckAll)
-    solver = Solver(problem, params=params, scaling=scaling)
+    params = Params(
+        iteration_limit=5000,
+        deriv_check=DerivCheck.CheckAll,
+        scaling=scaling,
+        scaling_type=ScalingType.Custom,
+    )
+
+    solver = Solver(problem, params=params)
 
     result = solver.solve(x_0, y_0)
 
