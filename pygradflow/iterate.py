@@ -121,6 +121,12 @@ class Iterate:
 
         infeas_opt_res = self.cons_jac.T.dot(self.cons)
 
+        at_lower = self.active_set.at_lower
+        at_upper = self.active_set.at_upper
+
+        infeas_opt_res[at_lower] = np.minimum(infeas_opt_res[at_lower], 0.0)
+        infeas_opt_res[at_upper] = np.maximum(infeas_opt_res[at_upper], 0.0)
+
         return bool(np.linalg.norm(infeas_opt_res, ord=np.inf) <= local_infeas_tol)
 
     @functools.cached_property
