@@ -3,7 +3,7 @@ import math
 import cyipopt
 import numpy as np
 
-from pygradflow.eval import astype
+from pygradflow.eval import EvalError, astype
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.step.step_control import (
@@ -227,12 +227,15 @@ class ImplicitProblem(cyipopt.Problem):
         z0 = np.concatenate([x0, y0])
 
         # Solve using Ipopt
-        z, info = super().solve(z0)
+        try:
+            z, info = super().solve(z0)
+        except EvalError:
+            raise StepSolverError("Failed to evaluate subproblem")
 
         assert np.isfinite(z).all()
 
         if info["status"] not in [0, 1]:
-            raise StepSolverError("Ipopt failed to solve the problem")
+            raise StepSolverError("Ipopt failed to solve subproblem")
 
         x = z[: self.prob_num_vars]
         y = info["mult_g"]
