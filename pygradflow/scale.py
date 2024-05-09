@@ -4,17 +4,22 @@ from pygradflow.problem import Problem
 
 
 class Scaling:
-    def __init__(self, var_weights, cons_weights, obj_weight=1):
+    def __init__(self, var_weights, cons_weights, obj_weight=0):
         self.var_weights = var_weights
         self.cons_weights = cons_weights
 
         assert var_weights.ndim == 1
-        assert var_weights.dtype == int
+        assert var_weights.dtype in [np.int64, np.int32, np.int16, np.int8]
 
         assert cons_weights.ndim == 1
-        assert cons_weights.dtype == int
+        assert cons_weights.dtype in [np.int64, np.int32, np.int16, np.int8]
 
         self.obj_weight = obj_weight
+
+    @staticmethod
+    def zero(num_vars, num_cons):
+        return Scaling(np.zeros((num_vars,), dtype=int),
+                       np.zeros((num_cons,), dtype=int))
 
     @staticmethod
     def from_nominal_values(var_values, cons_values, obj_value):
@@ -27,6 +32,34 @@ class Scaling:
     @staticmethod
     def weights_from_nominal_values(values):
         return 1 - np.frexp(values)[1]
+
+    @staticmethod
+    def from_gradient_and_jacobian(grad, jac):
+        grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
+        var_weights = -grad_weights
+
+        if jac is None:
+            cons_weights = np.zeros((0,), dtype=int)
+            return Scaling(var_weights, cons_weights)
+
+        (num_cons, num_vars) = jac.shape
+        assert grad.shape == (num_vars,)
+
+        jac = jac.tocoo()
+
+        rows = jac.row
+        cols = jac.col
+        data = np.abs(jac.data)
+
+        prescaled_data = np.ldexp(data, -var_weights[cols])
+        max_values = np.zeros((num_cons,), dtype=int)
+
+        for i, row in enumerate(rows):
+            max_values[row] = max(max_values[row], prescaled_data[i])
+
+        cons_weights = Scaling.weights_from_nominal_values(max_values)
+
+        return Scaling(var_weights, cons_weights)
 
     @property
     def num_vars(self):
@@ -79,7 +112,6 @@ class ScaledProblem(Problem):
         return np.ldexp(scaled_x, -var_weights)
 
     def obj(self, x):
-        var_weights = self.scaling.var_weights
         x_orig = self._orig_x(x)
         obj_orig = self.problem.obj(x_orig)
         return np.ldexp(obj_orig, self.scaling.obj_weight)
@@ -93,7 +125,6 @@ class ScaledProblem(Problem):
         return np.ldexp(grad, self.scaling.obj_weight)
 
     def cons(self, x):
-        var_weights = self.scaling.var_weights
         cons_weights = self.scaling.cons_weights
         x_orig = self._orig_x(x)
 
