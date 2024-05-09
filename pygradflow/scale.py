@@ -18,8 +18,9 @@ class Scaling:
 
     @staticmethod
     def zero(num_vars, num_cons):
-        return Scaling(np.zeros((num_vars,), dtype=int),
-                       np.zeros((num_cons,), dtype=int))
+        return Scaling(
+            np.zeros((num_vars,), dtype=int), np.zeros((num_cons,), dtype=int)
+        )
 
     @staticmethod
     def from_nominal_values(var_values, cons_values, obj_value):
@@ -34,18 +35,18 @@ class Scaling:
         return 1 - np.frexp(values)[1]
 
     @staticmethod
-    def from_gradient_and_jacobian(grad, jac):
-        grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
+    def from_grad_jac(obj_grad, cons_jac):
+        grad_weights = Scaling.weights_from_nominal_values(np.abs(obj_grad))
         var_weights = -grad_weights
 
-        if jac is None:
+        if cons_jac is None:
             cons_weights = np.zeros((0,), dtype=int)
             return Scaling(var_weights, cons_weights)
 
-        (num_cons, num_vars) = jac.shape
-        assert grad.shape == (num_vars,)
+        (num_cons, num_vars) = cons_jac.shape
+        assert obj_grad.shape == (num_vars,)
 
-        jac = jac.tocoo()
+        jac = cons_jac.tocoo()
 
         rows = jac.row
         cols = jac.col

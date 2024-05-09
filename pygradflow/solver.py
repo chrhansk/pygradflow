@@ -9,7 +9,7 @@ from pygradflow.eval import Evaluator, SimpleEvaluator, ValidatingEvaluator
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.newton import newton_method
-from pygradflow.params import Params
+from pygradflow.params import Params, ScalingType
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
 from pygradflow.scale import Scaling
@@ -196,7 +196,6 @@ class Solver:
         self,
         problem: Problem,
         params: Params = Params(),
-        scaling: Optional[Scaling] = None,
     ) -> None:
         """
         Creates a new solver
@@ -210,19 +209,6 @@ class Solver:
         """
         self.orig_problem = problem
         self.params = params
-        self.scaling = scaling
-
-        self.transform = Transformation(problem, params, scaling)
-
-        self.problem = self.transform.trans_problem
-
-        if params.validate_input:
-            self.evaluator: Evaluator = ValidatingEvaluator(self.problem, params)
-        else:
-            self.evaluator = SimpleEvaluator(self.problem, params)
-
-        self.penalty = penalty_strategy(self.problem, params)
-        self.rho = -1.0
 
     def compute_step(
         self,
@@ -345,6 +331,68 @@ class Solver:
 
         return Iterate(problem, params, x, y, self.evaluator)
 
+    def _create_scaling(self, x0):
+        params = self.params
+        problem = self.orig_problem
+
+        scaling_type = params.scaling_type
+
+        if params.scaling is not None:
+            assert scaling_type == ScalingType.Custom
+            return params.scaling
+
+        if scaling_type == ScalingType.NoScaling:
+            return None
+        elif scaling_type == ScalingType.GradJac:
+            obj_grad = problem.obj_grad(x0)
+            cons_jac = None
+            if problem.num_cons > 0:
+                cons_jac = problem.cons_jac(x0)
+
+            return Scaling.from_grad_jac(obj_grad, cons_jac)
+        elif scaling_type == ScalingType.Custom:
+            raise ValueError("Custom scaling requires explicit scaling")
+        else:
+            raise ValueError(f"Unknown scaling type {scaling_type}")
+
+    def _create_transformed_problem(self, x0):
+        self.scaling = self._create_scaling(x0)
+
+        orig_problem = self.orig_problem
+        params = self.params
+
+        self.transform = Transformation(orig_problem, params, self.scaling)
+        self.problem = self.transform.trans_problem
+
+        pass
+
+    def _check_terminate(self, iterate, iteration, timer):
+        params = self.params
+
+        if (params.iteration_limit is not None) and (
+            iteration >= params.iteration_limit
+        ):
+            logger.debug("Iteration limit reached")
+            return SolverStatus.IterationLimit
+
+        if timer.reached_time_limit():
+            logger.debug("Reached time limit")
+            return SolverStatus.TimeLimit
+
+        if iterate.total_res <= params.opt_tol:
+            logger.debug("Convergence achieved")
+            return SolverStatus.Optimal
+
+        if iterate.locally_infeasible(params.opt_tol, params.local_infeas_tol):
+            logger.debug("Local infeasibility detected")
+            return SolverStatus.LocallyInfeasible
+
+        if (iterate.obj <= params.obj_lower_limit) and (
+            iterate.is_feasible(params.opt_tol)
+        ):
+            logger.debug("Unboundedness detected")
+            return SolverStatus.Unbounded
+
     def solve(
         self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None
     ) -> SolverResult:
@@ -364,8 +412,18 @@ class Solver:
             The result of the solving process, including primal and dual
             solutions
         """
-        problem = self.problem
+
+        self._create_transformed_problem(x0)
         params = self.params
+        problem = self.problem
+
+        if params.validate_input:
+            self.evaluator: Evaluator = ValidatingEvaluator(self.problem, params)
+        else:
+            self.evaluator = SimpleEvaluator(self.problem, params)
+
+        self.penalty = penalty_strategy(self.problem, params)
+        self.rho = -1.0
 
         display = problem_display(problem, params)
 
@@ -405,25 +463,8 @@ class Solver:
         timer = Timer(params.time_limit)
 
         while True:
-            if line_diff == header_interval:
-                line_diff = 0
-                logger.info(display.header)
-
-            if iterate.total_res <= params.opt_tol:
-                logger.debug("Convergence achieved")
-                status = SolverStatus.Optimal
-                break
-
-            if iterate.locally_infeasible(params.opt_tol, params.local_infeas_tol):
-                logger.debug("Local infeasibility detected")
-                status = SolverStatus.LocallyInfeasible
-                break
-
-            if (iterate.obj <= params.obj_lower_limit) and (
-                iterate.is_feasible(params.opt_tol)
-            ):
-                logger.debug("Unboundedness detected")
-                status = SolverStatus.Unbounded
+            status = self._check_terminate(iterate, iteration, timer)
+            if status is not None:
                 break
 
             curr_time = time.time()
@@ -447,11 +488,6 @@ class Solver:
 
             primal_step_norm = np.linalg.norm(next_iterate.x - iterate.x)
             dual_step_norm = np.linalg.norm(next_iterate.y - iterate.y)
-
-            if timer.reached_time_limit():
-                logger.debug("Reached time limit")
-                status = SolverStatus.TimeLimit
-                break
 
             if display_iterate:
                 last_time = curr_time
@@ -505,13 +541,6 @@ class Solver:
             iteration += 1
             last_active_set = step_result.active_set
             # last_active_set = iterate.active_set
-
-            if (params.iteration_limit is not None) and (
-                iteration >= params.iteration_limit
-            ):
-                status = SolverStatus.IterationLimit
-                logger.debug("Iteration limit reached")
-                break
 
         total_time = timer.elapsed()
 

@@ -125,6 +125,27 @@ class DerivCheck(Flag):
     CheckAll = CheckFirst | CheckSecond
 
 
+class ScalingType(Enum):
+    """
+    How to scale the problem
+    """
+
+    NoScaling = auto()
+    """
+    No scaling
+    """
+
+    GradJac = auto()
+    """
+    Scale based on gradient and equilibration of constraint Jacobian
+    """
+
+    Custom = auto()
+    """
+    User-provided custom scaling
+    """
+
+
 @dataclass
 class Params:
     """
@@ -168,6 +189,9 @@ class Params:
     deriv_tol: float = 1e-4
 
     precision: Precision = Precision.Double
+
+    scaling_type: ScalingType = ScalingType.NoScaling
+    scaling: object = None
 
     validate_input: bool = True
 
