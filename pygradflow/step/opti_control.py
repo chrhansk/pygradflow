@@ -12,10 +12,6 @@ from pygradflow.step.step_control import (
     StepSolverError,
 )
 
-# Replace w by v = w / sqrt(lambda) in the augmented Lagrangian
-# to avoid numerical issues
-rescaled = True
-
 
 class ImplicitProblem(cyipopt.Problem):
     """
@@ -33,7 +29,10 @@ class ImplicitProblem(cyipopt.Problem):
     BFGS Hessian approximation.
     """
 
-    def __init__(self, iterate, lamb, rho):
+    def __init__(self, iterate, lamb, rho, rescaled=True):
+        # Resacled:
+        # Replace w by v = w / sqrt(lambda) in the augmented Lagrangian
+        # to avoid numerical issues
         assert lamb >= 0
         assert rho >= 0
 
@@ -41,6 +40,8 @@ class ImplicitProblem(cyipopt.Problem):
         self.eval = iterate.eval
         self.lamb = lamb
         self.rho = rho
+
+        self.rescaled = rescaled
 
         problem = iterate.problem
         prob_num_vars = problem.num_vars
@@ -85,7 +86,7 @@ class ImplicitProblem(cyipopt.Problem):
 
         xdiff = x - self.iterate.x
 
-        if rescaled:
+        if self.rescaled:
             wdiff = w - math.sqrt(lamb) * self.iterate.y
             aug_obj += (lamb / 2) * np.dot(xdiff, xdiff) + (1 / 2) * np.dot(
                 wdiff, wdiff
@@ -114,7 +115,7 @@ class ImplicitProblem(cyipopt.Problem):
 
         gradx = obj_grad + rho * cons_prod + lamb * (x - self.iterate.x)
 
-        if rescaled:
+        if self.rescaled:
             gradw = w - math.sqrt(lamb) * self.iterate.y
         else:
             gradw = lamb * (w - self.iterate.y)
@@ -133,7 +134,7 @@ class ImplicitProblem(cyipopt.Problem):
         prob_cons = eval.cons(x)
         lamb = self.lamb
 
-        if rescaled:
+        if self.rescaled:
             cons = prob_cons + math.sqrt(lamb) * w
         else:
             cons = prob_cons + lamb * w
@@ -152,7 +153,7 @@ class ImplicitProblem(cyipopt.Problem):
         jac_x = eval.cons_jac(x).tocoo()
         data_x = jac_x.data
 
-        if rescaled:
+        if self.rescaled:
             data_w = np.full((problem.num_cons,), math.sqrt(self.lamb))
         else:
             data_w = np.full((problem.num_cons,), self.lamb)
@@ -207,7 +208,7 @@ class ImplicitProblem(cyipopt.Problem):
 
         logging.getLogger("cyipopt").setLevel(logging.WARNING)
         self.add_option("print_level", 0)
-        self.add_option("derivative_test", "first-order")
+        # self.add_option("derivative_test", "first-order")
         self.add_option("hessian_approximation", "limited-memory")
 
         remaining = timer.remaining()
