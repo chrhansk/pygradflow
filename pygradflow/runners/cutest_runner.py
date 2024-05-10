@@ -150,9 +150,7 @@ class CUTestInstance(Instance):
         return pycutest.problem_properties(self.instance)
 
     def solve(self, params):
-        problem = pycutest.import_problem(self.name, drop_fixed_variables=True)
-
-        props = pycutest.problem_properties(self.instance)
+        problem = self.problem
 
         is_ne = self.name.endswith("NE")
 
