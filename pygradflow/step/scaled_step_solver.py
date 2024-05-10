@@ -1,7 +1,8 @@
 import copy
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 import numpy as np
+import scipy as sp
 
 from pygradflow.implicit_func import ScaledImplicitFunc
 from pygradflow.iterate import Iterate
@@ -21,9 +22,10 @@ class ScaledStepSolver(StepSolver):
     ) -> None:
         super().__init__(problem, params)
 
-        self.problem = problem
         self.orig_iterate = orig_iterate
         self.func = ScaledImplicitFunc(problem, orig_iterate, dt)
+
+        self._deriv: Optional[sp.sparse.spmatrix] = None
 
         self.dt = dt
         self.rho = rho
@@ -58,16 +60,21 @@ class ScaledStepSolver(StepSolver):
         raise NotImplementedError()
 
     def reset_deriv(self) -> None:
-        self.deriv = None
+        self._deriv = None
         self.solver = None
 
+    @property
+    def deriv(self) -> sp.sparse.spmatrix:
+        assert self._deriv is not None
+        return cast(sp.sparse.spmatrix, self._deriv)
+
     def update_derivs(self, iterate: Iterate) -> None:
-        self.jac = copy.copy(iterate.aug_lag_deriv_xy())
-        self.hess = copy.copy(iterate.aug_lag_deriv_xx(rho=0.0))
+        self._jac = copy.copy(iterate.aug_lag_deriv_xy())
+        self._hess = copy.copy(iterate.aug_lag_deriv_xx(rho=0.0))
         self.reset_deriv()
 
     def update_active_set(self, active_set: np.ndarray) -> None:
-        self.active_set = copy.copy(active_set)
+        self._active_set = copy.copy(active_set)
         self.reset_deriv()
 
     def solve(self, iterate: Iterate) -> StepResult:

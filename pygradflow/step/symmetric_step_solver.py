@@ -23,10 +23,6 @@ class SymmetricStepSolver(ScaledStepSolver):
         assert dt > 0.0
         assert rho > 0.0
 
-        self.active_set = None
-        self.jac = None
-        self.hess = None
-
     def compute_hess_jac(self) -> None:
         inactive_indices = np.where(np.logical_not(self.active_set))[0]
 
@@ -34,7 +30,7 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         n = self.n
 
-        hess = self.hess + sp.sparse.diags(
+        hess = self._hess + sp.sparse.diags(
             [lamb], shape=(n, n), dtype=self.params.dtype
         )
 
@@ -43,12 +39,11 @@ class SymmetricStepSolver(ScaledStepSolver):
 
     def update_derivs(self, iterate: Iterate) -> None:
         super().update_derivs(iterate)
-        self.jac = self.jac.tocsc()
+        self._jac = self.jac.tocsc()
 
     def reset_deriv(self) -> None:
         super().reset_deriv()
         self.hess_rows = None
-        self.deriv = None
 
     def compute_deriv(self, active_set: np.ndarray) -> sp.sparse.spmatrix:
         inactive_indices = np.where(np.logical_not(self.active_set))[0]
@@ -144,7 +139,7 @@ class SymmetricStepSolver(ScaledStepSolver):
         return sol
 
     def solve_active_set(self, active_set: np.ndarray, rhs: np.ndarray) -> np.ndarray:
-        if self.deriv is None:
-            self.deriv = self.compute_deriv(self.active_set)
+        if self._deriv is None:
+            self._deriv = self.compute_deriv(self.active_set)
 
         return self.solve_deriv(self.active_set, self.deriv, rhs)

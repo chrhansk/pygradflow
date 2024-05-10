@@ -17,9 +17,7 @@ class _Func(abc.ABC):
         self.n = problem.num_vars
         self.m = problem.num_cons
 
-    def compute_active_set(
-        self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray
-    ) -> np.ndarray:
+    def compute_active_set_box(self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray):
         """
         Compute the active set at the given point with respect to the
         given bounds.
@@ -44,7 +42,7 @@ class _Func(abc.ABC):
 
         return np.logical_or(x < lb - 1e-8, x > ub + 1e-8)
 
-    def project(
+    def project_box(
         self, x: np.ndarray, lb: np.ndarray, ub: np.ndarray, active_set: np.ndarray
     ) -> np.ndarray:
         assert active_set.dtype == bool
@@ -76,13 +74,13 @@ class ImplicitFunc(_Func):
         lb = problem.var_lb
         ub = problem.var_ub
 
-        return super().project(x, lb, ub, active_set)
+        return super().project_box(x, lb, ub, active_set)
 
     def compute_active_set(self, x: np.ndarray):
         problem = self.problem
         lb = problem.var_lb
         ub = problem.var_ub
-        return super().compute_active_set(x, lb, ub)
+        return super().compute_active_set_box(x, lb, ub)
 
     def projection_initial(self, iterate: Iterate, rho: float):
         x_0 = self.orig_iterate.x
@@ -210,7 +208,7 @@ class ScaledImplicitFunc(_Func):
         return lamb * x_0 - iterate.aug_lag_deriv_x(rho)
 
     def project(self, x: np.ndarray, active_set: np.ndarray):
-        return super().project(x, self.lb, self.ub, active_set)
+        return super().project_box(x, self.lb, self.ub, active_set)
 
     def compute_active_set(self, x: np.ndarray):
-        return super().compute_active_set(x, self.lb, self.ub)
+        return super().compute_active_set_box(x, self.lb, self.ub)

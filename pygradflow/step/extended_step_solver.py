@@ -29,10 +29,6 @@ class ExtendedStepSolver(ScaledStepSolver):
         assert dt > 0.0
         assert rho > 0.0
 
-        self.active_set = None
-        self.jac = None
-        self.hess = None
-
     def extract_rows(
         self, mat: sp.sparse.spmatrix, row_filter: np.ndarray
     ) -> sp.sparse.spmatrix:
@@ -78,14 +74,14 @@ class ExtendedStepSolver(ScaledStepSolver):
             [jac, lower_mat],
         ]
 
-        self.deriv = sp.sparse.bmat(blocks, format="csc")
+        self._deriv = sp.sparse.bmat(blocks, format="csc")
 
         assert self.deriv.shape == (n + m, n + m)
         assert self.deriv.dtype == self.params.dtype
 
     def solve_scaled(self, b0, b1, b2t):
         params = self.params
-        if self.deriv is None:
+        if self._deriv is None:
             self._compute_deriv()
 
         if self.solver is None:
