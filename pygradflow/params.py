@@ -2,7 +2,7 @@ import dataclasses
 import enum
 from dataclasses import dataclass
 from enum import Enum, Flag, auto
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
 
@@ -179,7 +179,7 @@ class Params:
 
     step_control_type: StepControlType = StepControlType.DistanceRatio
 
-    step_solver: object = None
+    step_solver: Optional[Callable[..., Any]] = None
     step_solver_type: StepSolverType = StepSolverType.Symmetric
     linear_solver_type: LinearSolverType = LinearSolverType.LU
     penalty_update: PenaltyUpdate = PenaltyUpdate.DualNorm

@@ -124,7 +124,7 @@ class FixedActiveSetNewtonMethod(NewtonMethod):
         dx = x - xn
         dy = y - yn
 
-        return StepResult(iterate, dx, dy)
+        return StepResult(iterate, dx, dy, active_set=self.active_set)
 
     @staticmethod
     def active_set_from_iterate(problem, iterate):

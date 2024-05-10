@@ -30,9 +30,6 @@ class StandardStepSolver(StepSolver):
         self.orig_iterate = orig_iterate
         self.func = ImplicitFunc(problem, orig_iterate, dt)
 
-        self.active_set = None
-        self.jac = None
-        self.hess = None
         self.rho = rho
 
     def _compute_deriv(self) -> None:
@@ -47,12 +44,12 @@ class StandardStepSolver(StepSolver):
         self.solver = None
 
     def update_derivs(self, iterate: Iterate) -> None:
-        self.jac = copy.copy(iterate.aug_lag_deriv_xy())
-        self.hess = copy.copy(iterate.aug_lag_deriv_xx(self.rho))
+        self._jac = copy.copy(iterate.aug_lag_deriv_xy())
+        self._hess = copy.copy(iterate.aug_lag_deriv_xx(self.rho))
         self._reset_deriv()
 
     def update_active_set(self, active_set: np.ndarray) -> None:
-        self.active_set = copy.copy(active_set)
+        self._active_set = copy.copy(active_set)
         self._reset_deriv()
 
     def solve(self, iterate: Iterate) -> StepResult:

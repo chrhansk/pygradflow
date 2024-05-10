@@ -25,21 +25,13 @@ class AsymmetricStepSolver(ScaledStepSolver):
         assert dt > 0.0
         assert rho > 0.0
 
-        self.active_set = None
-        self.jac = None
-        self.hess = None
-
-    def reset_deriv(self) -> None:
-        self.deriv = None
-        self.solver = None
-
     def update_derivs(self, iterate: Iterate) -> None:
-        self.jac = copy.copy(iterate.aug_lag_deriv_xy())
-        self.hess = copy.copy(iterate.aug_lag_deriv_xx(rho=0.0))
+        self._jac = copy.copy(iterate.aug_lag_deriv_xy())
+        self._hess = copy.copy(iterate.aug_lag_deriv_xx(rho=0.0))
         self.reset_deriv()
 
     def update_active_set(self, active_set: np.ndarray) -> None:
-        self.active_set = copy.copy(active_set)
+        self._active_set = copy.copy(active_set)
         self.reset_deriv()
 
     def overwrite_active_rows(self, matrix):
@@ -145,8 +137,8 @@ class AsymmetricStepSolver(ScaledStepSolver):
         return initial_sol
 
     def solve_scaled(self, b0, b1, b2t):
-        if self.deriv is None:
-            self.deriv = self.compute_deriv(self.active_set)
+        if self._deriv is None:
+            self._deriv = self.compute_deriv(self.active_set)
 
         if self.solver is None:
             self.solver = self.linear_solver(self.deriv)
