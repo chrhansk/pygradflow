@@ -1,4 +1,5 @@
 import logging
+from functools import cached_property
 
 import numpy as np
 import pycutest
@@ -24,7 +25,8 @@ class UnconstrainedCUTEstProblem(Problem):
         self.instance = instance
         var_lb = cutest_map_inf(instance.bl)
         var_ub = cutest_map_inf(instance.bu)
-        super().__init__(var_lb, var_ub, num_cons=instance.m)
+        assert instance.m == 0
+        super().__init__(var_lb, var_ub, num_cons=0)
 
     def obj(self, x):
         return self.instance.obj(x)
@@ -87,24 +89,71 @@ class ConstrainedCUTEstProblem(Problem):
         return self.instance.v0
 
 
+class LSQCUTEstProblem(Problem):
+    def __init__(self, instance):
+        self.instance = instance
+        var_lb = cutest_map_inf(instance.bl)
+        var_ub = cutest_map_inf(instance.bu)
+
+        super().__init__(var_lb, var_ub, num_cons=0)
+
+    @cached_property
+    def problem(self):
+        return pycutest.import_problem(self.name, drop_fixed_variables=True)
+
+    def obj(self, x):
+        residuals = self.instance.cons(x)
+        return 0.5 * np.dot(residuals, residuals)
+
+    def obj_grad(self, x):
+        residuals, jac = self.instance.scons(x, gradient=True)
+        return jac.T.dot(residuals)
+
+    def lag_hess(self, x, y):
+        _, jac = self.instance.scons(x, gradient=True)
+        return jac.T.dot(jac)
+
+    @property
+    def x0(self):
+        return self.instance.x0
+
+    @property
+    def y0(self):
+        return np.zeros((self.num_cons,))
+
+
 class CUTestInstance(Instance):
     def __init__(self, instance):
         self.instance = instance
 
-        props = pycutest.problem_properties(instance)
-
-        num_vars = props["n"]
-        num_cons = props["m"]
+        num_vars = self.props["n"]
+        num_cons = self.props["m"]
 
         if num_cons is None:
             num_cons = 0
 
         super().__init__(instance, num_vars, num_cons)
 
+    @property
+    def x0(self):
+        return self.problem.x0
+
+    @cached_property
+    def problem(self):
+        return pycutest.import_problem(self.name, drop_fixed_variables=True)
+
+    @cached_property
+    def description(self):
+        return pycutest.problem_properties(self.instance)
+
     def solve(self, params):
         problem = pycutest.import_problem(self.name, drop_fixed_variables=True)
 
-        if problem.m == 0:
+        props = pycutest.problem_properties(self.instance)
+
+        if props["objective"] == "none":
+            problem = LSQCUTEstProblem(problem)
+        elif problem.m == 0:
             problem = UnconstrainedCUTEstProblem(problem)
         else:
             problem = ConstrainedCUTEstProblem(problem)
