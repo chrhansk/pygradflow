@@ -23,12 +23,16 @@ class ScaledStepSolver(StepSolver):
         super().__init__(problem, params)
 
         self.orig_iterate = orig_iterate
-        self.func = ScaledImplicitFunc(problem, orig_iterate, dt)
+        self._func = ScaledImplicitFunc(problem, orig_iterate, dt)
 
         self._deriv: Optional[sp.sparse.spmatrix] = None
 
         self.dt = dt
         self.rho = rho
+
+    @property
+    def func(self) -> ScaledImplicitFunc:
+        return self._func
 
     def initial_rhs(
         self, iterate: Iterate

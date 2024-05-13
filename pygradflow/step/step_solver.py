@@ -5,6 +5,7 @@ from typing import Optional, cast
 import numpy as np
 import scipy as sp
 
+from pygradflow.implicit_func import StepFunc
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
@@ -88,6 +89,11 @@ class StepSolver(abc.ABC):
 
     @abc.abstractmethod
     def update_active_set(self, active_set: np.ndarray):
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
+    def func(self) -> StepFunc:
         raise NotImplementedError()
 
     @abc.abstractmethod

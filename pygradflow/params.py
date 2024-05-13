@@ -30,6 +30,11 @@ class NewtonType(Enum):
     Requires refactorizations but no reevaluations of the derivatives
     """
 
+    Globalized = auto()
+    """
+    Globalizes the Newton method by using an Armijo line search
+    """
+
 
 class StepSolverType(Enum):
     """

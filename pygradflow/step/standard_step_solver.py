@@ -28,9 +28,13 @@ class StandardStepSolver(StepSolver):
         super().__init__(problem, params)
 
         self.orig_iterate = orig_iterate
-        self.func = ImplicitFunc(problem, orig_iterate, dt)
+        self._func = ImplicitFunc(problem, orig_iterate, dt)
 
         self.rho = rho
+
+    @property
+    def func(self) -> ImplicitFunc:
+        return self._func
 
     def _compute_deriv(self) -> None:
         assert self.active_set is not None
