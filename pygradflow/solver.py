@@ -546,7 +546,7 @@ class Solver:
 
         direct_dist = iterate.dist(initial_iterate)
 
-        assert path_dist >= direct_dist
+        assert (path_dist >= direct_dist) or (np.isclose(path_dist, direct_dist))
 
         dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
         iterations = iteration
