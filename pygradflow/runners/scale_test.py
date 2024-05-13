@@ -6,6 +6,7 @@ from pygradflow.scale import Scaling
 from concurrent.futures import ProcessPoolExecutor, wait
 from multiprocessing import cpu_count
 
+import scipy as sp
 import numpy as np
 
 run_logger = logging.getLogger(__name__)
@@ -97,9 +98,18 @@ def main():
 
     parameters = np.array([0., 0., 0.])
 
-    num_solved = solve(instances, parameters)
+    def obj(parameters):
+        return -solve(instances, parameters)
 
-    run_logger.info("Solved %d instances", num_solved)
+    res = sp.optimize.minimize(obj,
+                               parameters,
+                               method="Nelder-Mead")
+
+    print("Result")
+    print(res)
+
+    print("Solution")
+    print(res.x)
 
 
 if __name__ == "__main__":
