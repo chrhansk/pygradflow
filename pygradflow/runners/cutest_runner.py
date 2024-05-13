@@ -89,7 +89,10 @@ class ConstrainedCUTEstProblem(Problem):
         return self.instance.v0
 
 
-class LSQCUTEstProblem(Problem):
+# Nonlinear equations: Goal is to minimize the violation
+# 1/2 ||c(x)||^2 subject to problem bounds. Constraint
+# functions are used to access the residuals and their derivatives
+class NECUTEstProblem(Problem):
     def __init__(self, instance):
         self.instance = instance
         var_lb = cutest_map_inf(instance.bl)
@@ -151,8 +154,10 @@ class CUTestInstance(Instance):
 
         props = pycutest.problem_properties(self.instance)
 
-        if props["objective"] == "none":
-            problem = LSQCUTEstProblem(problem)
+        is_ne = self.name.endswith("NE")
+
+        if is_ne:
+            problem = NECUTEstProblem(problem)
         elif problem.m == 0:
             problem = UnconstrainedCUTEstProblem(problem)
         else:
