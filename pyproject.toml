@@ -34,7 +34,7 @@ optional = true
 
 [tool.poetry.group.bench.dependencies]
 pyqplib = "^0.1.3"
-pycutest = "^1.5.1"
+pycutest = "^1.7.0"
 
 [build-system]
 requires = ["poetry-core"]
