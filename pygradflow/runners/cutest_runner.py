@@ -146,7 +146,7 @@ class CUTestInstance(Instance):
         return pycutest.import_problem(self.name, drop_fixed_variables=True)
 
     @cached_property
-    def description(self):
+    def props(self):
         return pycutest.problem_properties(self.instance)
 
     def solve(self, params):
