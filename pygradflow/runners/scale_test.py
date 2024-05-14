@@ -23,8 +23,10 @@ class ScalingRule(ABC):
 class ZeroScaling(ScalingRule):
     def compute_scaling(self, instance):
 
-        return Scaling.zero(instance.num_vars,
-                            instance.num_cons)
+        problem = instance.problem()
+
+        return Scaling.zero(problem.num_vars,
+                            problem.num_cons)
 
 
 class SimpleGrad(ScalingRule):
