@@ -38,7 +38,9 @@ class SimpleGrad(ScalingRule):
         grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
         var_weights = -grad_weights
 
-        cons_weights = np.zeros((0,), np.int64)
+        assert problem.num_cons == 0
+
+        cons_weights = np.zeros((problem.num_cons), np.int16)
 
         return Scaling(var_weights, cons_weights)
 

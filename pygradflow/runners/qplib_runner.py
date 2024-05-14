@@ -54,10 +54,16 @@ class QPLIBInstance(Instance):
         return self.description.filename
 
     def solve(self, params):
-        qproblem = pyqplib.read_problem(self.filename)
-        problem = QPLIBProblem(qproblem)
+        problem = self.problem()
         solver = Solver(problem, params)
         return solver.solve(problem.x0, problem.y0)
+
+    def problem(self):
+        qproblem = pyqplib.read_problem(self.filename)
+        return QPLIBProblem(qproblem)
+
+    def x0(self):
+        return self.problem().x0
 
 
 class QPLIBRunner(Runner):
