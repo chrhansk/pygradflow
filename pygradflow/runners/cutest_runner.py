@@ -129,8 +129,10 @@ class CUTestInstance(Instance):
     def __init__(self, instance):
         self.instance = instance
 
-        num_vars = self.props["n"]
-        num_cons = self.props["m"]
+        props = pycutest.problem_properties(self.instance)
+
+        num_vars = props["n"]
+        num_cons = props["m"]
 
         if num_cons is None:
             num_cons = 0
@@ -141,25 +143,17 @@ class CUTestInstance(Instance):
     def x0(self):
         return self.problem.x0
 
-    @cached_property
-    def problem(self):
-        return pycutest.import_problem(self.name, drop_fixed_variables=True)
-
-    @cached_property
-    def props(self):
-        return pycutest.problem_properties(self.instance)
-
     def solve(self, params):
-        problem = self.problem
+        cutest_problem = pycutest.import_problem(self.name, drop_fixed_variables=True)
 
         is_ne = self.name.endswith("NE")
 
         if is_ne:
-            problem = NECUTEstProblem(problem)
-        elif problem.m == 0:
-            problem = UnconstrainedCUTEstProblem(problem)
+            problem = NECUTEstProblem(cutest_problem)
+        elif cutest_problem.m == 0:
+            problem = UnconstrainedCUTEstProblem(cutest_problem)
         else:
-            problem = ConstrainedCUTEstProblem(problem)
+            problem = ConstrainedCUTEstProblem(cutest_problem)
 
         solver = Solver(problem, params)
         return solver.solve(problem.x0, problem.y0)
