@@ -2,6 +2,7 @@ import time
 
 import cyipopt
 import numpy as np
+import scipy as sp
 from scipy.optimize import Bounds, minimize
 
 from pygradflow.implicit_func import ImplicitFunc
@@ -63,13 +64,37 @@ class BoxReducedProblem(cyipopt.Problem):
     def jacobian(self, x):
         return np.empty((0, self.num_vars))
 
+    def hessianstructure(self):
+        x0 = self.x0
+        hess = self.step_controller.hessian(self.iterate, x0, self.lamb, self.rho)
+        hess = hess.tocoo()
+        rows = hess.row
+        cols = hess.col
+
+        hess_filter = (rows >= cols)
+
+        return rows[hess_filter], cols[hess_filter]
+
+    def hessian(self, x, lag, obj_factor):
+        hess = self.step_controller.hessian(self.iterate, x, self.lamb, self.rho)
+        hess = hess.tocoo()
+
+        rows = hess.row
+        cols = hess.col
+        data = hess.data
+
+        hess_filter = (rows >= cols)
+
+        return data[hess_filter]
+
     def set_options(self, timer):
         import logging
 
         logging.getLogger("cyipopt").setLevel(logging.WARNING)
         self.add_option("print_level", 0)
-        # self.add_option("derivative_test", "first-order")
-        self.add_option("hessian_approximation", "limited-memory")
+        # self.add_option("derivative_test", "second-order")
+        # self.add_option("hessian_approximation", "limited-memory")
+        # self.add_option("max_iter", 10)
 
         remaining = timer.remaining()
 
@@ -78,11 +103,15 @@ class BoxReducedProblem(cyipopt.Problem):
         elif np.isfinite(remaining):
             self.add_option("max_cpu_time", remaining)
 
+    @property
+    def x0(self):
+        return self.iterate.x
+
     def solve(self, timer):
         iterate = self.iterate
 
         self.set_options(timer)
-        x0 = iterate.x
+        x0 = self.x0
 
         # Solve using Ipopt
         x, info = super().solve(x0)
@@ -96,11 +125,12 @@ class BoxReducedProblem(cyipopt.Problem):
 class BoxReducedController(StepController):
 
     def objective(self, iterate, x, lamb, rho):
+        eval = iterate.eval
         xhat = iterate.x
         yhat = iterate.y
 
-        obj = self.problem.obj(x)
-        cons = self.problem.cons(x)
+        obj = eval.obj(x)
+        cons = eval.cons(x)
 
         dx = x - xhat
         dx_norm_sq = np.dot(dx, dx)
@@ -115,18 +145,36 @@ class BoxReducedController(StepController):
         return curr_obj
 
     def gradient(self, iterate, x, lamb, rho):
+        eval = iterate.eval
         xhat = iterate.x
         yhat = iterate.y
 
-        obj_grad = self.problem.obj_grad(x)
-        cons = self.problem.cons(x)
-        cons_jac = self.problem.cons_jac(x)
+        obj_grad = eval.obj_grad(x)
+        cons = eval.cons(x)
+        cons_jac = eval.cons_jac(x)
 
         dx = x - xhat
         cons_jac_factor = (rho + (1 / lamb)) * cons + yhat
         return obj_grad + lamb * dx + cons_jac.T.dot(cons_jac_factor)
 
-    def solve_step(self, iterate, rho, dt, timer):
+    def hessian(self, iterate, x, lamb, rho):
+        eval = iterate.eval
+        (n,) = x.shape
+
+        yhat = iterate.y
+
+        cons = eval.cons(x)
+        jac = eval.cons_jac(x)
+        cons_factor = (1 / lamb + rho)
+        y = cons_factor * cons + yhat
+
+        hess = eval.lag_hess(x, y)
+        hess += sp.sparse.diags([lamb], shape=(n, n))
+        hess += cons_factor * (jac.T @ jac)
+
+        return hess
+
+    def solve_step_scipy(self, iterate, rho, dt, timer):
         problem = self.problem
 
         x = iterate.x
@@ -171,6 +219,11 @@ class BoxReducedController(StepController):
 
         return result.x
 
+    def solve_step_ipopt(self, iterate, rho, dt, timer):
+        lamb = 1.0 / dt
+        reduced_problem = BoxReducedProblem(self, iterate, lamb, rho)
+        return reduced_problem.solve(timer=timer)
+
     def step(
         self, iterate, rho: float, dt: float, next_steps, display: bool, timer
     ) -> StepControlResult:
@@ -180,13 +233,13 @@ class BoxReducedController(StepController):
         problem = self.problem
         params = self.params
 
-        # reduced_problem = BoxReducedProblem(self, iterate, lamb, rho)
-        # x = reduced_problem.solve(timer=timer)
+        # x = self.solve_step_ipopt(iterate, rho, dt, timer)
 
-        # TODO: The minimize function shipped with scipy
+        # Note: The minimize function shipped with scipy
         # do not consistently produce high-quality solutions,
         # causing the optimization of the overall problem to fail.
-        x = self.solve_step(iterate, rho, dt, timer=timer)
+
+        x = self.solve_step_scipy(iterate, rho, dt, timer)
 
         cons = problem.cons(x)
         w = (-1 / lamb) * cons
