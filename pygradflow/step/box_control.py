@@ -1,5 +1,3 @@
-import time
-
 import cyipopt
 import numpy as np
 import scipy as sp
@@ -12,11 +10,6 @@ from pygradflow.step.step_control import (
     StepControlResult,
     StepSolverError,
 )
-
-max_num_it = 10000
-max_num_linesearch_it = 40
-t_init = 1.0
-beta = 0.5
 
 
 class BoxReducedProblem(cyipopt.Problem):
@@ -71,7 +64,7 @@ class BoxReducedProblem(cyipopt.Problem):
         rows = hess.row
         cols = hess.col
 
-        hess_filter = (rows >= cols)
+        hess_filter = rows >= cols
 
         return rows[hess_filter], cols[hess_filter]
 
@@ -83,7 +76,7 @@ class BoxReducedProblem(cyipopt.Problem):
         cols = hess.col
         data = hess.data
 
-        hess_filter = (rows >= cols)
+        hess_filter = rows >= cols
 
         return data[hess_filter]
 
@@ -108,8 +101,6 @@ class BoxReducedProblem(cyipopt.Problem):
         return self.iterate.x
 
     def solve(self, timer):
-        iterate = self.iterate
-
         self.set_options(timer)
         x0 = self.x0
 
@@ -165,7 +156,7 @@ class BoxReducedController(StepController):
 
         cons = eval.cons(x)
         jac = eval.cons_jac(x)
-        cons_factor = (1 / lamb + rho)
+        cons_factor = 1 / lamb + rho
         y = cons_factor * cons + yhat
 
         hess = eval.lag_hess(x, y)
@@ -224,6 +215,28 @@ class BoxReducedController(StepController):
         reduced_problem = BoxReducedProblem(self, iterate, lamb, rho)
         return reduced_problem.solve(timer=timer)
 
+    def solve_step_box(self, iterate, rho, dt, timer):
+        from .box_solver import BoxSolverError, solve_box_constrained
+
+        problem = self.problem
+        lamb = 1.0 / dt
+
+        def objective(x):
+            return self.objective(iterate, x, lamb, rho)
+
+        def gradient(x):
+            return self.gradient(iterate, x, lamb, rho)
+
+        def hessian(x):
+            return self.hessian(iterate, x, lamb, rho)
+
+        try:
+            return solve_box_constrained(
+                iterate.x, objective, gradient, hessian, problem.var_lb, problem.var_ub
+            )
+        except BoxSolverError as e:
+            raise StepSolverError("Box-constrained solver failed to converge") from e
+
     def step(
         self, iterate, rho: float, dt: float, next_steps, display: bool, timer
     ) -> StepControlResult:
@@ -238,8 +251,8 @@ class BoxReducedController(StepController):
         # Note: The minimize function shipped with scipy
         # do not consistently produce high-quality solutions,
         # causing the optimization of the overall problem to fail.
-
-        x = self.solve_step_scipy(iterate, rho, dt, timer)
+        # x = self.solve_step_scipy(iterate, rho, dt, timer)
+        x = self.solve_step_box(iterate, rho, dt, timer)
 
         cons = problem.cons(x)
         w = (-1 / lamb) * cons
