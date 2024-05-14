@@ -34,7 +34,7 @@ class SimpleGrad(ScalingRule):
 
         x0 = instance.x0
 
-        problem = instance.problem
+        problem = instance.problem()
         grad = problem.grad(x0)
 
         grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
