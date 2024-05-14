@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 import logging
 
 from pygradflow.log import logger
@@ -12,14 +14,44 @@ import numpy as np
 run_logger = logging.getLogger(__name__)
 
 
+class ScalingRule(ABC):
+    @abstractmethod
+    def compute_scaling(self, instance):
+        raise NotImplementedError()
+
+
+class ZeroScaling(ScalingRule):
+    def compute_scaling(self, instance):
+
+        return Scaling.zero(instance.num_vars,
+                            instance.num_cons)
+
+
+class SimpleGrad(ScalingRule):
+    def compute_scaling(self, instance):
+
+        x0 = instance.x0
+
+        problem = instance.problem
+        grad = problem.grad(x0)
+
+        grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
+        var_weights = -grad_weights
+
+        cons_weights = np.zeros((0,), np.int64)
+
+        return Scaling(var_weights, cons_weights)
+
+
 class Args:
     pass
 
 
-def try_solve(instance, parameters):
+def try_solve(instance, scaling_rule):
     try:
         logger.setLevel(logging.WARNING)
-        scaling = compute_scaling(instance, parameters)
+
+        scaling = scaling_rule.compute_scaling(instance)
 
         params = Params(time_limit=60.,
                         scaling=scaling,
@@ -36,30 +68,7 @@ def try_solve(instance, parameters):
         return 0
 
 
-def compute_scaling(instance, parameters):
-    x0 = instance.x0
-
-    [a, b, c] = parameters
-
-    problem = instance.problem
-    grad = problem.grad(x0)
-
-    norm_grad = np.linalg.norm(grad, ord=1)
-    normed_grad = grad / norm_grad
-
-    log_grad = np.log(np.abs(grad) + 1)
-    sqrt_log_grad = np.sqrt(np.abs(log_grad))
-
-    value = a*normed_grad + b*log_grad + c*sqrt_log_grad
-
-    var_weights = value.astype(np.int64)
-
-    cons_weights = np.zeros((0,), np.int64)
-
-    return Scaling(var_weights, cons_weights)
-
-
-def solve(instances, parameters):
+def solve(instances, scaling_rule):
 
     num_solved = 0
 
@@ -69,7 +78,7 @@ def solve(instances, parameters):
 
     with ProcessPoolExecutor(num_procs) as pool:
         futures = [
-            pool.submit(try_solve, instance, parameters)
+            pool.submit(try_solve, instance, scaling_rule)
             for instance in instances
         ]
 
@@ -86,6 +95,8 @@ def main():
     logging.basicConfig(level=logging.INFO)
     from .cutest_runner import CUTestRunner
 
+    scaling_rules = [ZeroScaling(), SimpleGrad()]
+
     args = Args()
     args.name = None
     args.max_size = 100
@@ -96,20 +107,14 @@ def main():
     runner = CUTestRunner()
     instances = runner.filter_instances(args)
 
-    parameters = np.array([0., 0., 0.])
+    scaling_num_solved = []
 
-    def obj(parameters):
-        return -solve(instances, parameters)
+    for scaling_rule in scaling_rules:
+        num_solved = solve(instances, scaling_rule)
+        scaling_num_solved.append(num_solved)
 
-    res = sp.optimize.minimize(obj,
-                               parameters,
-                               method="Nelder-Mead")
-
-    print("Result")
-    print(res)
-
-    print("Solution")
-    print(res.x)
+    for (scaling_rule, num_solved) in zip(scaling_rules, scaling_num_solved):
+        print(f"{scaling_rule.__class__.__name__}: {num_solved} instances solved")
 
 
 if __name__ == "__main__":
