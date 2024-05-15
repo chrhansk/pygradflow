@@ -32,7 +32,7 @@ class ZeroScaling(ScalingRule):
 class SimpleGrad(ScalingRule):
     def compute_scaling(self, instance):
 
-        x0 = instance.x0
+        x0 = instance.x0()
 
         problem = instance.problem()
         grad = problem.obj_grad(x0)
