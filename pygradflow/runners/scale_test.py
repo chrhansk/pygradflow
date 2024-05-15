@@ -47,6 +47,90 @@ class SimpleGrad(ScalingRule):
         return Scaling(var_weights, cons_weights)
 
 
+class BiasFreeSimpleGrad(ScalingRule):
+    def compute_scaling(self, instance):
+
+        x0 = instance.x0()
+
+        problem = instance.problem()
+        grad = problem.obj_grad(x0)
+
+        grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
+        var_weights = -grad_weights
+
+        var_weights = np.rint(var_weights - np.mean(var_weights)).astype(int)
+
+        assert problem.num_cons == 0
+
+        cons_weights = np.zeros((problem.num_cons), np.int16)
+
+        return Scaling(var_weights, cons_weights)
+
+
+class RootedGrad(ScalingRule):
+    def compute_scaling(self, instance):
+
+        x0 = instance.x0()
+
+        problem = instance.problem()
+        grad = problem.obj_grad(x0)
+
+        grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
+        var_weights = -grad_weights
+
+        var_weights = np.rint(np.sqrt(np.abs(var_weights)) * np.sign(var_weights)).astype(np.int16)
+
+        assert problem.num_cons == 0
+
+        cons_weights = np.zeros((problem.num_cons), np.int16)
+
+        return Scaling(var_weights, cons_weights)
+
+
+class MaxGuardedSimpleGrad(ScalingRule):
+    def compute_scaling(self, instance):
+
+        x0 = instance.x0()
+
+        problem = instance.problem()
+        grad = problem.obj_grad(x0)
+
+        grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
+
+        max_val = np.max(grad_weights)
+
+        if max_val <= 15:
+            var_weights = np.zeros((problem.num_vars), np.int16)
+        else:
+            var_weights = -grad_weights
+
+        assert problem.num_cons == 0
+
+        cons_weights = np.zeros((problem.num_cons), np.int16)
+
+        return Scaling(var_weights, cons_weights)
+
+
+class ClippedGrad(ScalingRule):
+    def compute_scaling(self, instance):
+
+        x0 = instance.x0()
+
+        problem = instance.problem()
+        grad = problem.obj_grad(x0)
+
+        grad_weights = Scaling.weights_from_nominal_values(np.abs(grad))
+        var_weights = -grad_weights
+
+        var_weights = np.clip(var_weights, -10, 20)
+
+        assert problem.num_cons == 0
+
+        cons_weights = np.zeros((problem.num_cons), np.int16)
+
+        return Scaling(var_weights, cons_weights)
+
+
 class Args:
     pass
 
@@ -99,7 +183,13 @@ def main():
     logging.basicConfig(level=logging.INFO)
     from .cutest_runner import CUTestRunner
 
-    scaling_rules = [ZeroScaling(), SimpleGrad()]
+    scaling_rules = [ZeroScaling(),
+                     SimpleGrad(),
+                     BiasFreeSimpleGrad(),
+                     # RootedGrad(),
+                     # MaxGuardedSimpleGrad(),
+                     # ClippedGrad()
+                     ]
 
     args = Args()
     args.name = None
