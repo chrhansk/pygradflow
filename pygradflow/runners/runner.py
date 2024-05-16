@@ -156,13 +156,6 @@ class Runner(ABC):
 
         parser = argparse.ArgumentParser()
 
-        parser.add_argument("--output", type=str)
-        parser.add_argument("--max_size", type=int)
-        parser.add_argument("--name", type=str)
-        parser.add_argument("--unconstrained", action="store_true")
-        parser.add_argument("--verbose", action="store_true")
-        parser.add_argument("--parallel", nargs="?", type=int, const=True)
-
         group = parser.add_argument_group(title="parameters")
 
         default_params = Params()
@@ -183,6 +176,15 @@ class Runner(ABC):
                     type=attr,
                     help="Default: %(default)s",
                 )
+
+        group = parser.add_argument_group(title="runner")
+
+        parser.add_argument("--output", type=str)
+        parser.add_argument("--max_size", type=int)
+        parser.add_argument("--name", type=str)
+        parser.add_argument("--unconstrained", action="store_true")
+        parser.add_argument("--verbose", action="store_true")
+        parser.add_argument("--parallel", nargs="?", type=int, const=True)
 
         return parser
 

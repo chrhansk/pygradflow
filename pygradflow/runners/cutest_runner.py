@@ -12,6 +12,10 @@ from .runner import Runner
 formatter = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
 
 
+def cutest_is_ne_prob(name):
+    return name.endswith("NE")
+
+
 def cutest_map_inf(x):
     cutest_inf = 1e20
     y = np.copy(x)
@@ -149,7 +153,7 @@ class CUTestInstance(Instance):
     def problem(self):
         cutest_problem = self.cutest_problem()
 
-        is_ne = self.name.endswith("NE")
+        is_ne = cutest_is_ne_prob(self.name)
 
         if is_ne:
             return NECUTEstProblem(cutest_problem)
@@ -168,12 +172,22 @@ class CUTestRunner(Runner):
     def __init__(self):
         super().__init__(name="cutest")
 
+    def parser(self):
+        parser = super().parser()
+
+        parser.add_argument("--ignore_ne_probs", action="store_true")
+
+        return parser
+
     def get_instances(self, args):
         instances = pycutest.find_problems()
         filtered_instances = []
 
         for instance in instances:
             props = pycutest.problem_properties(instance)
+
+            if args.ignore_ne_probs and cutest_is_ne_prob(instance):
+                continue
 
             if props["m"] == "variable":
                 continue
