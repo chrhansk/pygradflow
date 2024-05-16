@@ -227,3 +227,76 @@ def test_create_scaling(hs71_instance, scaling_type):
 
     assert scaling.num_vars == problem.num_vars
     assert scaling.num_cons == problem.num_cons
+
+
+def test_equilibrated_kkt(hs71_instance):
+    import scipy as sp
+
+    instance = hs71_instance
+
+    problem = instance.problem
+    x_0 = instance.x_0
+    y_0 = instance.y_0
+
+    params = Params(scaling_type=ScalingType.KKT)
+
+    scaling = create_scaling(problem, params, x_0, y_0)
+
+    scaled_problem = ScaledProblem(problem, scaling)
+
+    scaled_x_0 = scaling.scale_primal(x_0)
+    scaled_y_0 = scaling.scale_dual(y_0)
+
+    scaled_lag_hess = scaled_problem.lag_hess(scaled_x_0, scaled_y_0)
+    scaled_cons_jac = scaled_problem.cons_jac(scaled_x_0)
+
+    scaled_kkt_mat = sp.sparse.bmat(
+        [[scaled_lag_hess, scaled_cons_jac.T], [scaled_cons_jac, None]]
+    )
+
+    row_norms = np.abs(scaled_kkt_mat.toarray()).max(axis=0)
+
+    assert (row_norms <= 2.0).all()
+
+
+def test_grad_jac(hs71_instance):
+    instance = hs71_instance
+
+    problem = instance.problem
+    x_0 = instance.x_0
+    y_0 = instance.y_0
+
+    params = Params(scaling_type=ScalingType.GradJac)
+
+    scaling = create_scaling(problem, params, x_0, y_0)
+
+    scaled_problem = ScaledProblem(problem, scaling)
+
+    scaled_x_0 = scaling.scale_primal(x_0)
+
+    scaled_obj_grad = scaled_problem.obj_grad(scaled_x_0)
+    scaled_cons_jac = scaled_problem.cons_jac(scaled_x_0)
+
+    assert (np.abs(scaled_obj_grad) <= 2.0).all()
+    assert (np.abs(scaled_cons_jac.toarray()) <= 2.0).all()
+
+
+def test_nominal(hs71_instance):
+    instance = hs71_instance
+
+    problem = instance.problem
+    x_0 = instance.x_0
+    y_0 = instance.y_0
+
+    params = Params(scaling_type=ScalingType.Nominal)
+
+    scaling = create_scaling(problem, params, x_0, y_0)
+
+    scaled_problem = ScaledProblem(problem, scaling)
+
+    scaled_x_0 = scaling.scale_primal(x_0)
+
+    scaled_cons_val = scaled_problem.cons(scaled_x_0)
+
+    assert (np.abs(scaled_x_0) <= 2.0).all()
+    assert (np.abs(scaled_cons_val) <= 2.0).all()

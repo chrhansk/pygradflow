@@ -39,3 +39,5 @@ jobs:
       run: poetry run pytest --timeout=300 -o log_level=info -o log_cli=true -v --isort --black
     - name: Test with mypy
       run: poetry run mypy pygradflow
+    - name: Test with pyflakes
+      run: poetry run pyflakes pygradflow
