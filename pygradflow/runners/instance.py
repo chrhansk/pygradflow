@@ -14,3 +14,11 @@ class Instance(ABC):
     @abstractmethod
     def solve(self, params):
         raise NotImplementedError()
+
+    @abstractmethod
+    def problem(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def x0(self):
+        raise NotImplementedError()
