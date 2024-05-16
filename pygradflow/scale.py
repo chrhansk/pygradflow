@@ -111,7 +111,7 @@ class Scaling:
 
         weights = scale_symmetric(kkt_mat)
 
-        var_weights = weights[:n]
+        var_weights = -weights[:n]
         cons_weights = weights[n:]
 
         return Scaling(var_weights, cons_weights)
