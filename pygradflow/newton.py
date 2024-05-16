@@ -3,7 +3,6 @@ import abc
 import numpy as np
 import scipy as sp
 
-from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger as lgg
 from pygradflow.params import NewtonType, Params
