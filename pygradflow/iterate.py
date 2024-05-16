@@ -68,8 +68,8 @@ class Iterate:
     def cons_jac(self) -> sp.sparse.spmatrix:
         return self.eval.cons_jac(self.x)
 
-    def lag_hess(self, lag: np.ndarray) -> sp.sparse.spmatrix:
-        return self.eval.lag_hess(self.x, lag)
+    def lag_hess(self, y: np.ndarray) -> sp.sparse.spmatrix:
+        return self.eval.lag_hess(self.x, y)
 
     def aug_lag_violation(self, rho: float) -> float:
         cv = self.cons
