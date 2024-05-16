@@ -1,6 +1,43 @@
 import numpy as np
+import scipy as sp
 
 from pygradflow.problem import Problem
+
+
+def scale_symmetric(A):
+    (n, _) = A.shape
+
+    A = A.tocoo()
+    a_rows = A.row
+    a_cols = A.col
+    a_data = np.abs(A.data)
+
+    max_it = 100
+
+    D = np.zeros((n,), dtype=int)
+
+    for i in range(max_it):
+        R = np.zeros((n,), dtype=int)
+
+        for k in range(len(a_data)):
+            R[a_cols[k]] += a_data[k]
+
+        R[R < 1e-10] = 1.0
+        R = np.sqrt(R)
+
+        Rsca = 1 - np.frexp(R)[1]
+
+        if (Rsca == 0).all():
+            break
+
+        for k in range(len(a_data)):
+            a_data[k] = np.ldexp(a_data[k], Rsca[a_rows[k]] + Rsca[a_cols[k]])
+
+        D += Rsca
+    else:
+        raise Exception("Equilibration failed to converge")
+
+    return D
 
 
 class Scaling:
@@ -23,7 +60,7 @@ class Scaling:
         )
 
     @staticmethod
-    def from_nominal_values(var_values, cons_values, obj_value):
+    def from_nominal_values(var_values, cons_values, obj_value=1.0):
         var_weights = Scaling.weights_from_nominal_values(var_values)
         cons_weights = Scaling.weights_from_nominal_values(cons_values)
         obj_weight = Scaling.weights_from_nominal_values(obj_value)
@@ -59,6 +96,20 @@ class Scaling:
             max_values[row] = max(max_values[row], prescaled_data[i])
 
         cons_weights = Scaling.weights_from_nominal_values(max_values)
+
+        return Scaling(var_weights, cons_weights)
+
+    @staticmethod
+    def from_equilibrated_kkt(lag_hess, cons_jac):
+        (m, n) = cons_jac.shape
+        assert lag_hess.shape == (n, n)
+
+        kkt_mat = sp.sparse.bmat([[lag_hess, cons_jac.T], [cons_jac, None]])
+
+        weights = scale_symmetric(kkt_mat)
+
+        var_weights = weights[:n]
+        cons_weights = weights[n:]
 
         return Scaling(var_weights, cons_weights)
 
