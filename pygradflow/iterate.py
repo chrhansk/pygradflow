@@ -175,3 +175,13 @@ class Iterate:
     @property
     def total_res(self) -> float:
         return max(self.cons_violation, self.bound_violation, self.stat_res)
+
+    def obj_nonlin(self, other: "Iterate") -> float:
+        dx = other.x - self.x
+        next_obj = self.obj + np.dot(dx, self.obj_grad)
+        return abs(other.obj - next_obj) / np.dot(dx, dx)
+
+    def cons_nonlin(self, other: "Iterate") -> np.ndarray:
+        dx = other.x - self.x
+        next_cons = self.cons + self.cons_jac.dot(dx)
+        return (other.cons - next_cons) / np.dot(dx, dx)

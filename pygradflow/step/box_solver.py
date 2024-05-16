@@ -77,7 +77,6 @@ def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=Fa
         residuum[at_upper] = np.minimum(residuum[at_upper], 0)
 
         if np.linalg.norm(residuum, ord=np.inf) < 1e-8:
-            print(f"Converged after {iteration} iterations")
             break
 
         active = np.logical_or(active_lower, active_upper)
