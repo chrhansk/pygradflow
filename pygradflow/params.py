@@ -1,8 +1,12 @@
 import dataclasses
 import enum
+import typing
 from dataclasses import dataclass
 from enum import Enum, Flag, auto
 from typing import Any, Callable, Optional
+
+if typing.TYPE_CHECKING:
+    from .scale import Scaling
 
 import numpy as np
 
@@ -145,6 +149,16 @@ class ScalingType(Enum):
     Scale based on gradient and equilibration of constraint Jacobian
     """
 
+    KKT = auto()
+    """
+    Compute scales based on the equilibration of the KKT matrix
+    """
+
+    Nominal = auto()
+    """
+    Scaled based on values of the variable and constraint values
+    """
+
     Custom = auto()
     """
     User-provided custom scaling
@@ -196,7 +210,7 @@ class Params:
     precision: Precision = Precision.Double
 
     scaling_type: ScalingType = ScalingType.NoScaling
-    scaling: object = None
+    scaling: Optional["Scaling"] = None
 
     validate_input: bool = True
 

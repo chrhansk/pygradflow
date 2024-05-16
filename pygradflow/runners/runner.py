@@ -122,13 +122,9 @@ class Runner(ABC):
 
     def solve_instances(self, instances, args):
         # yields sequence of tuples of (instance, result) for each instance
-        results = []
-
         run_logger.info("Solving %d instances", len(instances))
 
         params = self.create_params(args)
-
-        verbose = args.verbose
 
         if args.parallel is not None:
             yield from self.solve_instances_parallel(instances, args, params)
@@ -143,6 +139,9 @@ class Runner(ABC):
 
         for instance in self.get_instances(args):
             if max_size is not None and instance.size > max_size:
+                continue
+
+            if args.unconstrained and instance.num_cons > 0:
                 continue
 
             if name is not None and name != instance.name:
@@ -160,6 +159,7 @@ class Runner(ABC):
         parser.add_argument("--output", type=str)
         parser.add_argument("--max_size", type=int)
         parser.add_argument("--name", type=str)
+        parser.add_argument("--unconstrained", action="store_true")
         parser.add_argument("--verbose", action="store_true")
         parser.add_argument("--parallel", nargs="?", type=int, const=True)
 

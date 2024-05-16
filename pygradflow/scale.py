@@ -1,6 +1,46 @@
-import numpy as np
+from typing import Optional
 
+import numpy as np
+import scipy as sp
+
+from pygradflow.params import Params, ScalingType
 from pygradflow.problem import Problem
+
+
+def scale_symmetric(A):
+    (n, _) = A.shape
+
+    A = A.tocoo()
+    a_rows = A.row
+    a_cols = A.col
+    a_data = np.abs(A.data)
+
+    max_it = 100
+
+    D = np.zeros((n,), dtype=int)
+
+    for i in range(max_it):
+        R = np.zeros((n,), dtype=int)
+
+        for k in range(len(a_data)):
+            R[a_cols[k]] += a_data[k]
+
+        R[R < 1e-10] = 1.0
+        R = np.sqrt(R)
+
+        Rsca = 1 - np.frexp(R)[1]
+
+        if (Rsca == 0).all():
+            break
+
+        for k in range(len(a_data)):
+            a_data[k] = np.ldexp(a_data[k], Rsca[a_rows[k]] + Rsca[a_cols[k]])
+
+        D += Rsca
+    else:
+        raise Exception("Equilibration failed to converge")
+
+    return D
 
 
 class Scaling:
@@ -23,7 +63,7 @@ class Scaling:
         )
 
     @staticmethod
-    def from_nominal_values(var_values, cons_values, obj_value):
+    def from_nominal_values(var_values, cons_values, obj_value=1.0):
         var_weights = Scaling.weights_from_nominal_values(var_values)
         cons_weights = Scaling.weights_from_nominal_values(cons_values)
         obj_weight = Scaling.weights_from_nominal_values(obj_value)
@@ -59,6 +99,20 @@ class Scaling:
             max_values[row] = max(max_values[row], prescaled_data[i])
 
         cons_weights = Scaling.weights_from_nominal_values(max_values)
+
+        return Scaling(var_weights, cons_weights)
+
+    @staticmethod
+    def from_equilibrated_kkt(lag_hess, cons_jac):
+        (m, n) = cons_jac.shape
+        assert lag_hess.shape == (n, n)
+
+        kkt_mat = sp.sparse.bmat([[lag_hess, cons_jac.T], [cons_jac, None]])
+
+        weights = scale_symmetric(kkt_mat)
+
+        var_weights = weights[:n]
+        cons_weights = weights[n:]
 
         return Scaling(var_weights, cons_weights)
 
@@ -173,3 +227,35 @@ class ScaledProblem(Problem):
             hess_data[k] = np.ldexp(v, combined_weight)
 
         return hess
+
+
+def create_scaling(
+    problem: Problem, params: Params, x0: np.ndarray, y0: np.ndarray
+) -> Optional[Scaling]:
+    scaling_type = params.scaling_type
+
+    if params.scaling is not None:
+        assert scaling_type == ScalingType.Custom
+        return params.scaling
+
+    if scaling_type == ScalingType.NoScaling:
+        return None
+    elif scaling_type == ScalingType.Custom:
+        raise ValueError("Custom scaling requires explicit scaling")
+
+    if scaling_type == ScalingType.Nominal:
+        cons_val = problem.cons(x0)
+        return Scaling.from_nominal_values(x0, cons_val)
+
+    cons_jac = None
+    if problem.num_cons > 0:
+        cons_jac = problem.cons_jac(x0)
+
+    if scaling_type == ScalingType.GradJac:
+        obj_grad = problem.obj_grad(x0)
+        return Scaling.from_grad_jac(obj_grad, cons_jac)
+    elif scaling_type == ScalingType.KKT:
+        lag_hess = problem.lag_hess(x0, y0)
+        return Scaling.from_equilibrated_kkt(lag_hess, cons_jac)
+    else:
+        raise ValueError(f"Unknown scaling type {scaling_type}")

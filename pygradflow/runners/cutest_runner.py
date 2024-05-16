@@ -129,40 +129,37 @@ class CUTestInstance(Instance):
     def __init__(self, instance):
         self.instance = instance
 
-        num_vars = self.props["n"]
-        num_cons = self.props["m"]
+        props = pycutest.problem_properties(self.instance)
+
+        num_vars = props["n"]
+        num_cons = props["m"]
 
         if num_cons is None:
             num_cons = 0
 
         super().__init__(instance, num_vars, num_cons)
 
-    @property
-    def x0(self):
-        return self.problem.x0
-
-    @cached_property
-    def problem(self):
+    def cutest_problem(self):
         return pycutest.import_problem(self.name, drop_fixed_variables=True)
 
-    @cached_property
-    def description(self):
-        return pycutest.problem_properties(self.instance)
+    def x0(self):
+        cutest_problem = self.cutest_problem()
+        return cutest_problem.x0
 
-    def solve(self, params):
-        problem = pycutest.import_problem(self.name, drop_fixed_variables=True)
-
-        props = pycutest.problem_properties(self.instance)
+    def problem(self):
+        cutest_problem = self.cutest_problem()
 
         is_ne = self.name.endswith("NE")
 
         if is_ne:
-            problem = NECUTEstProblem(problem)
-        elif problem.m == 0:
-            problem = UnconstrainedCUTEstProblem(problem)
+            return NECUTEstProblem(cutest_problem)
+        elif cutest_problem.m == 0:
+            return UnconstrainedCUTEstProblem(cutest_problem)
         else:
-            problem = ConstrainedCUTEstProblem(problem)
+            return ConstrainedCUTEstProblem(cutest_problem)
 
+    def solve(self, params):
+        problem = self.problem()
         solver = Solver(problem, params)
         return solver.solve(problem.x0, problem.y0)
 

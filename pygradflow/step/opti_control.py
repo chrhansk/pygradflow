@@ -4,7 +4,6 @@ import cyipopt
 import numpy as np
 
 from pygradflow.eval import EvalError, astype
-from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.step.step_control import (
     StepController,
@@ -254,12 +253,6 @@ class OptimizingController(StepController):
         (x, y) = implicit_problem.solve(timer=timer)
 
         next_iterate = Iterate(problem, params, x, y, iterate.eval)
-
-        implicit_func = ImplicitFunc(problem, iterate, dt)
-
-        value = implicit_func.value_at(next_iterate, rho)
-
-        residuum = np.linalg.norm(value)
 
         return StepControlResult(
             next_iterate, 0.5 * lamb, active_set=None, rcond=None, accepted=True
