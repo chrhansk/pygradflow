@@ -4,6 +4,7 @@ from typing import Optional, cast
 
 import numpy as np
 
+from pygradflow.callbacks import Callbacks, CallbackType
 from pygradflow.display import Format, problem_display
 from pygradflow.eval import Evaluator, SimpleEvaluator, ValidatingEvaluator
 from pygradflow.iterate import Iterate
@@ -209,6 +210,7 @@ class Solver:
         """
         self.orig_problem = problem
         self.params = params
+        self.callbacks = Callbacks()
 
     def compute_step(
         self,
@@ -425,7 +427,9 @@ class Solver:
         logger.info("    Ranged constraints: %s", num_ranged)
 
     def solve(
-        self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None
+        self,
+        x0: Optional[np.ndarray] = None,
+        y0: Optional[np.ndarray] = None,
     ) -> SolverResult:
         """
         Solves the problem starting from the given primal / dual point
@@ -517,6 +521,8 @@ class Solver:
             primal_step_norm = float(np.linalg.norm(next_iterate.x - iterate.x))
             dual_step_norm = float(np.linalg.norm(next_iterate.y - iterate.y))
 
+            self.callbacks(CallbackType.ComputedStep, iterate, next_iterate, accept)
+
             if display_iterate:
                 last_time = curr_time
                 line_diff += 1
@@ -531,6 +537,11 @@ class Solver:
 
                 state["last_active_set"] = compute_last_active_set
                 state["curr_active_set"] = lambda: step_result.active_set
+
+                state["obj_nonlin"] = lambda: iterate.obj_nonlin(next_iterate)
+                state["cons_nonlin"] = lambda: np.linalg.norm(
+                    iterate.cons_nonlin(next_iterate), ord=np.inf
+                )
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["obj"] = lambda: iterate.obj()

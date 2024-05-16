@@ -170,6 +170,9 @@ def problem_display(problem: Problem, params: Params):
     if params.report_rcond:
         cols.append(AttrColumn("Rcond", 5, RCondFormatter(), StateAttr("rcond")))
 
+    cols.append(AttrColumn("Obj nonlin", 16, "{:16.8e}", StateAttr("obj_nonlin")))
+    cols.append(AttrColumn("Cons nonlin", 16, "{:16.8e}", StateAttr("cons_nonlin")))
+
     cols.append(AttrColumn("Type", 8, StepFormatter(), StateAttr("step_accept")))
 
     return Display(cols)
