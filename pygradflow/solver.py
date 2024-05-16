@@ -4,6 +4,7 @@ from typing import Optional, cast
 
 import numpy as np
 
+from pygradflow.callbacks import Callbacks, CallbackType
 from pygradflow.display import Format, problem_display
 from pygradflow.eval import Evaluator, SimpleEvaluator, ValidatingEvaluator
 from pygradflow.iterate import Iterate
@@ -209,6 +210,7 @@ class Solver:
         """
         self.orig_problem = problem
         self.params = params
+        self.callbacks = Callbacks()
 
     def compute_step(
         self,
@@ -518,6 +520,8 @@ class Solver:
 
             primal_step_norm = float(np.linalg.norm(next_iterate.x - iterate.x))
             dual_step_norm = float(np.linalg.norm(next_iterate.y - iterate.y))
+
+            self.callbacks(CallbackType.ComputedStep, iterate, next_iterate, accept)
 
             if display_iterate:
                 last_time = curr_time
