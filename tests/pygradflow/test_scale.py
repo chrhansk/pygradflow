@@ -4,10 +4,12 @@ import pytest
 from pygradflow.deriv_check import deriv_check
 from pygradflow.iterate import Iterate
 from pygradflow.params import DerivCheck, Params, ScalingType
-from pygradflow.scale import ScaledProblem, Scaling
+from pygradflow.scale import ScaledProblem, Scaling, create_scaling
 from pygradflow.solver import Solver
 
 from .instances import hs71_constrained_instance, hs71_instance
+
+scaling_types = [ScalingType.GradJac, ScalingType.KKT, ScalingType.Nominal]
 
 
 def zero_scaling(problem):
@@ -209,3 +211,19 @@ def test_solve_hs71_scaled(hs71_instance):
 
     assert np.allclose(result.x, x_opt, atol=1e-6)
     assert np.allclose(result.y, y_opt, atol=1e-6)
+
+
+@pytest.mark.parametrize("scaling_type", scaling_types)
+def test_create_scaling(hs71_instance, scaling_type):
+    instance = hs71_instance
+
+    problem = instance.problem
+    x_0 = instance.x_0
+    y_0 = instance.y_0
+
+    params = Params(scaling_type=scaling_type)
+
+    scaling = create_scaling(problem, params, x_0, y_0)
+
+    assert scaling.num_vars == problem.num_vars
+    assert scaling.num_cons == problem.num_cons

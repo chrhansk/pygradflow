@@ -9,10 +9,10 @@ from pygradflow.eval import Evaluator, SimpleEvaluator, ValidatingEvaluator
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.newton import newton_method
-from pygradflow.params import Params, ScalingType
+from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
-from pygradflow.scale import Scaling
+from pygradflow.scale import create_scaling
 from pygradflow.step.step_control import (
     StepController,
     StepControlResult,
@@ -331,35 +331,11 @@ class Solver:
 
         return Iterate(problem, params, x, y, self.evaluator)
 
-    def _create_scaling(self, x0):
-        params = self.params
-        problem = self.orig_problem
-
-        scaling_type = params.scaling_type
-
-        if params.scaling is not None:
-            assert scaling_type == ScalingType.Custom
-            return params.scaling
-
-        if scaling_type == ScalingType.NoScaling:
-            return None
-        elif scaling_type == ScalingType.GradJac:
-            obj_grad = problem.obj_grad(x0)
-            cons_jac = None
-            if problem.num_cons > 0:
-                cons_jac = problem.cons_jac(x0)
-
-            return Scaling.from_grad_jac(obj_grad, cons_jac)
-        elif scaling_type == ScalingType.Custom:
-            raise ValueError("Custom scaling requires explicit scaling")
-        else:
-            raise ValueError(f"Unknown scaling type {scaling_type}")
-
-    def _create_transformed_problem(self, x0):
-        self.scaling = self._create_scaling(x0)
-
+    def _create_transformed_problem(self, x0, y0):
         orig_problem = self.orig_problem
         params = self.params
+
+        self.scaling = create_scaling(orig_problem, params, x0, y0)
 
         self.transform = Transformation(orig_problem, params, self.scaling)
         self.problem = self.transform.trans_problem
@@ -413,7 +389,7 @@ class Solver:
             solutions
         """
 
-        self._create_transformed_problem(x0)
+        self._create_transformed_problem(x0, y0)
         params = self.params
         problem = self.problem
 
