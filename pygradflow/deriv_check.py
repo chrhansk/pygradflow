@@ -23,7 +23,6 @@ class DerivError(ValueError):
         self.max_deriv_diff = self.deriv_diffs.max()
 
         (num_rows, _) = self.deriv_diffs.shape
-        num_invalid_indices = self.invalid_indices.size
         self.col_index = col_index
 
     def __str__(self):
