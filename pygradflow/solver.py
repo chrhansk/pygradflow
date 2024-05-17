@@ -6,7 +6,7 @@ import numpy as np
 
 from pygradflow.callbacks import Callbacks, CallbackType
 from pygradflow.display import Format, problem_display
-from pygradflow.eval import Evaluator, SimpleEvaluator, ValidatingEvaluator
+from pygradflow.eval import create_evaluator
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.newton import newton_method
@@ -297,6 +297,15 @@ class Solver:
         logger.info("%20s: %45e", "Constraint violation", iterate.cons_violation)
         logger.info("%20s: %45e", "Dual violation", iterate.stat_res)
 
+        eval = self.evaluator
+
+        eval_name = Format.bold("{:>20s}".format("Evaluations"))
+        logger.info("%20s", eval_name)
+
+        for component, num_evals in eval.num_evals.items():
+            name = component.name()
+            logger.info("%20s: %45d", name, num_evals)
+
     def _create_initial_iterate(
         self, x0: Optional[np.ndarray], y0: Optional[np.ndarray]
     ):
@@ -452,10 +461,7 @@ class Solver:
         params = self.params
         problem = self.problem
 
-        if params.validate_input:
-            self.evaluator: Evaluator = ValidatingEvaluator(self.problem, params)
-        else:
-            self.evaluator = SimpleEvaluator(self.problem, params)
+        self.evaluator = create_evaluator(problem, params)
 
         self.penalty = penalty_strategy(self.problem, params)
         self.rho = -1.0
@@ -539,9 +545,11 @@ class Solver:
                 state["curr_active_set"] = lambda: step_result.active_set
 
                 state["obj_nonlin"] = lambda: iterate.obj_nonlin(next_iterate)
-                state["cons_nonlin"] = lambda: np.linalg.norm(
-                    iterate.cons_nonlin(next_iterate), ord=np.inf
-                )
+
+                if problem.num_cons > 0:
+                    state["cons_nonlin"] = lambda: np.linalg.norm(
+                        iterate.cons_nonlin(next_iterate), ord=np.inf
+                    )
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["obj"] = lambda: iterate.obj()
