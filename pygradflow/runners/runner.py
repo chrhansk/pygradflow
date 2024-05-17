@@ -23,6 +23,8 @@ def try_solve_instance(instance, params, log_filename, verbose):
     try:
         logger.handlers.clear()
 
+        np.seterr(divide="raise", over="raise", invalid="raise")
+
         handler = logging.FileHandler(log_filename)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
