@@ -545,9 +545,11 @@ class Solver:
                 state["curr_active_set"] = lambda: step_result.active_set
 
                 state["obj_nonlin"] = lambda: iterate.obj_nonlin(next_iterate)
-                state["cons_nonlin"] = lambda: np.linalg.norm(
-                    iterate.cons_nonlin(next_iterate), ord=np.inf
-                )
+
+                if problem.num_cons > 0:
+                    state["cons_nonlin"] = lambda: np.linalg.norm(
+                        iterate.cons_nonlin(next_iterate), ord=np.inf
+                    )
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["obj"] = lambda: iterate.obj()
