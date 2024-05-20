@@ -295,10 +295,10 @@ class ExplicitSolver:
 
         initial_iterate = self.transform.initial_iterate
 
-        x0 = initial_iterate.x
-        y0 = initial_iterate.y
+        x_init = initial_iterate.x
+        y_init = initial_iterate.y
 
-        curr_z = np.concatenate((x0, y0))
+        curr_z = np.concatenate((x_init, y_init))
         curr_t = 0.0
         curr_filter = self.create_filter(curr_z, rho)
 
