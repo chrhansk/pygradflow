@@ -1,11 +1,10 @@
 import time
-from typing import Optional, cast
+from typing import Optional
 
 import numpy as np
 
 from pygradflow.callbacks import Callbacks, CallbackType
 from pygradflow.display import Format, problem_display
-from pygradflow.eval import create_evaluator
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.newton import newton_method
@@ -13,7 +12,6 @@ from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
 from pygradflow.result import SolverResult
-from pygradflow.scale import create_scaling
 from pygradflow.status import SolverStatus
 from pygradflow.step.step_control import (
     StepController,
@@ -181,53 +179,6 @@ class Solver:
             name = component.name()
             logger.info("%20s: %45d", name, num_evals)
 
-    def _create_initial_iterate(
-        self, x0: Optional[np.ndarray], y0: Optional[np.ndarray]
-    ):
-        params = self.params
-        dtype = params.dtype
-        orig_problem = self.orig_problem
-        problem = self.problem
-
-        orig_lb = orig_problem.var_lb
-        orig_ub = orig_problem.var_ub
-
-        if x0 is None:
-            orig_n = orig_problem.num_vars
-            x_init = np.zeros((orig_n,), dtype=dtype)
-            np.clip(x_init, orig_lb, orig_ub, out=x_init)
-        else:
-            if (x0 > orig_ub).any() or (x0 < orig_lb).any():
-                logger.warning("Initial point violates variable bounds")
-                x0 = np.clip(x0, orig_lb, orig_ub)
-
-            x_init = cast(np.ndarray, x0)
-
-        if y0 is None:
-            orig_m = orig_problem.num_cons
-            y_init = np.zeros((orig_m,), dtype=dtype)
-        else:
-            y_init = cast(np.ndarray, y0)
-
-        transform = self.transform
-        (x_init, y_init) = transform.transform_sol(x_init, y_init)
-
-        x = x_init.astype(dtype)
-        y = y_init.astype(dtype)
-
-        return Iterate(problem, params, x, y, self.evaluator)
-
-    def _create_transformed_problem(self, x0, y0):
-        orig_problem = self.orig_problem
-        params = self.params
-
-        self.scaling = create_scaling(orig_problem, params, x0, y0)
-
-        self.transform = Transformation(orig_problem, params, self.scaling)
-        self.problem = self.transform.trans_problem
-
-        pass
-
     def _check_terminate(self, iterate, iteration, timer):
         params = self.params
 
@@ -332,18 +283,21 @@ class Solver:
             solutions
         """
 
-        self._create_transformed_problem(x0, y0)
+        self.transform = Transformation(self.orig_problem, self.params, x0, y0)
+
+        self.problem = self.transform.trans_problem
+
         params = self.params
         problem = self.problem
 
-        self.evaluator = create_evaluator(problem, params)
+        self.evaluator = self.transform.evaluator
 
         self.penalty = penalty_strategy(self.problem, params)
         self.rho = -1.0
 
         display = problem_display(problem, params)
 
-        iterate = self._create_initial_iterate(x0, y0)
+        iterate = self.transform.initial_iterate
 
         self.print_problem_stats(problem, iterate)
 
@@ -488,9 +442,7 @@ class Solver:
         y = iterate.y
         d = iterate.bounds_dual
 
-        transform = self.transform
-
-        (x, y, d) = transform.restore_sol(x, y, d)
+        (x, y, d) = self.transform.restore_sol(x, y, d)
 
         return SolverResult(
             x,

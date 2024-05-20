@@ -5,8 +5,6 @@ from typing import Optional
 import numpy as np
 import scipy as sp
 
-from pygradflow.cons_problem import ConstrainedProblem
-from pygradflow.eval import create_evaluator
 from pygradflow.explicit.events import (
     ConvergedResult,
     EventResultType,
@@ -21,6 +19,7 @@ from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.result import SolverResult
 from pygradflow.status import SolverStatus
+from pygradflow.transform import Transformation
 
 
 class IntegrationStatus(Enum):
@@ -41,7 +40,6 @@ class IntegrationResult:
 class ExplicitSolver:
     def __init__(self, problem, params):
         self.orig_problem = problem
-        self.problem = ConstrainedProblem(problem)
         self.params = params
 
     def create_events(self, result, triggers):
@@ -284,20 +282,25 @@ class ExplicitSolver:
         return IntegrationResult(status, next_t, next_z, next_filter)
 
     def solve(self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None):
+
+        self.transform = Transformation(self.orig_problem, self.params, x0, y0)
+
+        self.problem = self.transform.trans_problem
+        self.eval = self.transform.evaluator
+
         problem = self.problem
         params = self.params
-
-        self.eval = create_evaluator(problem, params)
         self.flow = Flow(problem, params, self.eval)
-
         rho = 1e2
 
-        (x0, y0) = self._get_initial_sol(x0, y0)
+        initial_iterate = self.transform.initial_iterate
+
+        x0 = initial_iterate.x
+        y0 = initial_iterate.y
+
         curr_z = np.concatenate((x0, y0))
         curr_t = 0.0
         curr_filter = self.create_filter(curr_z, rho)
-
-        initial_iterate = Iterate(problem, params, x0, y0, self.eval)
 
         status = None
         iteration = 0
@@ -389,7 +392,7 @@ class ExplicitSolver:
 
         dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
 
-        (x, y, d) = problem.restore_sol(x, y, d)
+        (x, y, d) = self.transform.restore_sol(x, y, d)
 
         return SolverResult(
             x,
