@@ -5,6 +5,7 @@ from typing import Optional
 import numpy as np
 import scipy as sp
 
+from pygradflow.display import StateData, integrator_display
 from pygradflow.explicit.events import (
     ConvergedResult,
     EventResultType,
@@ -20,6 +21,7 @@ from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.result import SolverResult
 from pygradflow.status import SolverStatus
+from pygradflow.timer import Timer
 from pygradflow.transform import Transformation
 
 
@@ -30,10 +32,31 @@ class IntegrationStatus(Enum):
     Finished = auto()
     Penalty = auto()
 
+    def name(self):
+        return {
+            IntegrationStatus.Converged: "Converged",
+            IntegrationStatus.Unbounded: "Unbounded",
+            IntegrationStatus.Event: "Event",
+            IntegrationStatus.Finished: "Finished",
+            IntegrationStatus.Penalty: "Penalty",
+        }[self]
+
 
 class IntegrationResult:
-    def __init__(self, status, t_next, z_next, filter_next):
+    def __init__(
+        self,
+        status,
+        t_next,
+        z_next,
+        filter_next,
+        num_steps,
+        num_func_evals,
+        num_jac_evals,
+    ):
         self.status = status
+        self.num_steps = num_steps
+        self.num_func_evals = num_func_evals
+        self.num_jac_evals = num_jac_evals
         self.t = t_next
         self.z = z_next
         self.filter = filter_next
@@ -291,7 +314,15 @@ class ExplicitSolver:
         assert np.isclose(next_x[not_filter], curr_x[not_filter]).all()
         assert self.flow.is_boxed(next_x)
 
-        return IntegrationResult(status, next_t, next_z, next_filter)
+        return IntegrationResult(
+            status,
+            next_t,
+            next_z,
+            next_filter,
+            num_steps=ivp_result.t.size,
+            num_func_evals=ivp_result.nfev,
+            num_jac_evals=ivp_result.njev,
+        )
 
     def solve(self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None):
 
@@ -316,9 +347,13 @@ class ExplicitSolver:
 
         status = None
         iteration = 0
-        start_time = time.time()
         path_dist = 0.0
         accepted_steps = 0
+
+        timer = Timer(params.time_limit)
+
+        display = integrator_display(problem, params)
+        logger.info(display.header)
 
         while True:
             self._check_filter(curr_z, curr_filter, rho)
@@ -332,8 +367,6 @@ class ExplicitSolver:
                 status = SolverStatus.Optimal
                 break
 
-            curr_time = time.time()
-
             logger.debug("Iteration %d: value: %s", iteration, curr_z)
 
             logger.debug(
@@ -343,7 +376,7 @@ class ExplicitSolver:
                 self.flow.rhs(curr_z, rho),
             )
 
-            if curr_time - start_time >= params.time_limit:
+            if timer.reached_time_limit():
                 logger.debug("Reached time limit")
                 status = SolverStatus.TimeLimit
                 break
@@ -365,6 +398,24 @@ class ExplicitSolver:
                 break
 
             result = self.perform_integration(curr_t, curr_z, curr_filter, rho)
+
+            if display.should_display():
+                state = StateData()
+                curr_x, curr_y = self.flow.split_states(curr_z)
+                iterate = Iterate(problem, params, curr_x, curr_y, self.eval)
+                state["iterate"] = iterate
+                state["filter"] = curr_filter
+                state["aug_lag"] = lambda: iterate.aug_lag(rho)
+                state["obj"] = lambda: iterate.obj()
+                state["iter"] = iteration + 1
+                state["num_func_evals"] = result.num_func_evals
+                state["num_jac_evals"] = result.num_jac_evals
+                state["num_steps"] = result.num_steps
+                state["dt"] = result.t - curr_t
+                state["step_type"] = result.status
+
+                logger.info(display.row(state))
+
             iteration += 1
 
             curr_z = result.z
@@ -398,12 +449,12 @@ class ExplicitSolver:
         d = iterate.bounds_dual
 
         iterations = iteration
-        curr_time = time.time()
-        total_time = curr_time - start_time
 
         logger.debug("Status: %s", status)
 
         direct_dist = iterate.dist(initial_iterate)
+
+        total_time = timer.elapsed()
 
         dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
 

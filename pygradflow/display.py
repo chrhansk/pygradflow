@@ -5,6 +5,21 @@ from termcolor import colored
 
 from pygradflow.params import Params
 from pygradflow.problem import Problem
+from pygradflow.timer import SimpleTimer
+
+
+class StateData:
+    def __init__(self):
+        self._entries = dict()
+
+    def __setitem__(self, key, value):
+        self._entries[key] = value
+
+    def __getitem__(self, key):
+        entry = self._entries[key]
+        if callable(entry):
+            return entry()
+        return entry
 
 
 class Format:
@@ -65,7 +80,7 @@ class Column(ABC):
         return "{:^{}s}".format(self.name, self.width)
 
     @abstractmethod
-    def content(self, state) -> str:
+    def content(self, state, last_state) -> str:
         raise NotImplementedError()
 
 
@@ -80,20 +95,38 @@ class AttrColumn(Column):
 
         self.attr = attr
 
-    def content(self, state) -> str:
+    def content(self, state, _) -> str:
         return self.format(self.attr(state))
 
 
 class Display:
-    def __init__(self, cols):
+    def __init__(self, cols, interval=None):
         self.cols = cols
+        self.interval = interval
+
+        self.timer = None
+        if self.interval is not None:
+            assert self.interval > 0
+            self.timer = SimpleTimer()
+        self.last_state = None
+
+    def should_display(self):
+        if self.timer is None:
+            return True
+
+        return self.timer.elapsed() >= self.interval
 
     @property
     def header(self) -> str:
         return " ".join([col.header for col in self.cols])
 
     def row(self, state) -> str:
-        return " ".join([col.content(state) for col in self.cols])
+        if self.timer is not None:
+            self.timer.reset()
+
+        row = " ".join([col.content(state, self.last_state) for col in self.cols])
+        self.last_state = state
+        return row
 
 
 class StateAttr:
@@ -102,7 +135,7 @@ class StateAttr:
 
     def __call__(self, state):
         value = state[self.name]
-        return value()
+        return value
 
 
 class IterateAttr:
@@ -121,9 +154,12 @@ class ActiveSetColumn(Column):
     def empty(self):
         return "{:^{}s}".format("--", self.width)
 
-    def content(self, state):
-        curr_active_set = state["curr_active_set"]()
-        last_active_set = state["last_active_set"]()
+    def content(self, state, last_state):
+        curr_active_set = state["active_set"]
+        last_active_set = None
+
+        if (last_state is not None) and (state["iter"] == (last_state["iter"] + 1)):
+            last_active_set = last_state["active_set"]
 
         if curr_active_set is None:
             return self.empty()
@@ -142,12 +178,9 @@ class ActiveSetColumn(Column):
             return "{:^{}s}".format("--", self.width)
 
 
-def problem_display(problem: Problem, params: Params):
+def iter_cols(problem):
     is_bounded = problem.var_bounded
-
-    cols: List[Column] = []
-
-    cols.append(AttrColumn("Iter", 6, BoldFormatter("{:6d}"), StateAttr("iter")))
+    cols = []
     cols.append(AttrColumn("Aug Lag", 16, "{:16.8e}", StateAttr("aug_lag")))
     cols.append(AttrColumn("Objective", 16, "{:16.8e}", IterateAttr("obj")))
 
@@ -158,6 +191,17 @@ def problem_display(problem: Problem, params: Params):
 
     cols.append(AttrColumn("Cons inf", 16, "{:16.8e}", IterateAttr("cons_violation")))
     cols.append(AttrColumn("Dual inf", 16, "{:16.8e}", IterateAttr("stat_res")))
+
+    return cols
+
+
+def solver_display(problem: Problem, params: Params):
+    cols: List[Column] = []
+
+    cols.append(AttrColumn("Iter", 6, BoldFormatter("{:6d}"), StateAttr("iter")))
+
+    cols += iter_cols(problem)
+
     cols.append(
         AttrColumn("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm"))
     )
@@ -176,6 +220,65 @@ def problem_display(problem: Problem, params: Params):
         cols.append(AttrColumn("Cons nonlin", 16, "{:16.8e}", StateAttr("cons_nonlin")))
 
     cols.append(AttrColumn("Type", 8, StepFormatter(), StateAttr("step_accept")))
+
+    return Display(cols, interval=params.display_interval)
+
+
+class FilterColumn(Column):
+    def __init__(self):
+        super().__init__("Filter", 10)
+
+    def empty(self):
+        return "{:^{}s}".format("--", self.width)
+
+    def content(self, state, last_state):
+        curr_filter = state["filter"]
+        last_filter = None
+
+        if (last_state is not None) and (state["iter"] == (last_state["iter"] + 1)):
+            last_filter = last_state["filter"]
+
+        if curr_filter is None:
+            return self.empty()
+
+        display_curr = False
+
+        if last_filter is None:
+            display_curr = True
+        elif (curr_filter != last_filter).any():
+            display_curr = True
+
+        if display_curr:
+            num_active = curr_filter.sum()
+            return "{:^{}d}".format(num_active, self.width)
+        else:
+            return "{:^{}s}".format("--", self.width)
+
+
+class StepTypeColumn(Column):
+    def __init__(self):
+        super().__init__("Step Type", 10)
+        self.format = BoldFormatter("{:^10s}")
+
+    def content(self, state, last_state):
+        step_type = state["step_type"]
+        return self.format(step_type.name())
+
+
+def integrator_display(problem: Problem, params: Params):
+    cols: List[Column] = []
+
+    cols.append(AttrColumn("Iter", 6, BoldFormatter("{:6d}"), StateAttr("iter")))
+    cols += iter_cols(problem)
+
+    cols.append(FilterColumn())
+
+    cols.append(AttrColumn("Func evals", 10, "{:10d}", StateAttr("num_func_evals")))
+    cols.append(AttrColumn("Jac evals", 10, "{:10d}", StateAttr("num_jac_evals")))
+    cols.append(AttrColumn("Steps", 10, "{:10d}", StateAttr("num_steps")))
+    cols.append(AttrColumn("dt", 12, "{:6e}", StateAttr("dt")))
+
+    cols.append(StepTypeColumn())
 
     return Display(cols)
 

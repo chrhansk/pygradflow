@@ -4,7 +4,7 @@ from typing import Iterator, Optional
 
 import numpy as np
 
-from pygradflow.display import inner_display
+from pygradflow.display import StateData, inner_display
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
@@ -109,7 +109,7 @@ class StepController(abc.ABC):
             return
 
         iterate = step.iterate
-        state = dict()
+        state = StateData()
         state["iter"] = lambda: iteration
         state["residuum"] = lambda: self.res_func(iterate)
         state["dist"] = lambda: step.diff

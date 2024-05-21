@@ -4,7 +4,7 @@ from typing import Optional
 import numpy as np
 
 from pygradflow.callbacks import Callbacks, CallbackType
-from pygradflow.display import Format, problem_display
+from pygradflow.display import Format, StateData, solver_display
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.newton import newton_method
@@ -295,7 +295,7 @@ class Solver:
         self.penalty = penalty_strategy(self.problem, params)
         self.rho = -1.0
 
-        display = problem_display(problem, params)
+        display = solver_display(problem, params)
 
         iterate = self.transform.initial_iterate
 
@@ -312,9 +312,6 @@ class Solver:
         logger.debug("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))
 
         status = None
-        start_time = time.time()
-        last_time = start_time
-        line_diff = 0
         iteration = 0
 
         logger.info(display.header)
@@ -334,8 +331,7 @@ class Solver:
             if status is not None:
                 break
 
-            curr_time = time.time()
-            display_iterate = curr_time - last_time >= params.display_interval
+            display_iterate = display.should_display()
 
             step_result = self.compute_step(
                 controller, iterate, 1.0 / lamb, display_iterate, timer
@@ -359,20 +355,9 @@ class Solver:
             self.callbacks(CallbackType.ComputedStep, iterate, next_iterate, accept)
 
             if display_iterate:
-                last_time = curr_time
-                line_diff += 1
-
-                state = dict()
+                state = StateData()
                 state["iterate"] = iterate
-
-                def compute_last_active_set():
-                    if last_display_iteration + 1 == iteration:
-                        return last_active_set
-                    return None
-
-                state["last_active_set"] = compute_last_active_set
-                state["curr_active_set"] = lambda: step_result.active_set
-
+                state["active_set"] = lambda: step_result.active_set
                 state["obj_nonlin"] = lambda: iterate.obj_nonlin(next_iterate)
 
                 if problem.num_cons > 0:
@@ -382,7 +367,7 @@ class Solver:
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["obj"] = lambda: iterate.obj()
-                state["iter"] = lambda: iteration + 1
+                state["iter"] = iteration + 1
                 state["primal_step_norm"] = lambda: primal_step_norm
                 state["dual_step_norm"] = lambda: dual_step_norm
                 state["lamb"] = lambda: lamb
@@ -390,7 +375,6 @@ class Solver:
                 state["rcond"] = lambda: step_result.rcond
 
                 logger.info(display.row(state))
-                last_display_iteration = iteration
 
             if accept:
                 # Accept
