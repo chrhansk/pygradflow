@@ -6,7 +6,7 @@ import numpy as np
 import scipy as sp
 
 from pygradflow.display import StateData, integrator_display
-from pygradflow.explicit.events import (
+from pygradflow.integration.events import (
     ConvergedResult,
     EventResultType,
     FilterChangedResult,
@@ -14,9 +14,9 @@ from pygradflow.explicit.events import (
     PenaltyResult,
     UnboundedResult,
 )
-from pygradflow.explicit.flow import Flow, func_neg, func_pos, lazy_func
-from pygradflow.explicit.problem_switches import SwitchTrigger, TriggerType
-from pygradflow.explicit.restricted_flow import RestrictedFlow
+from pygradflow.integration.flow import Flow, func_neg, func_pos, lazy_func
+from pygradflow.integration.problem_switches import SwitchTrigger, TriggerType
+from pygradflow.integration.restricted_flow import RestrictedFlow
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.result import SolverResult
@@ -62,7 +62,7 @@ class IntegrationResult:
         self.filter = filter_next
 
 
-class ExplicitSolver:
+class IntegrationSolver:
     def __init__(self, problem, params):
         self.orig_problem = problem
         self.params = params

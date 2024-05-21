@@ -2,7 +2,7 @@ from enum import Enum, auto
 
 import numpy as np
 
-from pygradflow.explicit.flow import func_neg, func_pos, lazy_func
+from pygradflow.integration.flow import func_neg, func_pos, lazy_func
 
 
 class TriggerType(Enum):

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import scipy as sp
 
-from pygradflow.explicit.explicit_solver import ExplicitSolver
+from pygradflow.integration.integration_solver import IntegrationSolver
 from pygradflow.params import Params
 from pygradflow.problem import Problem
 from pygradflow.status import SolverStatus
@@ -11,7 +11,7 @@ from ..instances import hs71_instance, tame_instance
 
 
 @pytest.fixture
-def explicit_params():
+def integration_params():
     return Params(iteration_limit=1000, rho=1e-2)
 
 
@@ -31,12 +31,12 @@ class SimpleProblem(Problem):
         return sp.sparse.eye(1)
 
 
-def test_simple_problem(explicit_params):
+def test_simple_problem(integration_params):
     problem = SimpleProblem()
     x0 = np.array([10.0])
     y0 = np.array([])
 
-    solver = ExplicitSolver(problem, explicit_params)
+    solver = IntegrationSolver(problem, integration_params)
 
     result = solver.solve(x0, y0)
 
@@ -59,12 +59,12 @@ class SimpleUnboundedProblem(Problem):
         return sp.sparse.csr_matrix((1, 1))
 
 
-def test_simple_unbounded(explicit_params):
+def test_simple_unbounded(integration_params):
     problem = SimpleUnboundedProblem()
     x0 = np.array([0.0])
     y0 = np.array([])
 
-    solver = ExplicitSolver(problem, explicit_params)
+    solver = IntegrationSolver(problem, integration_params)
 
     result = solver.solve(x0, y0)
 
@@ -87,12 +87,12 @@ class ActiveSetChangeProblem(Problem):
         return sp.sparse.eye(1)
 
 
-def test_solve_active_set_change(explicit_params):
+def test_solve_active_set_change(integration_params):
     problem = ActiveSetChangeProblem()
     x0 = np.array([10.0])
     y0 = np.array([])
 
-    solver = ExplicitSolver(problem, explicit_params)
+    solver = IntegrationSolver(problem, integration_params)
 
     result = solver.solve(x0, y0)
 
@@ -117,12 +117,12 @@ class SingleActiveSetProblem(Problem):
         return sp.sparse.eye(2)
 
 
-def test_solve_single_active_set(explicit_params):
+def test_solve_single_active_set(integration_params):
     problem = SingleActiveSetProblem()
     x0 = np.array([1.5, 10.0])
     y0 = np.array([])
 
-    solver = ExplicitSolver(problem, explicit_params)
+    solver = IntegrationSolver(problem, integration_params)
 
     result = solver.solve(x0, y0)
 
@@ -131,12 +131,12 @@ def test_solve_single_active_set(explicit_params):
     assert result.success
 
 
-def test_solve_tame(tame_instance, explicit_params):
+def test_solve_tame(tame_instance, integration_params):
     problem = tame_instance.problem
     x0 = tame_instance.x_0
     y0 = tame_instance.y_0
 
-    solver = ExplicitSolver(problem, explicit_params)
+    solver = IntegrationSolver(problem, integration_params)
 
     result = solver.solve(x0, y0)
 
@@ -146,12 +146,12 @@ def test_solve_tame(tame_instance, explicit_params):
     assert np.allclose(result.y, tame_instance.y_opt, atol=1e-6)
 
 
-def test_solve_hs71(hs71_instance, explicit_params):
+def test_solve_hs71(hs71_instance, integration_params):
     problem = hs71_instance.problem
     x0 = hs71_instance.x_0
     y0 = hs71_instance.y_0
 
-    solver = ExplicitSolver(problem, explicit_params)
+    solver = IntegrationSolver(problem, integration_params)
 
     result = solver.solve(x0, y0)
 

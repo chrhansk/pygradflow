@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-from pygradflow.explicit.problem_switches import ProblemSwitches
+from pygradflow.integration.problem_switches import ProblemSwitches
 from pygradflow.iterate import Iterate
 from pygradflow.util import keep_rows
 
