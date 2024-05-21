@@ -1,7 +1,9 @@
 import numpy as np
+import scipy as sp
 
 from pygradflow.explicit.problem_switches import ProblemSwitches
 from pygradflow.iterate import Iterate
+from pygradflow.util import keep_rows
 
 
 class RestrictedFlow:
@@ -91,6 +93,31 @@ class RestrictedFlow:
             return self.rhs(z, rho)
 
         return rhs
+
+    def rhs_jac(self, z, rho):
+        problem = self.problem
+        params = self.params
+
+        (x, y) = self.flow.split_states(z)
+
+        iterate = Iterate(problem, params, x, y)
+        hess = iterate.aug_lag_deriv_xx(rho)
+        jac = iterate.aug_lag_deriv_xy()
+
+        filtered_hess = keep_rows(hess, self.filter)
+        filtered_jac = keep_rows(jac.T, self.filter)
+
+        return sp.sparse.bmat(
+            [[-filtered_hess, -filtered_jac], [jac, None]], format="csr"
+        )
+
+    def rhs_jac_func(self, rho):
+        assert rho > 0
+
+        def rhs_jac(_, z):
+            return self.rhs_jac(z, rho)
+
+        return rhs_jac
 
     def residuum(self, z):
         return np.linalg.norm(self.rhs(z, rho=0.0))

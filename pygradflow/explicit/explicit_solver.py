@@ -240,6 +240,7 @@ class ExplicitSolver:
             (curr_t, next_t),
             curr_z,
             method="BDF",
+            jac=restricted_flow.rhs_jac_func(rho),
             events=event_triggers,
         )
 
