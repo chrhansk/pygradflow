@@ -1,11 +1,14 @@
 from enum import Enum, auto
 
+import numpy as np
+
 from pygradflow.explicit.flow import func_neg, func_pos, lazy_func
 
 
 class TriggerType(Enum):
     LB = auto()
     UB = auto()
+    PENALTY = auto()
     GRAD_FIXED = auto()
     GRAD_FREE = auto()
     CONVERGED = auto()
@@ -57,6 +60,20 @@ class ProblemSwitches:
         at_ub.index = j
 
         return at_ub
+
+    def penalty_event(self, rho):
+        def penalty_check(_, z):
+            rhs = self.restricted_flow.rhs(z, rho)
+            rhs_x, rhs_y = self.flow.split_states(rhs)
+            aug_dx = self.flow.aug_lag_deriv_x(z, rho)
+            aug_dy = self.flow.aug_lag_deriv_y(z, rho)
+
+            return np.dot(rhs_x, aug_dx) + np.dot(rhs_y, aug_dy)
+
+        penalty_check.type = TriggerType.PENALTY
+        penalty_check.direction = 1.0
+
+        return penalty_check
 
     def grad_fixed_event(self, j, rho):
         def grad(_, z):
@@ -194,6 +211,7 @@ class ProblemSwitches:
             *grad_fixed_events,
             self.converged_event(),
             self.unbounded_event(),
+            self.penalty_event(rho),
         ]
 
         for event in events:

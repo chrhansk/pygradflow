@@ -10,6 +10,7 @@ from pygradflow.explicit.events import (
     EventResultType,
     FilterChangedResult,
     FreeGradZeroResult,
+    PenaltyResult,
     UnboundedResult,
 )
 from pygradflow.explicit.flow import Flow, func_neg, func_pos, lazy_func
@@ -27,6 +28,7 @@ class IntegrationStatus(Enum):
     Unbounded = auto()
     Event = auto()
     Finished = auto()
+    Penalty = auto()
 
 
 class IntegrationResult:
@@ -194,6 +196,9 @@ class ExplicitSolver:
                 if iterate_event.is_feasible(params.opt_tol):
                     return UnboundedResult(t_event, z_event)
 
+            elif event.type == TriggerType.PENALTY:
+                (x_event, y_event) = self.flow.split_states(z_event)
+                return PenaltyResult(t_event, z_event)
             else:
                 assert event.type == TriggerType.CONVERGED
                 logger.debug("Convergence achieved at time %f", event.time)
@@ -271,6 +276,12 @@ class ExplicitSolver:
             status = IntegrationStatus.Event
             next_z = event_result.z
             next_t = event_result.t
+        else:
+            assert event_result.type == EventResultType.PENALTY
+            logger.debug("Penalty event")
+            status = IntegrationStatus.Penalty
+            next_z = event_result.z
+            next_t = event_result.t
 
         (next_x, next_y) = self.flow.split_states(next_z)
 
@@ -291,7 +302,7 @@ class ExplicitSolver:
         problem = self.problem
         params = self.params
         self.flow = Flow(problem, params, self.eval)
-        rho = 1e2
+        rho = self.params.rho
 
         initial_iterate = self.transform.initial_iterate
 
@@ -355,14 +366,21 @@ class ExplicitSolver:
             result = self.perform_integration(curr_t, curr_z, curr_filter, rho)
             iteration += 1
 
+            curr_z = result.z
+            curr_t = result.t
+            curr_filter = result.filter
+
             if result.status == IntegrationStatus.Converged:
-                curr_z = result.z
                 status = SolverStatus.Optimal
                 break
             elif result.status == IntegrationStatus.Unbounded:
-                curr_z = result.z
                 status = SolverStatus.Unbounded
                 break
+            elif result.status == IntegrationStatus.Penalty:
+                # Continuation criterion is violated => update penalty parameter
+                logger.debug("Updating penalty parameter %f -> %f", rho, 10 * rho)
+                rho *= 10
+                curr_filter = self.create_filter(curr_z, rho)
 
             if (params.iteration_limit is not None) and (
                 iteration >= params.iteration_limit
@@ -370,10 +388,6 @@ class ExplicitSolver:
                 status = SolverStatus.IterationLimit
                 logger.debug("Iteration limit reached")
                 break
-
-            curr_z = result.z
-            curr_t = result.t
-            curr_filter = result.filter
 
         (curr_x, curr_y) = self.flow.split_states(curr_z)
         iterate = Iterate(problem, params, curr_x, curr_y)

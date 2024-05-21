@@ -96,6 +96,15 @@ class Flow:
         aug_lag_deriv_x = eval.obj_grad(x) + eval.cons_jac(x).T.dot(lhs)
         return aug_lag_deriv_x
 
+    def aug_lag_deriv_y(self, z, rho, c=None):
+        eval = self.eval
+        (x, y) = self.split_states(z)
+
+        if c is None:
+            c = eval.cons(x)
+
+        return c
+
     def neg_aug_lag_deriv_x(self, z, rho, c=None):
         return -self.aug_lag_deriv_x(z, rho, c)
 

@@ -8,6 +8,7 @@ class EventResultType(Enum):
     UNBOUNDED = auto()
     FILTER_CHANGED = auto()
     FREE_GRAD_ZERO = auto()
+    PENALTY = auto()
 
 
 class EventResult:
@@ -48,7 +49,7 @@ class FreeGradZeroResult(EventResult):
         self.j = j
 
 
-class NothingResult(EventResult):
-    def __init__(self, t, z):
+class PenaltyResult(EventResult):
+    def __init__(self, t: float, z: np.ndarray):
         super().__init__(t, z)
-        self.type = EventResultType.NOTHING
+        self.type = EventResultType.PENALTY
