@@ -2,7 +2,7 @@ from enum import Enum, auto
 
 import numpy as np
 
-from pygradflow.integration.flow import func_neg, func_pos, lazy_func
+from pygradflow.integration.flow import lazy_func
 
 
 class TriggerType(Enum):
@@ -10,7 +10,6 @@ class TriggerType(Enum):
     UB = auto()
     PENALTY = auto()
     GRAD_FIXED = auto()
-    GRAD_FREE = auto()
     CONVERGED = auto()
     UNBOUNDED = auto()
 
@@ -46,6 +45,7 @@ class ProblemSwitches:
 
         at_lb.type = TriggerType.LB
         at_lb.index = j
+        at_lb.direction = -1.0
 
         return at_lb
 
@@ -54,10 +54,11 @@ class ProblemSwitches:
 
         def at_ub(_, z):
             (x, y) = self.flow.split_states(z)
-            return ub[j] - x[j]
+            return x[j] - ub[j]
 
         at_ub.type = TriggerType.UB
         at_ub.index = j
+        at_ub.direction = 1.0
 
         return at_ub
 
@@ -80,23 +81,6 @@ class ProblemSwitches:
             return self.flow.neg_aug_lag_deriv_x(z, rho)[j]
 
         grad.type = TriggerType.GRAD_FIXED
-        grad.index = j
-
-        return grad
-
-    def grad_free_event(self, j, rho, deriv=False):
-
-        if deriv:
-
-            def grad(_, z):
-                return self.flow.rhs_deriv_x(z, rho)[j]
-
-        else:
-
-            def grad(_, z):
-                return self.flow.neg_aug_lag_deriv_x(z, rho)[j]
-
-        grad.type = TriggerType.GRAD_FREE
         grad.index = j
 
         return grad
@@ -143,7 +127,6 @@ class ProblemSwitches:
 
         lb_events = []
         ub_events = []
-        grad_free_events = []
         grad_fixed_events = []
 
         at_lb = self.flow.isclose(x, lb)
@@ -154,42 +137,21 @@ class ProblemSwitches:
             if filter[j]:
 
                 lb_event = self.lb_event(j)
-                lb_event.direction = -1.0
-
                 ub_event = self.ub_event(j)
-                ub_event.direction = 1.0
 
-                # Between bounds: Trigger event when approaching
-                # either of the bounds
-                if not (at_lb[j] or at_ub[j]):
+                if np.isfinite(lb[j]):
                     lb_events.append(lb_event)
+
+                if np.isfinite(ub[j]):
                     ub_events.append(ub_event)
-                    continue
-
-                # If at bound (wlog lb): Cannot create event
-                # for reaching lb, since that would trigger again
-                # immediately. However: We know that (rhs, rhs') > 0
-                # so we initially move away from the bound and can only
-                # reach the bound again when the sign of (rhs, rhs')
-                # changes back, so just watch for that happening...
-                deriv = bool(self.flow.isclose(rhs()[j], 0.0))
-                grad_free_event = self.grad_free_event(j, rho, deriv=deriv)
-
-                if at_lb[j]:
-                    assert func_pos(rhs, rhs_deriv, j)
-                    ub_events.append(ub_event)
-                    grad_free_events.append(grad_free_event)
-
-                elif at_ub[j]:
-                    assert func_neg(rhs, rhs_deriv, j)
-                    lb_events.append(lb_event)
-                    grad_free_events.append(grad_free_event)
 
             # Variable is pinned, watch for sign changes
             if not filter[j]:
                 # Equal bounds, flow *must* stay at zero
                 if at_lb[j] and at_ub[j]:
                     continue
+
+                assert at_lb[j] or at_ub[j]
 
                 event = self.grad_fixed_event(j, rho)
 
@@ -207,7 +169,6 @@ class ProblemSwitches:
         events = [
             *lb_events,
             *ub_events,
-            *grad_free_events,
             *grad_fixed_events,
             self.converged_event(),
             self.unbounded_event(),

@@ -10,7 +10,6 @@ from pygradflow.integration.events import (
     ConvergedResult,
     EventResultType,
     FilterChangedResult,
-    FreeGradZeroResult,
     PenaltyResult,
     UnboundedResult,
 )
@@ -195,21 +194,6 @@ class IntegrationSolver:
                     continue
 
                 return FilterChangedResult(t_event, z_event, filter, j)
-
-            elif event.type == TriggerType.GRAD_FREE:
-                j = event.index
-                logger.debug(
-                    "Gradient entry of free %d changed sign at time %f", j, event.time
-                )
-
-                assert filter[j]
-
-                at_lb = Flow.isclose(z_event[j], lb[j])
-                at_ub = Flow.isclose(z_event[j], ub[j])
-
-                assert not (at_lb or at_ub), "Not implemented"
-
-                return FreeGradZeroResult(t_event, z_event, j)
 
             elif event.type == TriggerType.UNBOUNDED:
                 params = self.params

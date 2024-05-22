@@ -41,14 +41,6 @@ class FilterChangedResult(EventResult):
         self.filter = next_filter
 
 
-class FreeGradZeroResult(EventResult):
-    def __init__(self, t: float, z: np.ndarray, j: int):
-        super().__init__(t, z)
-        self.z = z
-        self.type = EventResultType.FREE_GRAD_ZERO
-        self.j = j
-
-
 class PenaltyResult(EventResult):
     def __init__(self, t: float, z: np.ndarray):
         super().__init__(t, z)
