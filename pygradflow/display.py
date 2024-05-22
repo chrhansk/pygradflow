@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List, Literal
 
+import numpy as np
 from termcolor import colored
 
+from pygradflow.log import logger
 from pygradflow.params import Params
 from pygradflow.problem import Problem
 from pygradflow.timer import SimpleTimer
@@ -292,3 +294,57 @@ def inner_display(problem: Problem, params: Params):
     cols.append(AttrColumn("Active set", 10, "{:10d}", StateAttr("active_set_size")))
 
     return Display(cols)
+
+
+def print_problem_stats(problem, iterate):
+    num_vars = problem.num_vars
+    num_cons = problem.num_cons
+
+    logger.info("Solving problem with %s variables, %s constraints", num_vars, num_cons)
+
+    cons_jac = iterate.cons_jac
+    lag_hess = iterate.lag_hess(iterate.y)
+
+    var_lb = problem.var_lb
+    var_ub = problem.var_ub
+
+    inf_lb = var_lb == -np.inf
+    inf_ub = var_ub == np.inf
+
+    unbounded = np.logical_and(inf_lb, inf_ub)
+    ranged = np.logical_and(np.logical_not(inf_lb), np.logical_not(inf_ub))
+    bounded_below = np.logical_and(np.logical_not(inf_lb), inf_ub)
+    bounded_above = np.logical_and(inf_lb, np.logical_not(inf_ub))
+    bounded = np.logical_or(bounded_below, bounded_above)
+
+    num_unbounded = np.sum(unbounded)
+    num_ranged = np.sum(ranged)
+    num_bounded = np.sum(bounded)
+
+    has_cons = num_cons > 0
+
+    logger.info("           Hessian nnz: %s", lag_hess.nnz)
+    if has_cons:
+        logger.info("          Jacobian nnz: %s", cons_jac.nnz)
+
+    logger.info("        Free variables: %s", num_unbounded)
+    logger.info("     Bounded variables: %s", num_bounded)
+    logger.info("      Ranged variables: %s", num_ranged)
+
+    if not has_cons:
+        return
+
+    cons_lb = problem.cons_lb
+    cons_ub = problem.cons_ub
+
+    equation = cons_lb == cons_ub
+    ranged = np.logical_and(np.isfinite(cons_lb), np.isfinite(cons_ub))
+    ranged = np.logical_and(ranged, np.logical_not(equation))
+
+    num_equations = equation.sum()
+    num_ranged = ranged.sum()
+    num_inequalities = num_cons - num_equations - num_ranged
+
+    logger.info("  Equality constraints: %s", num_equations)
+    logger.info("Inequality constraints: %s", num_inequalities)
+    logger.info("    Ranged constraints: %s", num_ranged)

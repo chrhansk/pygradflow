@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import scipy as sp
 
-from pygradflow.display import StateData, integrator_display
+from pygradflow.display import StateData, integrator_display, print_problem_stats
 from pygradflow.integration.events import (
     ConvergedResult,
     EventResultType,
@@ -337,6 +337,8 @@ class IntegrationSolver:
         rho = self.params.rho
 
         initial_iterate = self.transform.initial_iterate
+
+        print_problem_stats(problem, initial_iterate)
 
         x_init = initial_iterate.x
         y_init = initial_iterate.y
