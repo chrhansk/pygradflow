@@ -5,8 +5,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
-from multiprocessing import TimeoutError, cpu_count
-from multiprocessing.pool import ThreadPool
+from multiprocessing import cpu_count
 
 import numpy as np
 
@@ -19,46 +18,49 @@ run_logger = logging.getLogger(__name__)
 formatter = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
 
 
-def try_solve_instance(instance, params, log_filename, verbose):
-    try:
-        logger.handlers.clear()
+def solve_instance(instance, params, log_filename, verbose):
+    logger.handlers.clear()
 
-        np.seterr(divide="raise", over="raise", invalid="raise")
+    np.seterr(divide="raise", over="raise", invalid="raise")
 
-        handler = logging.FileHandler(log_filename)
+    handler = logging.FileHandler(log_filename)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    if verbose:
+        handler = logging.StreamHandler()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-        if verbose:
-            handler = logging.StreamHandler()
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
-        logger.setLevel(logging.INFO)
+    logging.captureWarnings(True)
+    warn_logger = logging.getLogger("py.warnings")
+    warn_logger.addHandler(handler)
+    warn_logger.setLevel(logging.WARN)
 
-        logging.captureWarnings(True)
-        warn_logger = logging.getLogger("py.warnings")
-        warn_logger.addHandler(handler)
-        warn_logger.setLevel(logging.WARN)
+    return instance.solve(params)
 
-        def solve():
-            return instance.solve(params)
 
+def try_solve_instance(instance, params, log_filename, verbose):
+    try:
         # No time limit
         if params.time_limit == np.inf:
-            return (instance, solve())
+            return (instance, solve_instance(instance, params, log_filename, verbose))
 
-        # Solve in thread pool so we can
-        # await the result
-        thread_pool = ThreadPool(1)
+        with ProcessPoolExecutor(1) as pool:
+            future = pool.submit(
+                solve_instance, instance, params, log_filename, verbose
+            )
+            done, _ = wait([future], timeout=(params.time_limit + 10))
 
-        try:
-            res = thread_pool.apply_async(solve)
-            result = res.get(params.time_limit)
+            if len(done) == 0:
+                logger.error("Reached timeout, aborting")
+                return (instance, "timeout")
+
+            result = next(iter(done)).result()
             return (instance, result)
-        except TimeoutError:
-            logger.error("Reached timeout, aborting")
-            return (instance, "timeout")
+
     except Exception as exc:
         logger.error("Error solving %s", instance.name)
         logger.exception(exc, exc_info=(type(exc), exc, exc.__traceback__))
