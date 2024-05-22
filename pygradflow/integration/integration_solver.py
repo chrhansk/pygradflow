@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import scipy as sp
 
-from pygradflow.display import StateData, integrator_display, print_problem_stats
+from pygradflow.display import Format, StateData, integrator_display, print_problem_stats
 from pygradflow.integration.events import (
     ConvergedResult,
     EventResultType,
@@ -45,6 +45,7 @@ class IntegrationResult:
     def __init__(
         self,
         status,
+        dist,
         t_next,
         z_next,
         filter_next,
@@ -53,6 +54,7 @@ class IntegrationResult:
         num_jac_evals,
     ):
         self.status = status
+        self.dist = dist
         self.num_steps = num_steps
         self.num_func_evals = num_func_evals
         self.num_jac_evals = num_jac_evals
@@ -213,20 +215,42 @@ class IntegrationSolver:
 
         return None
 
-    def _get_initial_sol(self, x0, y0):
-        problem = self.problem
-        orig_problem = self.orig_problem
+    def print_result(
+                    self,
+                    total_time: float,
+                    status: SolverStatus,
+                    iterate: Iterate,
+                    iterations: int,
+                    dist_factor: float,
+    ) -> None:
+        rho = self.rho
 
-        if x0 is None:
-            orig_n = orig_problem.num_vars
-            x0 = np.zeros((orig_n,))
-            x0 = np.clip(x0, orig_problem.var_lb, orig_problem.var_ub)
+        desc = "{:>45s}".format(SolverStatus.description(status))
 
-        if y0 is None:
-            orig_m = orig_problem.num_cons
-            y0 = np.zeros((orig_m,))
+        status_desc = Format.redgreen(desc, SolverStatus.success(status), bold=True)
+        status_name = Format.bold("{:>20s}".format("Status"))
 
-        return problem.transform_sol(x0, y0)
+        logger.info("%20s: %45s", status_name, status_desc)
+        logger.info("%20s: %45s", "Time", f"{total_time:.2f}s")
+        logger.info("%20s: %45d", "Iterations", iterations)
+
+        logger.info("%20s: %45e", "Distance factor", dist_factor)
+
+        logger.info("%20s: %45e", "Objective", iterate.obj)
+        logger.info("%20s: %45e", "Aug Lag violation", iterate.aug_lag_violation(rho))
+        logger.info("%20s: %45e", "Aug Lag dual", iterate.aug_lag_dual())
+
+        logger.info("%20s: %45e", "Constraint violation", iterate.cons_violation)
+        logger.info("%20s: %45e", "Dual violation", iterate.stat_res)
+
+        eval = self.evaluator
+
+        eval_name = Format.bold("{:>20s}".format("Evaluations"))
+        logger.info("%20s", eval_name)
+
+        for component, num_evals in eval.num_evals.items():
+            name = component.name()
+            logger.info("%20s: %45d", name, num_evals)
 
     def perform_integration(
         self, curr_t, curr_z, curr_filter, rho
@@ -257,49 +281,45 @@ class IntegrationSolver:
         event_result = self.handle_events(events, restricted_flow, rho)
 
         status = IntegrationStatus.Finished
-        next_t = ivp_result.t[-1]
-        next_z = ivp_result.y[:, -1]
         next_filter = curr_filter
 
         if event_result is None:
-            pass
-        elif event_result.type == EventResultType.CONVERGED:
-            logger.debug("Convergence achieved")
-            status = IntegrationStatus.Converged
-            next_z = event_result.z
-            next_t = event_result.t
-        elif event_result.type == EventResultType.UNBOUNDED:
-            logger.debug("Unboundedness detected")
-            status = IntegrationStatus.Unbounded
-            next_z = event_result.z
-            next_t = event_result.t
-        elif event_result.type == EventResultType.FILTER_CHANGED:
-            logger.debug("Filter changed")
-            status = IntegrationStatus.Event
-            next_z = event_result.z
-            next_t = event_result.t
-            next_filter = event_result.filter
-        elif event_result.type == EventResultType.FREE_GRAD_ZERO:
-            logger.debug("Free gradient entry %d became zero", event_result.j)
-            status = IntegrationStatus.Event
-            next_z = event_result.z
-            next_t = event_result.t
+            next_t = ivp_result.t[-1]
+            next_z = ivp_result.y[:, -1]
         else:
-            assert event_result.type == EventResultType.PENALTY
-            logger.debug("Penalty event")
-            status = IntegrationStatus.Penalty
             next_z = event_result.z
             next_t = event_result.t
+
+            if event_result.type == EventResultType.CONVERGED:
+                logger.debug("Convergence achieved")
+                status = IntegrationStatus.Converged
+            elif event_result.type == EventResultType.UNBOUNDED:
+                logger.debug("Unboundedness detected")
+                status = IntegrationStatus.Unbounded
+            elif event_result.type == EventResultType.FILTER_CHANGED:
+                logger.debug("Filter changed")
+                status = IntegrationStatus.Event
+                next_filter = event_result.filter
+            elif event_result.type == EventResultType.FREE_GRAD_ZERO:
+                logger.debug("Free gradient entry %d became zero", event_result.j)
+                status = IntegrationStatus.Event
+            else:
+                assert event_result.type == EventResultType.PENALTY
+                logger.debug("Penalty event")
+                status = IntegrationStatus.Penalty
 
         (next_x, next_y) = self.flow.split_states(next_z)
 
         not_filter = np.logical_not(curr_filter)
 
-        assert np.isclose(next_x[not_filter], curr_x[not_filter]).all()
+        assert (next_x[not_filter] == curr_x[not_filter]).all()
         assert self.flow.is_boxed(next_x)
+
+        dist = np.linalg.norm((ivp_result.y[:, 1:] - ivp_result.y[:, :-1]), axis=0).sum()
 
         return IntegrationResult(
             status,
+            dist,
             next_t,
             next_z,
             next_filter,
@@ -313,12 +333,12 @@ class IntegrationSolver:
         self.transform = Transformation(self.orig_problem, self.params, x0, y0)
 
         self.problem = self.transform.trans_problem
-        self.eval = self.transform.evaluator
+        self.evaluator = self.transform.evaluator
 
         problem = self.problem
         params = self.params
-        self.flow = Flow(problem, params, self.eval)
-        rho = self.params.rho
+        self.flow = Flow(problem, params, self.evaluator)
+        self.rho = self.params.rho
 
         initial_iterate = self.transform.initial_iterate
 
@@ -329,7 +349,7 @@ class IntegrationSolver:
 
         curr_z = np.concatenate((x_init, y_init))
         curr_t = 0.0
-        curr_filter = self.create_filter(curr_z, rho)
+        curr_filter = self.create_filter(curr_z, self.rho)
 
         status = None
         iteration = 0
@@ -342,7 +362,7 @@ class IntegrationSolver:
         logger.info(display.header)
 
         while True:
-            self._check_filter(curr_z, curr_filter, rho)
+            self._check_filter(curr_z, curr_filter, self.rho)
             self._check_bounds(curr_z)
 
             restricted_flow = RestrictedFlow(self.flow, curr_filter)
@@ -359,7 +379,7 @@ class IntegrationSolver:
                 "State: %s, filter: %s, grad: %s",
                 curr_z,
                 curr_filter,
-                self.flow.rhs(curr_z, rho),
+                self.flow.rhs(curr_z, self.rho),
             )
 
             if timer.reached_time_limit():
@@ -383,15 +403,16 @@ class IntegrationSolver:
                 status = SolverStatus.Unbounded
                 break
 
-            result = self.perform_integration(curr_t, curr_z, curr_filter, rho)
+            result = self.perform_integration(curr_t, curr_z, curr_filter, self.rho)
+            path_dist += result.dist
 
             if display.should_display():
                 state = StateData()
                 curr_x, curr_y = self.flow.split_states(curr_z)
-                iterate = Iterate(problem, params, curr_x, curr_y, self.eval)
+                iterate = Iterate(problem, params, curr_x, curr_y, self.evaluator)
                 state["iterate"] = iterate
                 state["filter"] = curr_filter
-                state["aug_lag"] = lambda: iterate.aug_lag(rho)
+                state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["obj"] = lambda: iterate.obj()
                 state["iter"] = iteration + 1
                 state["num_func_evals"] = result.num_func_evals
@@ -416,9 +437,9 @@ class IntegrationSolver:
                 break
             elif result.status == IntegrationStatus.Penalty:
                 # Continuation criterion is violated => update penalty parameter
-                logger.debug("Updating penalty parameter %f -> %f", rho, 10 * rho)
-                rho *= 10
-                curr_filter = self.create_filter(curr_z, rho)
+                logger.debug("Updating penalty parameter %f -> %f", self.rho, 10 * self.rho)
+                self.rho *= 10
+                curr_filter = self.create_filter(curr_z, self.rho)
 
             if (params.iteration_limit is not None) and (
                 iteration >= params.iteration_limit
@@ -443,6 +464,12 @@ class IntegrationSolver:
         total_time = timer.elapsed()
 
         dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
+
+        self.print_result(total_time,
+                          status,
+                          iterate,
+                          iterations,
+                          dist_factor)
 
         (x, y, d) = self.transform.restore_sol(x, y, d)
 
