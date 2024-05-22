@@ -76,12 +76,17 @@ class ProblemSwitches:
 
         return penalty_check
 
-    def grad_fixed_event(self, j, rho):
+    def grad_fixed_event(self, j, rho, at_lb):
         def grad(_, z):
             return self.flow.neg_aug_lag_deriv_x(z, rho)[j]
 
         grad.type = TriggerType.GRAD_FIXED
         grad.index = j
+
+        if at_lb:
+            grad.direction = 1.0
+        else:
+            grad.direction = -1.0
 
         return grad
 
@@ -153,17 +158,7 @@ class ProblemSwitches:
 
                 assert at_lb[j] or at_ub[j]
 
-                event = self.grad_fixed_event(j, rho)
-
-                if at_lb[j]:
-                    # We only care about the derivative
-                    # becoming positive
-                    event.direction = 1.0
-                elif at_ub[j]:
-                    # We only care about the derivative
-                    # becoming negative
-                    event.direction = -1.0
-
+                event = self.grad_fixed_event(j, rho, at_lb[j])
                 grad_fixed_events.append(event)
 
         events = [

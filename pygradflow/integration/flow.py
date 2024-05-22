@@ -19,11 +19,11 @@ def lazy_func(func):
 
 
 def is_pos(x):
-    return x > 0.0 and not np.isclose(x, 0.0)
+    return x > 0.0 and not Flow.isclose(x, 0.0)
 
 
 def is_neg(x):
-    return x < 0.0 and not np.isclose(x, 0.0)
+    return x < 0.0 and not Flow.isclose(x, 0.0)
 
 
 def func_pos(func, deriv, j):
@@ -67,6 +67,16 @@ class Flow:
         lb = problem.var_lb
         ub = problem.var_ub
         return (lb <= x).all() and (x <= ub).all()
+
+    def is_approx_boxed(self, x):
+        problem = self.problem
+        lb = problem.var_lb
+        ub = problem.var_ub
+
+        is_boxed_lb = np.logical_or(lb <= x, Flow.isclose(lb, x))
+        is_boxed_ub = np.logical_or(x <= ub, Flow.isclose(ub, x))
+
+        return np.logical_and(is_boxed_lb, is_boxed_ub).all()
 
     def rhs(self, z, rho, c=None):
         eval = self.eval

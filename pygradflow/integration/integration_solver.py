@@ -161,10 +161,9 @@ class IntegrationSolver:
                 j = event.index
                 logger.debug("State %d reached lower bound at time %f", j, event.time)
 
+                assert filter[j]
                 assert Flow.isclose(z_event[j], lb[j])
-
-                if func_pos(rhs, rhs_deriv, j):
-                    continue
+                assert func_neg(rhs, rhs_deriv, j)
 
                 return FilterChangedResult(t_event, z_event, filter, j)
 
@@ -172,10 +171,9 @@ class IntegrationSolver:
                 j = event.index
                 logger.debug("State %d reached upper bound at time %f", j, event.time)
 
+                assert filter[j]
                 assert Flow.isclose(z_event[j], ub[j])
-
-                if func_neg(rhs, rhs_deriv, j):
-                    continue
+                assert func_pos(rhs, rhs_deriv, j)
 
                 return FilterChangedResult(t_event, z_event, filter, j)
 
@@ -190,10 +188,10 @@ class IntegrationSolver:
 
                 assert not (filter[j])
 
-                if at_lb and func_neg(rhs, rhs_deriv, j):
-                    continue
-                elif at_ub and func_pos(rhs, rhs_deriv, j):
-                    continue
+                if at_lb:
+                    assert func_pos(rhs, rhs_deriv, j)
+                elif at_ub:
+                    assert func_neg(rhs, rhs_deriv, j)
 
                 return FilterChangedResult(t_event, z_event, filter, j)
 
@@ -276,6 +274,7 @@ class IntegrationSolver:
         )
 
         assert ivp_result.success, "Failed integration"
+        assert (ivp_result.y[:, 0] == curr_z).all()
 
         events = self.create_events(ivp_result, event_triggers)
         event_result = self.handle_events(events, restricted_flow, rho)
@@ -313,7 +312,11 @@ class IntegrationSolver:
         not_filter = np.logical_not(curr_filter)
 
         assert (next_x[not_filter] == curr_x[not_filter]).all()
-        assert self.flow.is_boxed(next_x)
+
+        assert self.flow.is_approx_boxed(next_x)
+
+        next_x = np.clip(next_x, self.problem.var_lb, self.problem.var_ub)
+        next_z = np.concatenate((next_x, next_y))
 
         dist = np.linalg.norm((ivp_result.y[:, 1:] - ivp_result.y[:, :-1]), axis=0).sum()
 
@@ -409,7 +412,7 @@ class IntegrationSolver:
             if display.should_display():
                 state = StateData()
                 curr_x, curr_y = self.flow.split_states(curr_z)
-                iterate = Iterate(problem, params, curr_x, curr_y, self.evaluator)
+                iterate = curr_it
                 state["iterate"] = iterate
                 state["filter"] = curr_filter
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)

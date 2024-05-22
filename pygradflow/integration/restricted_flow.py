@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 
+from pygradflow.integration.flow import Flow
 from pygradflow.integration.problem_switches import ProblemSwitches
 from pygradflow.iterate import Iterate
 from pygradflow.util import keep_rows
@@ -27,8 +28,8 @@ class RestrictedFlow:
         ub = problem.var_ub
 
         (x, y) = self.flow.split_states(z)
-        at_lb = np.isclose(x, lb)
-        at_ub = np.isclose(x, ub)
+        at_lb = Flow.isclose(x, lb)
+        at_ub = Flow.isclose(x, ub)
 
         rhs = self.rhs(z, rho)
         (rhs_x, _) = self.flow.split_states(rhs)
@@ -38,14 +39,14 @@ class RestrictedFlow:
 
         for j in range(num_vars):
             if at_lb[j]:
-                if rhs_x[j] < 0.0 and not (np.isclose(rhs_x[j], 0.0)):
+                if rhs_x[j] < 0.0 and not (Flow.isclose(rhs_x[j], 0.0)):
                     assert not filter[j]
-                elif rhs_x[j] > 0.0 and not (np.isclose(rhs_x[j], 0.0)):
+                elif rhs_x[j] > 0.0 and not (Flow.isclose(rhs_x[j], 0.0)):
                     assert filter[j]
             elif at_ub[j]:
-                if rhs_x[j] > 0.0 and not (np.isclose(rhs_x[j], 0.0)):
+                if rhs_x[j] > 0.0 and not (Flow.isclose(rhs_x[j], 0.0)):
                     assert not filter[j]
-                elif rhs_x[j] < 0.0 and not (np.isclose(rhs_x[j], 0.0)):
+                elif rhs_x[j] < 0.0 and not (Flow.isclose(rhs_x[j], 0.0)):
                     assert filter[j]
             else:
                 assert filter[j]
