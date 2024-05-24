@@ -183,9 +183,16 @@ class Iterate:
     def obj_nonlin(self, other: "Iterate") -> float:
         dx = other.x - self.x
         next_obj = self.obj + np.dot(dx, self.obj_grad)
-        return abs(other.obj - next_obj) / np.dot(dx, dx)
+        dx_dot = np.dot(dx, dx)
+        if np.isclose(dx_dot, 0.0):
+            return 0.0
+        return abs(other.obj - next_obj) / dx_dot
 
     def cons_nonlin(self, other: "Iterate") -> np.ndarray:
         dx = other.x - self.x
         next_cons = self.cons + self.cons_jac.dot(dx)
-        return (other.cons - next_cons) / np.dot(dx, dx)
+        dx_dot = np.dot(dx, dx)
+        if np.isclose(dx_dot, 0.0):
+            problem = self.problem
+            return np.zeros((problem.num_cons,))
+        return (other.cons - next_cons) / dx_dot
