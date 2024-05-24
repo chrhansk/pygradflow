@@ -128,10 +128,9 @@ class SymmetricStepSolver(ScaledStepSolver):
     def solve_deriv(
         self, active_set: np.ndarray, deriv: sp.sparse.spmatrix, rhs: np.ndarray
     ) -> np.ndarray:
-        if self.solver is None:
-            self.solver = self.linear_solver(self.deriv)
-
         try:
+            if self.solver is None:
+                self.solver = self.linear_solver(self.deriv)
             sol = self.solver.solve(rhs)
         except LinearSolverError as e:
             raise StepSolverError from e

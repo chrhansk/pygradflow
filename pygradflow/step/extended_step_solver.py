@@ -84,9 +84,6 @@ class ExtendedStepSolver(ScaledStepSolver):
         if self._deriv is None:
             self._compute_deriv()
 
-        if self.solver is None:
-            self.solver = self.linear_solver(self.deriv)
-
         n = self.n
         m = self.m
 
@@ -95,6 +92,8 @@ class ExtendedStepSolver(ScaledStepSolver):
         assert rhs.shape == (n + m,)
 
         try:
+            if self.solver is None:
+                self.solver = self.linear_solver(self.deriv)
             sol = self.solver.solve(rhs)
         except LinearSolverError as e:
             raise StepSolverError from e
