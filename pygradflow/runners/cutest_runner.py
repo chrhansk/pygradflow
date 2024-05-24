@@ -1,15 +1,12 @@
-import logging
 from functools import cached_property
 
 import numpy as np
 import pycutest
 
-from pygradflow.solver import Problem, Solver
+from pygradflow.problem import Problem
 
 from .instance import Instance
 from .runner import Runner
-
-formatter = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
 
 
 def cutest_is_ne_prob(name):
@@ -48,13 +45,8 @@ class UnconstrainedCUTEstProblem(Problem):
     def lag_hess(self, x, y):
         return self.instance.sphess(x, v=None)
 
-    @property
     def x0(self):
         return self.instance.x0
-
-    @property
-    def y0(self):
-        return np.zeros((self.num_cons,))
 
 
 class ConstrainedCUTEstProblem(Problem):
@@ -86,11 +78,7 @@ class ConstrainedCUTEstProblem(Problem):
 
     @property
     def x0(self):
-        return self.instance.x0
-
-    @property
-    def y0(self):
-        return self.instance.v0
+        return self.instance.x0()
 
 
 # Nonlinear equations: Goal is to minimize the violation
@@ -161,11 +149,6 @@ class CUTestInstance(Instance):
             return UnconstrainedCUTEstProblem(cutest_problem)
         else:
             return ConstrainedCUTEstProblem(cutest_problem)
-
-    def solve(self, params):
-        problem = self.problem()
-        solver = Solver(problem, params)
-        return solver.solve(problem.x0, problem.y0)
 
 
 class CUTestRunner(Runner):

@@ -2,10 +2,7 @@ import numpy as np
 import scipy as sp
 
 from pygradflow.problem import Problem
-
-
-def sparse_zero(shape):
-    return sp.sparse.coo_matrix(([], ([], [])), shape)
+from pygradflow.util import sparse_zero
 
 
 class ConstrainedProblem(Problem):
