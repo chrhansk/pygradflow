@@ -1,5 +1,4 @@
-import time
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 
@@ -268,6 +267,11 @@ class Solver:
 
         timer = Timer(params.time_limit)
 
+        if params.collect_path:
+            path: Optional[List[np.ndarray]] = [initial_iterate.z]
+        else:
+            path = None
+
         while True:
             status = self._check_terminate(iterate, iteration, timer)
             if status is not None:
@@ -330,6 +334,9 @@ class Solver:
 
                 delta = iterate.dist(next_iterate)
 
+                if path is not None:
+                    path.append(next_iterate.z)
+
                 iterate = next_iterate
 
                 path_dist += primal_step_norm + dual_step_norm
@@ -368,6 +375,15 @@ class Solver:
 
         (x, y, d) = self.transform.restore_sol(x, y, d)
 
+        result_props = dict()
+
+        if path is not None:
+            complete_path: np.ndarray = np.vstack(path).T
+            num_vars = problem.num_vars
+            result_props["path"] = complete_path
+            result_props["primal_path"] = complete_path[:num_vars, :]
+            result_props["dual_path"] = complete_path[num_vars:, :]
+
         return SolverResult(
             x,
             y,
@@ -377,4 +393,5 @@ class Solver:
             num_accepted_steps=accepted_steps,
             total_time=total_time,
             dist_factor=dist_factor,
+            **result_props,
         )

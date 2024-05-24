@@ -12,7 +12,7 @@ from ..instances import hs71_instance, tame_instance
 
 @pytest.fixture
 def integration_params():
-    return Params(iteration_limit=1000, rho=1e-2)
+    return Params(iteration_limit=1000, rho=1e-2, collect_path=True)
 
 
 class SimpleProblem(Problem):

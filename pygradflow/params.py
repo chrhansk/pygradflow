@@ -223,6 +223,7 @@ class Params:
     obj_lower_limit: float = -1e10
 
     report_rcond: bool = False
+    collect_path: bool = False
 
     def __post_init__(self):
         # Convert enum strings to enum values

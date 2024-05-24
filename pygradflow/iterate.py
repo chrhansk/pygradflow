@@ -37,6 +37,10 @@ class Iterate:
             self.eval = SimpleEvaluator(problem, params)
         self.problem = problem
 
+    @property
+    def z(self):
+        return np.concatenate((self.x, self.y))
+
     def copy(self) -> "Iterate":
         return Iterate(
             self.problem, self.params, np.copy(self.x), np.copy(self.y), self.eval

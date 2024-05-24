@@ -1,11 +1,15 @@
-import time
 from enum import Enum, auto
-from typing import Optional
+from typing import List, Optional, cast
 
 import numpy as np
 import scipy as sp
 
-from pygradflow.display import Format, StateData, integrator_display, print_problem_stats
+from pygradflow.display import (
+    Format,
+    StateData,
+    integrator_display,
+    print_problem_stats,
+)
 from pygradflow.integration.events import (
     ConvergedResult,
     EventResultType,
@@ -18,6 +22,7 @@ from pygradflow.integration.problem_switches import SwitchTrigger, TriggerType
 from pygradflow.integration.restricted_flow import RestrictedFlow
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
+from pygradflow.params import Params
 from pygradflow.result import SolverResult
 from pygradflow.status import SolverStatus
 from pygradflow.timer import Timer
@@ -64,9 +69,10 @@ class IntegrationResult:
 
 
 class IntegrationSolver:
-    def __init__(self, problem, params):
+    def __init__(self, problem, params=Params()):
         self.orig_problem = problem
         self.params = params
+        self.path: Optional[List[np.ndarray]] = None
 
     def create_events(self, result, triggers):
         all_events = []
@@ -214,12 +220,12 @@ class IntegrationSolver:
         return None
 
     def print_result(
-                    self,
-                    total_time: float,
-                    status: SolverStatus,
-                    iterate: Iterate,
-                    iterations: int,
-                    dist_factor: float,
+        self,
+        total_time: float,
+        status: SolverStatus,
+        iterate: Iterate,
+        iterations: int,
+        dist_factor: float,
     ) -> None:
         rho = self.rho
 
@@ -318,7 +324,19 @@ class IntegrationSolver:
         next_x = np.clip(next_x, self.problem.var_lb, self.problem.var_ub)
         next_z = np.concatenate((next_x, next_y))
 
-        dist = np.linalg.norm((ivp_result.y[:, 1:] - ivp_result.y[:, :-1]), axis=0).sum()
+        params = self.params
+
+        if params.collect_path:
+            assert self.path is not None
+            path = cast(List[np.ndarray], self.path)
+            assert (path[-1][:, -1] == curr_z).all()
+            assert (path[-1][:, -1] == ivp_result.y[:, 0]).all()
+            path.append(ivp_result.y[:, 1:])
+            path[-1][:, -1] = next_z
+
+        dist = np.linalg.norm(
+            (ivp_result.y[:, 1:] - ivp_result.y[:, :-1]), axis=0
+        ).sum()
 
         return IntegrationResult(
             status,
@@ -344,6 +362,8 @@ class IntegrationSolver:
         self.rho = self.params.rho
 
         initial_iterate = self.transform.initial_iterate
+
+        self.path = [initial_iterate.z[:, None]]
 
         print_problem_stats(problem, initial_iterate)
 
@@ -416,7 +436,7 @@ class IntegrationSolver:
                 state["iterate"] = iterate
                 state["filter"] = curr_filter
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
-                state["obj"] = lambda: iterate.obj()
+                state["obj"] = lambda: iterate.obj
                 state["iter"] = iteration + 1
                 state["num_func_evals"] = result.num_func_evals
                 state["num_jac_evals"] = result.num_jac_evals
@@ -440,7 +460,9 @@ class IntegrationSolver:
                 break
             elif result.status == IntegrationStatus.Penalty:
                 # Continuation criterion is violated => update penalty parameter
-                logger.debug("Updating penalty parameter %f -> %f", self.rho, 10 * self.rho)
+                logger.debug(
+                    "Updating penalty parameter %f -> %f", self.rho, 10 * self.rho
+                )
                 self.rho *= 10
                 curr_filter = self.create_filter(curr_z, self.rho)
 
@@ -453,6 +475,18 @@ class IntegrationSolver:
 
         (curr_x, curr_y) = self.flow.split_states(curr_z)
         iterate = Iterate(problem, params, curr_x, curr_y)
+
+        result_props = dict()
+
+        if params.collect_path:
+            complete_path = np.hstack(self.path)
+            self.path = None
+
+            num_vars = problem.num_vars
+
+            result_props["path"] = complete_path
+            result_props["primal_path"] = complete_path[:num_vars, :]
+            result_props["dual_path"] = complete_path[num_vars:, :]
 
         x = iterate.x
         y = iterate.y
@@ -468,11 +502,7 @@ class IntegrationSolver:
 
         dist_factor = path_dist / direct_dist if direct_dist != 0.0 else 1.0
 
-        self.print_result(total_time,
-                          status,
-                          iterate,
-                          iterations,
-                          dist_factor)
+        self.print_result(total_time, status, iterate, iterations, dist_factor)
 
         (x, y, d) = self.transform.restore_sol(x, y, d)
 
@@ -485,4 +515,5 @@ class IntegrationSolver:
             num_accepted_steps=accepted_steps,
             total_time=total_time,
             dist_factor=dist_factor,
+            **result_props,
         )
