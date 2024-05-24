@@ -60,12 +60,12 @@ class StandardStepSolver(StepSolver):
         if self.deriv is None:
             self._compute_deriv()
 
-        if self.solver is None:
-            self.solver = self.linear_solver(self.deriv)
-
         rhs = self.func.value_at(iterate, self.rho, self.active_set)
 
         try:
+            if self.solver is None:
+                self.solver = self.linear_solver(self.deriv)
+
             sol = self.solver.solve(rhs)
         except LinearSolverError as e:
             raise StepSolverError from e
