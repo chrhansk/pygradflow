@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 
+import numpy as np
+
+from pygradflow.solver import Solver
+
 
 class Instance(ABC):
     def __init__(self, name, num_vars, num_cons):
@@ -11,9 +15,10 @@ class Instance(ABC):
     def size(self):
         return self.num_vars + self.num_cons
 
-    @abstractmethod
     def solve(self, params):
-        raise NotImplementedError()
+        problem = self.problem()
+        solver = Solver(problem, params)
+        return solver.solve(self.x0(), self.y0())
 
     @abstractmethod
     def problem(self):
@@ -22,3 +27,6 @@ class Instance(ABC):
     @abstractmethod
     def x0(self):
         raise NotImplementedError()
+
+    def y0(self):
+        return np.zeros((self.num_cons,))

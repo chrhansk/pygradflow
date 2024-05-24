@@ -2,7 +2,7 @@ import os
 
 import pyqplib
 
-from pygradflow.solver import Problem, Solver
+from pygradflow.solver import Problem
 
 from .instance import Instance
 from .runner import Runner
@@ -34,13 +34,11 @@ class QPLIBProblem(Problem):
     def lag_hess(self, x, y):
         return self.problem.lag_hess(x, y)
 
-    @property
     def x0(self):
-        return self.problem.x0
+        return self.problem.x0()
 
-    @property
     def y0(self):
-        return self.problem.y0
+        return self.problem.y0()
 
 
 class QPLIBInstance(Instance):
@@ -53,17 +51,15 @@ class QPLIBInstance(Instance):
     def filename(self):
         return self.description.filename
 
-    def solve(self, params):
-        problem = self.problem()
-        solver = Solver(problem, params)
-        return solver.solve(problem.x0, problem.y0)
-
     def problem(self):
         qproblem = pyqplib.read_problem(self.filename)
         return QPLIBProblem(qproblem)
 
     def x0(self):
-        return self.problem().x0
+        return self.problem().x0()
+
+    def y0(self):
+        return self.problem().y0()
 
 
 class QPLIBRunner(Runner):
