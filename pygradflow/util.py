@@ -3,6 +3,15 @@ import scipy as sp
 from numpy import ndarray
 
 
+def sparse_zero(shape, format=None):
+    zero_mat = sp.sparse.coo_matrix(([], ([], [])), shape)
+
+    if format not in [None, "coo"]:
+        return zero_mat.asformat(format)
+
+    return zero_mat
+
+
 def norm_sq(x: ndarray) -> float:
     return np.dot(x, x)
 
