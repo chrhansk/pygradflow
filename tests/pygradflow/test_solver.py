@@ -90,7 +90,7 @@ def solve_and_test_instance(instance, solver):
 def test_solve_rosenbrock(rosenbrock_instance):
     problem = rosenbrock_instance.problem
 
-    params = Params(iteration_limit=100)
+    params = Params(iteration_limit=100, collect_path=True)
     solver = Solver(problem, params)
 
     solve_and_test_instance(rosenbrock_instance, solver)

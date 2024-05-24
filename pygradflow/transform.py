@@ -1,21 +1,50 @@
 import functools
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 
 from pygradflow.cons_problem import ConstrainedProblem
+from pygradflow.eval import create_evaluator
+from pygradflow.iterate import Iterate
+from pygradflow.log import logger
 from pygradflow.params import Params
 from pygradflow.problem import Problem
-from pygradflow.scale import ScaledProblem, Scaling
+from pygradflow.scale import ScaledProblem, create_scaling
 
 
 class Transformation:
     def __init__(
-        self, orig_problem: Problem, params: Params, scaling: Optional[Scaling] = None
+        self,
+        orig_problem: Problem,
+        params: Params,
+        x0: Optional[np.ndarray],
+        y0: Optional[np.ndarray],
     ):
         self.orig_problem = orig_problem
+        (self.x0, self.y0) = self._create_initial_values(orig_problem, x0, y0)
+        self.scaling = create_scaling(orig_problem, params, self.x0, self.y0)
         self.params = params
-        self.scaling = scaling
+
+        self.evaluator = create_evaluator(self.trans_problem, params)
+
+    def _create_initial_values(
+        self, orig_problem, x0: Optional[np.ndarray], y0: Optional[np.ndarray]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        orig_lb = orig_problem.var_lb
+        orig_ub = orig_problem.var_ub
+
+        if x0 is None:
+            x0 = np.zeros(orig_problem.num_vars)
+            x0 = np.clip(x0, orig_lb, orig_ub)
+        else:
+            if (x0 > orig_ub).any() or (x0 < orig_lb).any():
+                logger.warning("Initial point violates variable bounds")
+                x0 = np.clip(x0, orig_lb, orig_ub)
+
+        if y0 is None:
+            y0 = np.zeros(orig_problem.num_cons)
+
+        return (x0, y0)
 
     @functools.cached_property
     def scaled_problem(self):
@@ -32,6 +61,16 @@ class Transformation:
         scaled_problem = self.scaled_problem
 
         return ConstrainedProblem(scaled_problem)
+
+    @property
+    def initial_iterate(self):
+        (x0, y0) = self.transform_sol(self.x0, self.y0)
+        dtype = self.params.dtype
+
+        x = x0.astype(dtype)
+        y = y0.astype(dtype)
+
+        return Iterate(self.trans_problem, self.params, x, y, self.evaluator)
 
     def transform_sol(self, x: np.ndarray, y: np.ndarray):
         scaling = self.scaling

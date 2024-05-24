@@ -1,11 +1,9 @@
-import time
-from typing import Optional, cast
+from typing import List, Optional
 
 import numpy as np
 
 from pygradflow.callbacks import Callbacks, CallbackType
-from pygradflow.display import Format, problem_display
-from pygradflow.eval import create_evaluator
+from pygradflow.display import Format, StateData, print_problem_stats, solver_display
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.newton import newton_method
@@ -13,7 +11,6 @@ from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
 from pygradflow.result import SolverResult
-from pygradflow.scale import create_scaling
 from pygradflow.status import SolverStatus
 from pygradflow.step.step_control import (
     StepController,
@@ -181,53 +178,6 @@ class Solver:
             name = component.name()
             logger.info("%20s: %45d", name, num_evals)
 
-    def _create_initial_iterate(
-        self, x0: Optional[np.ndarray], y0: Optional[np.ndarray]
-    ):
-        params = self.params
-        dtype = params.dtype
-        orig_problem = self.orig_problem
-        problem = self.problem
-
-        orig_lb = orig_problem.var_lb
-        orig_ub = orig_problem.var_ub
-
-        if x0 is None:
-            orig_n = orig_problem.num_vars
-            x_init = np.zeros((orig_n,), dtype=dtype)
-            np.clip(x_init, orig_lb, orig_ub, out=x_init)
-        else:
-            if (x0 > orig_ub).any() or (x0 < orig_lb).any():
-                logger.warning("Initial point violates variable bounds")
-                x0 = np.clip(x0, orig_lb, orig_ub)
-
-            x_init = cast(np.ndarray, x0)
-
-        if y0 is None:
-            orig_m = orig_problem.num_cons
-            y_init = np.zeros((orig_m,), dtype=dtype)
-        else:
-            y_init = cast(np.ndarray, y0)
-
-        transform = self.transform
-        (x_init, y_init) = transform.transform_sol(x_init, y_init)
-
-        x = x_init.astype(dtype)
-        y = y_init.astype(dtype)
-
-        return Iterate(problem, params, x, y, self.evaluator)
-
-    def _create_transformed_problem(self, x0, y0):
-        orig_problem = self.orig_problem
-        params = self.params
-
-        self.scaling = create_scaling(orig_problem, params, x0, y0)
-
-        self.transform = Transformation(orig_problem, params, self.scaling)
-        self.problem = self.transform.trans_problem
-
-        pass
-
     def _check_terminate(self, iterate, iteration, timer):
         params = self.params
 
@@ -255,61 +205,6 @@ class Solver:
             logger.debug("Unboundedness detected")
             return SolverStatus.Unbounded
 
-    def print_problem_stats(self, problem, iterate):
-        num_vars = problem.num_vars
-        num_cons = problem.num_cons
-
-        logger.info(
-            "Solving problem with %s variables, %s constraints", num_vars, num_cons
-        )
-
-        cons_jac = iterate.cons_jac
-        lag_hess = iterate.lag_hess(iterate.y)
-
-        var_lb = problem.var_lb
-        var_ub = problem.var_ub
-
-        inf_lb = var_lb == -np.inf
-        inf_ub = var_ub == np.inf
-
-        unbounded = np.logical_and(inf_lb, inf_ub)
-        ranged = np.logical_and(np.logical_not(inf_lb), np.logical_not(inf_ub))
-        bounded_below = np.logical_and(np.logical_not(inf_lb), inf_ub)
-        bounded_above = np.logical_and(inf_lb, np.logical_not(inf_ub))
-        bounded = np.logical_or(bounded_below, bounded_above)
-
-        num_unbounded = np.sum(unbounded)
-        num_ranged = np.sum(ranged)
-        num_bounded = np.sum(bounded)
-
-        has_cons = num_cons > 0
-
-        logger.info("           Hessian nnz: %s", lag_hess.nnz)
-        if has_cons:
-            logger.info("          Jacobian nnz: %s", cons_jac.nnz)
-
-        logger.info("        Free variables: %s", num_unbounded)
-        logger.info("     Bounded variables: %s", num_bounded)
-        logger.info("      Ranged variables: %s", num_ranged)
-
-        if not has_cons:
-            return
-
-        cons_lb = problem.cons_lb
-        cons_ub = problem.cons_ub
-
-        equation = cons_lb == cons_ub
-        ranged = np.logical_and(np.isfinite(cons_lb), np.isfinite(cons_ub))
-        ranged = np.logical_and(ranged, np.logical_not(equation))
-
-        num_equations = equation.sum()
-        num_ranged = ranged.sum()
-        num_inequalities = num_cons - num_equations - num_ranged
-
-        logger.info("  Equality constraints: %s", num_equations)
-        logger.info("Inequality constraints: %s", num_inequalities)
-        logger.info("    Ranged constraints: %s", num_ranged)
-
     def solve(
         self,
         x0: Optional[np.ndarray] = None,
@@ -332,20 +227,23 @@ class Solver:
             solutions
         """
 
-        self._create_transformed_problem(x0, y0)
+        self.transform = Transformation(self.orig_problem, self.params, x0, y0)
+
+        self.problem = self.transform.trans_problem
+
         params = self.params
         problem = self.problem
 
-        self.evaluator = create_evaluator(problem, params)
+        self.evaluator = self.transform.evaluator
 
         self.penalty = penalty_strategy(self.problem, params)
         self.rho = -1.0
 
-        display = problem_display(problem, params)
+        display = solver_display(problem, params)
 
-        iterate = self._create_initial_iterate(x0, y0)
+        iterate = self.transform.initial_iterate
 
-        self.print_problem_stats(problem, iterate)
+        print_problem_stats(problem, iterate)
 
         lamb = params.lamb_init
 
@@ -358,9 +256,6 @@ class Solver:
         logger.debug("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))
 
         status = None
-        start_time = time.time()
-        last_time = start_time
-        line_diff = 0
         iteration = 0
 
         logger.info(display.header)
@@ -370,18 +265,19 @@ class Solver:
         accepted_steps = 0
         iteration = 0
 
-        last_active_set = None
-        last_display_iteration = -1
-
         timer = Timer(params.time_limit)
+
+        if params.collect_path:
+            path: Optional[List[np.ndarray]] = [initial_iterate.z]
+        else:
+            path = None
 
         while True:
             status = self._check_terminate(iterate, iteration, timer)
             if status is not None:
                 break
 
-            curr_time = time.time()
-            display_iterate = curr_time - last_time >= params.display_interval
+            display_iterate = display.should_display()
 
             step_result = self.compute_step(
                 controller, iterate, 1.0 / lamb, display_iterate, timer
@@ -405,20 +301,9 @@ class Solver:
             self.callbacks(CallbackType.ComputedStep, iterate, next_iterate, accept)
 
             if display_iterate:
-                last_time = curr_time
-                line_diff += 1
-
-                state = dict()
+                state = StateData()
                 state["iterate"] = iterate
-
-                def compute_last_active_set():
-                    if last_display_iteration + 1 == iteration:
-                        return last_active_set
-                    return None
-
-                state["last_active_set"] = compute_last_active_set
-                state["curr_active_set"] = lambda: step_result.active_set
-
+                state["active_set"] = lambda: step_result.active_set
                 state["obj_nonlin"] = lambda: iterate.obj_nonlin(next_iterate)
 
                 if problem.num_cons > 0:
@@ -428,7 +313,7 @@ class Solver:
 
                 state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
                 state["obj"] = lambda: iterate.obj()
-                state["iter"] = lambda: iteration + 1
+                state["iter"] = iteration + 1
                 state["primal_step_norm"] = lambda: primal_step_norm
                 state["dual_step_norm"] = lambda: dual_step_norm
                 state["lamb"] = lambda: lamb
@@ -436,7 +321,6 @@ class Solver:
                 state["rcond"] = lambda: step_result.rcond
 
                 logger.info(display.row(state))
-                last_display_iteration = iteration
 
             if accept:
                 # Accept
@@ -450,6 +334,9 @@ class Solver:
 
                 delta = iterate.dist(next_iterate)
 
+                if path is not None:
+                    path.append(next_iterate.z)
+
                 iterate = next_iterate
 
                 path_dist += primal_step_norm + dual_step_norm
@@ -461,8 +348,6 @@ class Solver:
                     break
 
             iteration += 1
-            last_active_set = step_result.active_set
-            # last_active_set = iterate.active_set
 
         total_time = timer.elapsed()
 
@@ -488,9 +373,16 @@ class Solver:
         y = iterate.y
         d = iterate.bounds_dual
 
-        transform = self.transform
+        (x, y, d) = self.transform.restore_sol(x, y, d)
 
-        (x, y, d) = transform.restore_sol(x, y, d)
+        result_props = dict()
+
+        if path is not None:
+            complete_path: np.ndarray = np.vstack(path).T
+            num_vars = problem.num_vars
+            result_props["path"] = complete_path
+            result_props["primal_path"] = complete_path[:num_vars, :]
+            result_props["dual_path"] = complete_path[num_vars:, :]
 
         return SolverResult(
             x,
@@ -501,4 +393,5 @@ class Solver:
             num_accepted_steps=accepted_steps,
             total_time=total_time,
             dist_factor=dist_factor,
+            **result_props,
         )

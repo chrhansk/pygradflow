@@ -6,6 +6,7 @@ import scipy as sp
 
 from pygradflow.iterate import Iterate
 from pygradflow.problem import Problem
+from pygradflow.util import keep_rows
 
 
 class StepFunc(abc.ABC):
@@ -88,24 +89,8 @@ class StepFunc(abc.ABC):
 
         assert (num_rows,) == lb.shape
 
-        mat = mat.tocoo()
-
         inactive_set = np.logical_not(active_set)
-        inactive_indices = np.where(inactive_set)[0]
-
-        alive_indices = np.isin(mat.row, inactive_indices)
-
-        assert inactive_set[mat.row[alive_indices]].all()
-
-        next_rows = mat.row[alive_indices]
-        next_cols = mat.col[alive_indices]
-        next_entries = mat.data[alive_indices]
-
-        proj_mat = sp.sparse.coo_matrix(
-            (next_entries, (next_rows, next_cols)), mat.shape
-        )
-
-        assert inactive_set[proj_mat.row].all()
+        proj_mat = keep_rows(mat, inactive_set)
 
         return proj_mat
 

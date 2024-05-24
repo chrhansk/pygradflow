@@ -19,7 +19,10 @@ class SolverResult:
         num_accepted_steps: int,
         total_time: float,
         dist_factor: float,
+        **attrs
     ):
+        self._attrs = attrs
+
         self._x = x
         self._y = y
         self._d = d
@@ -35,6 +38,15 @@ class SolverResult:
         The status of the solve as a :py:class:`pygradflow.solver.SolverStatus`
         """
         return self._status
+
+    def __getattr__(self, name):
+        return self._attrs.get(name, None)
+
+    def __setitem__(self, name, value):
+        self._attrs[name] = value
+
+    def __getitem__(self, name, value):
+        return self._attrs[name]
 
     @property
     def x(self) -> np.ndarray:
