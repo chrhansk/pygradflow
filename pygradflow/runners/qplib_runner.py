@@ -35,10 +35,10 @@ class QPLIBProblem(Problem):
         return self.problem.lag_hess(x, y)
 
     def x0(self):
-        return self.problem.x0()
+        return self.problem.x0
 
     def y0(self):
-        return self.problem.y0()
+        return self.problem.y0
 
 
 class QPLIBInstance(Instance):
