@@ -82,6 +82,8 @@ class LinearSolverType(Enum):
     Generalized minimal residual method (GMRES)
     """
 
+    Cholesky = auto()
+
 
 class StepControlType(Enum):
     Exact = auto()

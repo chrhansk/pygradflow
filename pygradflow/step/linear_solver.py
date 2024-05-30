@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import scipy as sp
+import sksparse.cholmod
 from numpy import ndarray
 
 from pygradflow.log import logger
@@ -19,9 +20,8 @@ class LinearSolverError(Exception):
 
 
 class LinearSolver(ABC):
-
     @abstractmethod
-    def solve(self, b: ndarray, trans: bool = False) -> ndarray:
+    def solve(self, rhs: ndarray, trans: bool = False, initial_sol=False) -> ndarray:
         raise NotImplementedError()
 
 
@@ -88,6 +88,20 @@ class LUSolver(LinearSolver):
         return self.solver.solve(rhs, trans=trans_str)
 
 
+class CholeskySolver(LinearSolver):
+    def __init__(self, mat):
+        try:
+            self.factor = sksparse.cholmod.cholesky(mat)
+            self.factor.L()
+        except sksparse.cholmod.CholmodNotPositiveDefiniteError as e:
+            raise LinearSolverError() from e
+
+    def solve(self, rhs, trans=False, initial_sol=None):
+        assert not trans
+
+        return self.factor.solve_A(rhs)
+
+
 def linear_solver(
     mat: sp.sparse.spmatrix, solver_type: LinearSolverType
 ) -> LinearSolver:
@@ -95,6 +109,8 @@ def linear_solver(
         return LUSolver(mat)
     elif solver_type == LinearSolverType.MINRES:
         return MINRESSolver(mat)
+    elif solver_type == LinearSolverType.Cholesky:
+        return CholeskySolver(mat)
     else:
         assert solver_type == LinearSolverType.GMRES
 

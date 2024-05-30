@@ -112,6 +112,23 @@ def test_solve_hs71(hs71_instance):
     solve_and_test_instance(hs71_instance, solver)
 
 
+def test_prod_cholesky():
+    from .prod import ProdProblem, optima
+    problem = ProdProblem()
+
+    params = Params(step_solver_type=StepSolverType.Symmetric,
+                    linear_solver_type=LinearSolverType.Cholesky)
+    solver = Solver(problem, params)
+
+    x0 = np.array([2.8, 2.9])
+
+    result = solver.solve(x0)
+
+    assert result.success
+
+    assert any([np.isclose(result.x, opt).all() for opt in optima])
+
+
 def test_solve_hs71_constrained(hs71_constrained_instance):
     problem = hs71_constrained_instance.problem
     solver = Solver(problem)
