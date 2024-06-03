@@ -5,8 +5,9 @@ from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
 from pygradflow.step.linear_solver import LinearSolverError
-from pygradflow.step.scaled_step_solver import ScaledStepSolver
-from pygradflow.step.step_control import StepSolverError
+from pygradflow.step.step_solver_error import StepSolverError
+
+from .scaled_step_solver import ScaledStepSolver
 
 
 class ExtendedStepSolver(ScaledStepSolver):

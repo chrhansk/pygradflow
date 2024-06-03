@@ -243,7 +243,7 @@ class ImplicitProblem(cyipopt.Problem):
 
 
 class OptimizingController(StepController):
-    def step(self, iterate, rho, dt, next_steps, display, timer) -> StepControlResult:
+    def step(self, iterate, rho, dt, display, timer) -> StepControlResult:
 
         problem = self.problem
         params = self.params

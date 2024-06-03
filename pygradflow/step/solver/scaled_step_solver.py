@@ -8,7 +8,8 @@ from pygradflow.implicit_func import ScaledImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.params import Params
 from pygradflow.problem import Problem
-from pygradflow.step.step_solver import StepResult, StepSolver
+
+from .step_solver import StepResult, StepSolver
 
 
 class ScaledStepSolver(StepSolver):

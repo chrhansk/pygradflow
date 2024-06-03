@@ -67,7 +67,7 @@ class StepSolver(abc.ABC):
         return cast(sp.sparse.spmatrix, self._hess)
 
     def linear_solver(self, mat: sp.sparse.spmatrix) -> LinearSolver:
-        from .linear_solver import linear_solver
+        from pygradflow.step.linear_solver import linear_solver
 
         solver_type = self.params.linear_solver_type
         return linear_solver(mat, solver_type)
@@ -75,7 +75,7 @@ class StepSolver(abc.ABC):
     def estimate_rcond(
         self, mat: sp.sparse.spmatrix, solver: LinearSolver
     ) -> Optional[float]:
-        from .cond_estimate import ConditionEstimator
+        from pygradflow.step.cond_estimate import ConditionEstimator
 
         estimator = ConditionEstimator(mat, solver, self.params)
         rcond = None

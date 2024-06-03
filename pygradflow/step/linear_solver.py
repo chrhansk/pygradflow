@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 import numpy as np
 import scipy as sp
 from numpy import ndarray
@@ -16,7 +18,9 @@ class LinearSolverError(Exception):
     pass
 
 
-class LinearSolver:
+class LinearSolver(ABC):
+
+    @abstractmethod
     def solve(self, b: ndarray, trans: bool = False) -> ndarray:
         raise NotImplementedError()
 

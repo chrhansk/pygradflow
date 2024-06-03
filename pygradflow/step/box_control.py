@@ -238,7 +238,7 @@ class BoxReducedController(StepController):
             raise StepSolverError("Box-constrained solver failed to converge") from e
 
     def step(
-        self, iterate, rho: float, dt: float, next_steps, display: bool, timer
+        self, iterate, rho: float, dt: float, display: bool, timer
     ) -> StepControlResult:
 
         lamb = 1.0 / dt
