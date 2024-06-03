@@ -46,7 +46,7 @@ class SymmetricStepSolver(ScaledStepSolver):
         super().reset_deriv()
         self.hess_rows = None
 
-    def compute_deriv(self, active_set: np.ndarray) -> sp.sparse.spmatrix:
+    def _compute_deriv(self, active_set: np.ndarray) -> sp.sparse.spmatrix:
         inactive_indices = np.where(np.logical_not(self.active_set))[0]
         lamb = 1.0 / self.dt
         rho = self.rho
@@ -110,7 +110,7 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         assert rhs.shape == (inactive_set_size + m,)
 
-        s = self.solve_active_set(self.active_set, rhs)
+        s = self._solve_active_set(self.active_set, rhs)
 
         inactive_dx = s[:inactive_set_size]
         dy = s[inactive_set_size:]
@@ -126,20 +126,33 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         return (dx, dy, rcond)
 
-    def solve_deriv(
+    def _solve_deriv(
         self, active_set: np.ndarray, deriv: sp.sparse.spmatrix, rhs: np.ndarray
     ) -> np.ndarray:
+        problem = self.problem
+        params = self.params
+
         try:
             if self.solver is None:
                 self.solver = self.linear_solver(self.deriv)
             sol = self.solver.solve(rhs)
+
+            if params.inertia_correction:
+                num_neg_eigvals = self.solver.num_neg_eigvals()
+
+                if num_neg_eigvals is None:
+                    raise Exception("Inertia correction requested but not available")
+
+                if num_neg_eigvals != problem.num_cons:
+                    raise LinearSolverError("Invalid matrix inertia")
+
         except LinearSolverError as e:
             raise StepSolverError from e
 
         return sol
 
-    def solve_active_set(self, active_set: np.ndarray, rhs: np.ndarray) -> np.ndarray:
+    def _solve_active_set(self, active_set: np.ndarray, rhs: np.ndarray) -> np.ndarray:
         if self._deriv is None:
-            self._deriv = self.compute_deriv(self.active_set)
+            self._deriv = self._compute_deriv(self.active_set)
 
-        return self.solve_deriv(self.active_set, self.deriv, rhs)
+        return self._solve_deriv(self.active_set, self.deriv, rhs)

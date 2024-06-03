@@ -24,6 +24,9 @@ class LinearSolver(ABC):
     def solve(self, rhs: ndarray, trans: bool = False, initial_sol=False) -> ndarray:
         raise NotImplementedError()
 
+    def num_neg_eigvals(self):
+        return None
+
 
 class MINRESSolver(LinearSolver):
     def __init__(self, mat):
@@ -101,6 +104,9 @@ class CholeskySolver(LinearSolver):
 
         return self.factor.solve_A(rhs)
 
+    def num_neg_eigvals(self):
+        return 0
+
 
 class MA57Solver(LinearSolver):
     def __init__(self, mat):
@@ -147,6 +153,8 @@ def linear_solver(
         return MINRESSolver(mat)
     elif solver_type == LinearSolverType.Cholesky:
         return CholeskySolver(mat)
+    elif solver_type == LinearSolverType.MA57:
+        return MA57Solver(mat)
     else:
         assert solver_type == LinearSolverType.GMRES
 

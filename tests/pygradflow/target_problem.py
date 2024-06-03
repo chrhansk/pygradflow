@@ -10,7 +10,7 @@ x1 = np.array([1.0, -1.0])
 optima = [x0, x1]
 
 
-class ProdProblem(Problem):
+class TargetProblem(Problem):
     def __init__(self):
         var_lb = np.array([-np.inf, -np.inf])
         var_ub = np.array([np.inf, np.inf])
