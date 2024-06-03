@@ -40,7 +40,7 @@ step_control_types = [
 
 
 def test_custom_step_solver(rosenbrock_instance):
-    from pygradflow.step.symmetric_step_solver import SymmetricStepSolver
+    from pygradflow.step.solver.symmetric_step_solver import SymmetricStepSolver
 
     problem = rosenbrock_instance.problem
     x_0 = rosenbrock_instance.x_0

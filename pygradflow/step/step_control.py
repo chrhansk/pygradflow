@@ -1,6 +1,6 @@
 import abc
 import logging
-from typing import Iterator, Optional
+from typing import Optional
 
 import numpy as np
 
@@ -10,17 +10,9 @@ from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.params import Params, StepControlType
 from pygradflow.problem import Problem
-from pygradflow.step.step_solver import StepResult
+from pygradflow.step.solver.step_solver import StepResult
+from pygradflow.step.step_solver_error import StepSolverError
 from pygradflow.timer import Timer
-
-
-class StepSolverError(Exception):
-    """
-    Error signaling that the step solver failed, e.g. because the
-    Newton matrix is (near) singular.
-    """
-
-    pass
 
 
 class StepControlResult:
@@ -63,7 +55,6 @@ class StepController(abc.ABC):
         iterate: Iterate,
         rho: float,
         dt: float,
-        next_steps: Iterator[StepResult],
         display: bool,
         timer: Timer,
     ) -> StepControlResult:
@@ -77,7 +68,6 @@ class StepController(abc.ABC):
         iterate: Iterate,
         rho: float,
         dt: float,
-        next_steps: Iterator[StepResult],
         display: bool,
         timer: Timer,
     ) -> StepControlResult:
@@ -85,6 +75,12 @@ class StepController(abc.ABC):
         Computes next step using the step method, handling
         linear algebra errors by reducing the step size.
         """
+
+        def fail_result():
+            lamb = 1.0 / dt
+            lamb = self.update_stepsize_after_fail(lamb)
+            return StepControlResult(iterate, lamb, None, None, False)
+
         try:
             self.display = None
             if display:
@@ -96,12 +92,10 @@ class StepController(abc.ABC):
                 self.res_func = res_func
                 self.display = inner_display(self.problem, self.params)
                 logger.debug("     %s", self.display.header)
-            return self.step(iterate, rho, dt, next_steps, display, timer)
+            return self.step(iterate, rho, dt, display, timer)
         except StepSolverError as e:
-            logger.debug("Linear solver error during step computation: %s", e)
-            lamb = 1.0 / dt
-            lamb = self.update_stepsize_after_fail(lamb)
-            return StepControlResult(iterate, lamb, None, None, False)
+            logger.debug("Step solver error during step computation: %s", e)
+            return fail_result()
 
     def display_step(self, iteration, step):
         level = logger.getEffectiveLevel()

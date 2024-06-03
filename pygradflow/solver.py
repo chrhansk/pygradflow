@@ -6,7 +6,6 @@ from pygradflow.callbacks import Callbacks, CallbackType
 from pygradflow.display import Format, StateData, print_problem_stats, solver_display
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
-from pygradflow.newton import newton_method
 from pygradflow.params import Params
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
@@ -92,22 +91,9 @@ class Solver:
         display: bool,
         timer: Timer,
     ) -> StepControlResult:
-        problem = self.problem
-        params = self.params
+
         assert self.rho != -1.0
-
-        method = newton_method(problem, params, iterate, dt, self.rho)
-
-        def next_steps():
-            curr_iterate = iterate
-            while True:
-                next_step = method.step(curr_iterate)
-                yield next_step
-                curr_iterate = next_step.iterate
-
-        return controller.compute_step(
-            iterate, self.rho, dt, next_steps(), display, timer
-        )
+        return controller.compute_step(iterate, self.rho, dt, display, timer)
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check

@@ -2,20 +2,18 @@ import numpy as np
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.log import logger
-from pygradflow.step.step_control import (
-    StepController,
-    StepControlResult,
-    StepSolverError,
-)
+from pygradflow.step.newton_control import NewtonController
+from pygradflow.step.step_control import StepControlResult
+from pygradflow.step.step_solver_error import StepSolverError
 
 
-class ExactController(StepController):
+class ExactController(NewtonController):
     def __init__(self, problem, params, max_num_it=10, rate_bound=0.5):
         super().__init__(problem, params)
         self.max_num_it = max_num_it
         self.rate_bound = rate_bound
 
-    def step(self, iterate, rho, dt, next_steps, display, timer):
+    def step(self, iterate, rho, dt, display, timer):
         assert dt > 0.0
         lamb = 1.0 / dt
 
@@ -25,6 +23,8 @@ class ExactController(StepController):
             return np.linalg.norm(func.value_at(iterate, rho))
 
         curr_func_val = func_val(iterate)
+
+        next_steps = self.newton_steps(iterate, rho, dt)
 
         rcond = None
         active_set = None

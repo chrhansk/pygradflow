@@ -5,21 +5,24 @@ from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.log import logger
 from pygradflow.params import Params
 from pygradflow.problem import Problem
-from pygradflow.step.step_control import StepController, StepControlResult
+from pygradflow.step.newton_control import NewtonController
+from pygradflow.step.step_control import StepControlResult
 
 
-class ResiduumRatioController(StepController):
+class ResiduumRatioController(NewtonController):
     def __init__(self, problem: Problem, params: Params) -> None:
         settings = ControllerSettings.from_params(params)
         self.controller = LogController(settings, params.theta_ref)
         super().__init__(problem, params)
 
-    def step(self, iterate, rho, dt, next_steps, display, timer):
+    def step(self, iterate, rho, dt, display, timer):
         assert dt > 0.0
         lamb = 1.0 / dt
 
         problem = self.problem
         params = self.params
+
+        next_steps = self.newton_steps(iterate, rho, dt)
 
         func = ImplicitFunc(problem, iterate, dt)
 
