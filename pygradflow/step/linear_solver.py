@@ -102,6 +102,42 @@ class CholeskySolver(LinearSolver):
         return self.factor.solve_A(rhs)
 
 
+class MA57Solver(LinearSolver):
+    def __init__(self, mat):
+        from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
+        from pyomo.contrib.pynumero.linalg.ma57_interface import MA57
+
+        self.mat = mat.tocoo()
+        self.solver = MA57()
+        status = self.solver.do_symbolic_factorization(self.mat)
+
+        if status.status != LinearSolverStatus.successful:
+            import pdb
+
+            pdb.set_trace()
+            raise LinearSolverError("Failed to compute symbolic factorization")
+
+        status = self.solver.do_numeric_factorization(self.mat)
+
+        if status.status != LinearSolverStatus.successful:
+            raise LinearSolverError("Failed to compute numeric factorization")
+
+    def solve(self, rhs, trans=False, initial_sol=None):
+        from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
+
+        assert not trans
+
+        x, status = self.solver.do_back_solve(rhs)
+
+        if status.status != LinearSolverStatus.successful:
+            raise LinearSolverError("Failed to compute solution")
+
+        return x
+
+    def num_neg_eigvals(self):
+        return self.solver.get_info(24)
+
+
 def linear_solver(
     mat: sp.sparse.spmatrix, solver_type: LinearSolverType
 ) -> LinearSolver:
