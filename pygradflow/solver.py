@@ -193,17 +193,17 @@ class Solver:
 
     def solve(
         self,
-        x0: Optional[np.ndarray] = None,
-        y0: Optional[np.ndarray] = None,
+        x0: np.ndarray | float | None = None,
+        y0: np.ndarray | float | None = None,
     ) -> SolverResult:
         """
         Solves the problem starting from the given primal / dual point
 
         Parameters
         ----------
-        x0: np.ndarray
+        x0: np.ndarray | float | None
             The initial primal point :math:`x_0 \\in \\mathbb{R}^{n}`
-        y0: np.ndarray
+        y0: np.ndarray | float | None
             The initial dual point :math:`y_0 \\in \\mathbb{R}^{m}`
 
         Returns
