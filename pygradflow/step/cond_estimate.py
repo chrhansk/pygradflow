@@ -3,9 +3,9 @@ import math
 import numpy as np
 import scipy as sp
 
+from pygradflow.linear_solver import LinearSolver
 from pygradflow.log import logger
 from pygradflow.params import Params
-from pygradflow.step.linear_solver import LinearSolver
 
 seed = 42
 
