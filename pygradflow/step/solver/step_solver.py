@@ -7,9 +7,9 @@ import scipy as sp
 
 from pygradflow.implicit_func import StepFunc
 from pygradflow.iterate import Iterate
+from pygradflow.linear_solver import LinearSolver, LinearSolverError
 from pygradflow.params import Params
 from pygradflow.problem import Problem
-from pygradflow.step.linear_solver import LinearSolver, LinearSolverError
 from pygradflow.util import norm_mult
 
 
@@ -67,7 +67,7 @@ class StepSolver(abc.ABC):
         return cast(sp.sparse.spmatrix, self._hess)
 
     def linear_solver(self, mat: sp.sparse.spmatrix) -> LinearSolver:
-        from pygradflow.step.linear_solver import linear_solver
+        from pygradflow.linear_solver import linear_solver
 
         solver_type = self.params.linear_solver_type
         return linear_solver(mat, solver_type)

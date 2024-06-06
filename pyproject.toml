@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pygradflow"
-version = "0.5.4"
+version = "0.5.5"
 description = "PyGradFlow is a simple implementation of the sequential homotopy method to be used to solve general nonlinear programs."
 authors = ["Christoph Hansknecht <christoph.hansknecht@tu-clausthal.de>"]
 readme = "README.md"
@@ -16,6 +16,12 @@ termcolor = ">=2.3.0"
 numpy = "^1"
 pyyaml = ">=6.0.0"
 cyipopt = ">=1.4.0"
+
+[tool.poetry.group.solvers.dependencies]
+pyomo = "^6.7.3"
+pymumps = ">=0.3.2"
+pyspral = ">=0.1.0"
+scikit-sparse = "^0.4.13"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

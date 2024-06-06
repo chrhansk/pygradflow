@@ -82,6 +82,26 @@ class LinearSolverType(Enum):
     Generalized minimal residual method (GMRES)
     """
 
+    Cholesky = auto()
+    """
+    Cholesky factorization using scikit-sparse
+    """
+
+    MA57 = auto()
+    """
+    HSL MA57 solver using pyomo
+    """
+
+    MUMPS = auto()
+    """
+    MUMPS solver
+    """
+
+    SSIDS = auto()
+    """
+    SPRAL / SSIDS solver
+    """
+
 
 class StepControlType(Enum):
     Exact = auto()
@@ -224,6 +244,8 @@ class Params:
 
     report_rcond: bool = False
     collect_path: bool = False
+
+    inertia_correction: bool = False
 
     def __post_init__(self):
         # Convert enum strings to enum values

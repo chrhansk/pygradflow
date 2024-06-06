@@ -4,9 +4,9 @@ import numpy as np
 
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
+from pygradflow.linear_solver import LinearSolverError
 from pygradflow.params import Params
 from pygradflow.problem import Problem
-from pygradflow.step.linear_solver import LinearSolverError
 from pygradflow.step.step_solver_error import StepSolverError
 
 from .step_solver import StepResult, StepSolver
