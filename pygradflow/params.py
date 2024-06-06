@@ -92,6 +92,16 @@ class LinearSolverType(Enum):
     HSL MA57 solver using pyomo
     """
 
+    MUMPS = auto()
+    """
+    MUMPS solver
+    """
+
+    SSIDS = auto()
+    """
+    SPRAL / SSIDS solver
+    """
+
 
 class StepControlType(Enum):
     Exact = auto()

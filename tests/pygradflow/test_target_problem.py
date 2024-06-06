@@ -1,9 +1,9 @@
+import numpy as np
 import pytest
 
-from pygradflow.params import Params, StepSolverType, LinearSolverType
+from pygradflow.params import LinearSolverType, Params, StepSolverType
 from pygradflow.solver import Solver
 
-import numpy as np
 
 @pytest.fixture
 def target_problem():

@@ -126,6 +126,12 @@ class SymmetricStepSolver(ScaledStepSolver):
 
         return (dx, dy, rcond)
 
+    def linear_solver(self, mat: sp.sparse.spmatrix):
+        from pygradflow.linear_solver import linear_solver
+
+        solver_type = self.params.linear_solver_type
+        return linear_solver(mat, solver_type, symmetric=True)
+
     def _solve_deriv(
         self, active_set: np.ndarray, deriv: sp.sparse.spmatrix, rhs: np.ndarray
     ) -> np.ndarray:

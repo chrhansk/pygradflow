@@ -3,7 +3,6 @@ import scipy as sp
 
 from pygradflow.problem import Problem
 
-
 x0 = np.array([-1.0, 1.0])
 x1 = np.array([1.0, -1.0])
 

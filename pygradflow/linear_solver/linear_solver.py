@@ -4,8 +4,6 @@ from typing import Optional
 import scipy as sp
 from numpy import ndarray
 
-from pygradflow.params import LinearSolverType
-
 
 class LinearSolverError(Exception):
     """
