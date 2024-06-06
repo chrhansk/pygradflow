@@ -62,8 +62,7 @@ def try_solve_instance(instance, params, log_filename, verbose):
             return (instance, result)
 
     except Exception as exc:
-        logger.error("Error solving %s", instance.name)
-        logger.exception(exc, exc_info=(type(exc), exc, exc.__traceback__))
+        logger.error("Error solving %s", instance.name, exc_info=exc)
         return (instance, "error")
 
 
