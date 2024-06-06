@@ -12,6 +12,16 @@ from pygradflow.step.step_control import (
 )
 
 
+def map_cython_exception(func):
+    def wrapped_func(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (ArithmeticError, EvalError) as e:
+            raise cyipopt.CyIpoptEvaluationError() from e
+
+    return wrapped_func
+
+
 class ImplicitProblem(cyipopt.Problem):
     """
     Solves the primal-dual proximally regularized problem
@@ -71,6 +81,7 @@ class ImplicitProblem(cyipopt.Problem):
             cu=self.cons_ub,
         )
 
+    @map_cython_exception
     def objective(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
@@ -94,10 +105,9 @@ class ImplicitProblem(cyipopt.Problem):
             wdiff = w - self.iterate.y
             aug_obj += (lamb / 2) * (np.dot(xdiff, xdiff) + np.dot(wdiff, wdiff))
 
-        assert np.isfinite(aug_obj)
-
         return float(aug_obj)
 
+    @map_cython_exception
     def gradient(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
@@ -121,10 +131,10 @@ class ImplicitProblem(cyipopt.Problem):
         grad = np.concatenate([gradx, gradw])
 
         assert grad.shape == (self.num_vars,)
-        assert np.isfinite(grad).all()
 
         return astype(grad, np.float64)
 
+    @map_cython_exception
     def constraints(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
@@ -139,10 +149,10 @@ class ImplicitProblem(cyipopt.Problem):
             cons = prob_cons + lamb * w
 
         assert cons.shape == (self.num_cons,)
-        assert np.isfinite(cons).all()
 
         return astype(cons, np.float64)
 
+    @map_cython_exception
     def jacobian(self, z):
         assert z.shape == (self.num_vars,)
         (x, w) = np.split(z, [self.prob_num_vars])
@@ -162,7 +172,6 @@ class ImplicitProblem(cyipopt.Problem):
         data = np.concatenate([data_x, data_w])
 
         assert data.shape == (self._jac_nnz,)
-        assert np.isfinite(data).all()
 
         return astype(data, np.float64)
 
@@ -228,10 +237,9 @@ class ImplicitProblem(cyipopt.Problem):
         # Solve using Ipopt
         try:
             z, info = super().solve(z0)
+            assert np.isfinite(z).all()
         except EvalError:
             raise StepSolverError("Failed to evaluate subproblem")
-
-        assert np.isfinite(z).all()
 
         if info["status"] not in [0, 1]:
             raise StepSolverError("Ipopt failed to solve subproblem")
