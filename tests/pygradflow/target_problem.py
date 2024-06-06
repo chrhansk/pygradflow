@@ -19,7 +19,9 @@ class TargetProblem(Problem):
         return np.dot(x - x0, x - x0) * np.dot(x - x1, x - x1)
 
     def obj_grad(self, x):
-        return 2 * (x - x0) * np.dot(x - x1, x - x1) + 2 * (x - x1) * np.dot(x - x0, x - x0)
+        return 2 * (x - x0) * np.dot(x - x1, x - x1) + 2 * (x - x1) * np.dot(
+            x - x0, x - x0
+        )
 
     def lag_hess(self, x, y):
         mat = (2 * (np.dot(x - x1, x - x1) + np.dot(x - x0, x - x0))) * np.eye(2)

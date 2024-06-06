@@ -1,9 +1,8 @@
 import warnings
 
 import mumps
-
-import scipy as sp
 import numpy as np
+import scipy as sp
 
 from .linear_solver import LinearSolver, LinearSolverError
 
@@ -21,7 +20,9 @@ class MUMPSSolver(LinearSolver):
         self.mat = mat
 
         if mat.format != "coo":
-            warnings.warn("Converting matrix to COO format", sp.sparse.SparseEfficiencyWarning)
+            warnings.warn(
+                "Converting matrix to COO format", sp.sparse.SparseEfficiencyWarning
+            )
             self.mat = mat.tocoo()
 
         rows = self.mat.row
@@ -35,13 +36,13 @@ class MUMPSSolver(LinearSolver):
             data = data[filter]
 
         if data.dtype != np.float64:
-            warnings.warn("Converting matrix data to float64", sp.sparse.SparseEfficiencyWarning)
+            warnings.warn(
+                "Converting matrix data to float64", sp.sparse.SparseEfficiencyWarning
+            )
             data = data.astype(np.float64)
 
         self.ctx.set_shape(self.mat.shape[0])
-        self.ctx.set_centralized_assembled(rows + 1,
-                                           cols + 1,
-                                           data)
+        self.ctx.set_centralized_assembled(rows + 1, cols + 1, data)
 
         # Analysis
         self.ctx.run(job=1)
@@ -53,7 +54,9 @@ class MUMPSSolver(LinearSolver):
         sol = np.copy(rhs)
 
         if sol.dtype != np.float64:
-            warnings.warn("Converting rhs to float64", sp.sparse.SparseEfficiencyWarning)
+            warnings.warn(
+                "Converting rhs to float64", sp.sparse.SparseEfficiencyWarning
+            )
             sol = sol.astype(np.float64)
 
         if not self.symmetric:

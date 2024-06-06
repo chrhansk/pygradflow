@@ -1,12 +1,9 @@
-import pytest
-
-import scipy as sp
 import numpy as np
+import pytest
+import scipy as sp
 
-
-from pygradflow.params import LinearSolverType
 from pygradflow.linear_solver import LinearSolverError, linear_solver
-
+from pygradflow.params import LinearSolverType
 
 symm_indef_solvers = [
     LinearSolverType.LU,
@@ -20,12 +17,22 @@ symm_indef_solvers = [
 
 
 def _indef_mat():
-    mat = np.array([[ 2,  1,  0,  0,  0 ],
-                    [ 1,  4,  1,  0,  1, ],
-                    [ 0,  1,  3,  2,  0 ],
-                    [ 0,  0,  2, -1,  0 ],
-                    [ 0,  1,  0,  0,  2 ],],
-                   dtype=float)
+    mat = np.array(
+        [
+            [2, 1, 0, 0, 0],
+            [
+                1,
+                4,
+                1,
+                0,
+                1,
+            ],
+            [0, 1, 3, 2, 0],
+            [0, 0, 2, -1, 0],
+            [0, 1, 0, 0, 2],
+        ],
+        dtype=float,
+    )
 
     return sp.sparse.csc_matrix(mat)
 
@@ -41,10 +48,12 @@ def posdef_matrix():
     eigvals = np.linalg.eigvalsh(mat.toarray())
     min_eigval = eigvals.min()
 
-    delta = min(2. * min_eigval, 0.)
+    delta = min(2.0 * min_eigval, 0.0)
 
     (_, n) = mat.shape
-    posdef_mat = mat + sp.sparse.diags([-delta]*n, )
+    posdef_mat = mat + sp.sparse.diags(
+        [-delta] * n,
+    )
 
     return posdef_mat
 
@@ -55,10 +64,12 @@ def negdef_matrix():
     eigvals = np.linalg.eigvalsh(mat.toarray())
     max_eigval = eigvals.max()
 
-    delta = max(2. * max_eigval, 0.)
+    delta = max(2.0 * max_eigval, 0.0)
 
     (_, n) = mat.shape
-    negdef_mat = mat + sp.sparse.diags([-delta]*n, )
+    negdef_mat = mat + sp.sparse.diags(
+        [-delta] * n,
+    )
 
     return negdef_mat
 
@@ -75,9 +86,7 @@ def compute_num_neg_eigvals(mat):
 
 def get_linear_solver(matrix, linear_solver_type, symmetric):
     try:
-        return linear_solver(matrix,
-                             linear_solver_type,
-                             symmetric=symmetric)
+        return linear_solver(matrix, linear_solver_type, symmetric=symmetric)
     except ImportError:
         pytest.skip(f"{linear_solver_type} not available")
 

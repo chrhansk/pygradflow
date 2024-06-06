@@ -1,6 +1,5 @@
 import pyspral.ssids as ssids
 
-
 from .linear_solver import LinearSolver, LinearSolverError
 
 
