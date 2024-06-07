@@ -254,7 +254,8 @@ class BoxReducedController(StepController):
         # x = self.solve_step_scipy(iterate, rho, dt, timer)
         x = self.solve_step_box(iterate, rho, dt, timer)
 
-        cons = problem.cons(x)
+        eval = iterate.eval
+        cons = eval.cons(x)
         w = (-1 / lamb) * cons
         y = iterate.y - w
 

@@ -1,6 +1,8 @@
 import numpy as np
 import scipy as sp
 
+from pygradflow.eval import EvalError
+
 
 # Simple dense BFGS implementation
 # Note: We should use a sparse limited-memory variant
@@ -97,13 +99,21 @@ def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=Fa
             dir[inactive] = sp.sparse.linalg.spsolve(inactive_hess, -inactive_grad)
 
         if np.dot(dir, curr_grad) >= 0:
-            raise BoxSolverError("Hessian not positive definite")
+            raise BoxSolverError("Inactive Hessian not positive definite")
 
         alpha = 1.0
 
+        eval_errors = False
+
         for i in range(20):
             next_x = np.clip(curr_x + alpha * dir, lb, ub)
-            next_func = func(next_x)
+
+            try:
+                next_func = func(next_x)
+            except (ArithmeticError, EvalError):
+                eval_errors = True
+                alpha *= beta
+                continue
 
             rhs = alpha * np.dot(curr_grad[inactive], dir[inactive])
 
@@ -116,7 +126,9 @@ def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=Fa
 
             alpha *= beta
         else:
-            raise Exception("Line search failed")
+            if eval_errors:
+                raise BoxSolverError("Line search failed")
+            raise Exception("Line search did not converge")
 
         prev_grad = curr_grad
         prev_x = curr_x
