@@ -1,37 +1,9 @@
+from typing import Callable
+
 import numpy as np
 import scipy as sp
 
 from pygradflow.eval import EvalError
-
-
-# Simple dense BFGS implementation
-# Note: We should use a sparse limited-memory variant
-# storing the approximate inverse Hessian
-class DampedBFGS:
-    def __init__(self, n):
-        self.mat = np.eye(n)
-
-    def update(self, s, y):
-        assert np.linalg.norm(s) > 0
-
-        s_prod = np.dot(self.mat, s)
-
-        prod = np.dot(s, y)
-        bidir_prod = np.dot(s, s_prod)
-
-        assert bidir_prod >= 0.0
-
-        if prod >= 0.2 * bidir_prod:
-            theta = 1
-        else:
-            theta = 0.8 * bidir_prod / (bidir_prod - prod)
-
-        r = theta * y + (1 - theta) * s_prod
-
-        assert np.dot(r, s) > 0
-
-        self.mat -= np.outer(s_prod, s_prod) / bidir_prod
-        self.mat += np.outer(r, r) / np.dot(r, s)
 
 
 class BoxSolverError(Exception):
@@ -39,7 +11,17 @@ class BoxSolverError(Exception):
 
 
 # Based on "Projected Newton Methods for Optimization Problems with Simple Constraints"
-def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=False):
+def solve_box_constrained(
+    x0: np.ndarray,
+    func: Callable[[np.ndarray], float],
+    grad: Callable[[np.ndarray], np.ndarray],
+    hess: Callable[[np.ndarray], sp.sparse.spmatrix],
+    lb: np.ndarray,
+    ub: np.ndarray,
+    max_it=1000,
+    atol: float = 1e-8,
+    rtol: float = 1e-8,
+):
 
     (n,) = x0.shape
     assert lb.shape == (n,)
@@ -50,21 +32,9 @@ def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=Fa
     beta = 0.5
     sigma = 1e-3
 
-    if use_bfgs:
-        bfgs = DampedBFGS(n)
-
-    prev_x = None
-    prev_grad = None
-
     for iteration in range(max_it):
         curr_func = func(curr_x)
         curr_grad = grad(curr_x)
-
-        if prev_x is not None and use_bfgs:
-            s = curr_x - prev_x
-            y = curr_grad - prev_grad
-
-            bfgs.update(s, y)
 
         assert curr_grad.shape == (n,)
 
@@ -74,11 +44,17 @@ def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=Fa
         at_upper = np.isclose(curr_x, ub)
         active_upper = np.logical_and(at_upper, curr_grad < 0)
 
-        residuum = -curr_grad
-        residuum[at_lower] = np.maximum(residuum[at_lower], 0)
-        residuum[at_upper] = np.minimum(residuum[at_upper], 0)
+        residuals = -curr_grad
+        residuals[at_lower] = np.maximum(residuals[at_lower], 0)
+        residuals[at_upper] = np.minimum(residuals[at_upper], 0)
 
-        if np.linalg.norm(residuum, ord=np.inf) < 1e-8:
+        residuum = np.linalg.norm(residuals, ord=np.inf)
+        grad_norm = np.linalg.norm(curr_grad, ord=np.inf)
+
+        if grad_norm < atol:
+            break
+
+        if (residuum < atol) or (residuum / grad_norm) < rtol:
             break
 
         active = np.logical_or(active_lower, active_upper)
@@ -87,16 +63,10 @@ def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=Fa
         dir = np.zeros((n,))
         inactive_grad = curr_grad[inactive]
 
-        if use_bfgs:
-            curr_hess = bfgs.mat
-            inactive_grad = curr_grad[inactive]
-            inactive_hess = curr_hess[inactive, :][:, inactive]
-            dir[inactive] = np.linalg.solve(inactive_hess, -inactive_grad)
-        else:
-            curr_hess = hess(curr_x)
-            assert curr_hess.shape == (n, n)
-            inactive_hess = curr_hess.tocsr()[inactive, :][:, inactive]
-            dir[inactive] = sp.sparse.linalg.spsolve(inactive_hess, -inactive_grad)
+        curr_hess = hess(curr_x)
+        assert curr_hess.shape == (n, n)
+        inactive_hess = curr_hess.tocsr()[inactive, :][:, inactive]
+        dir[inactive] = sp.sparse.linalg.spsolve(inactive_hess, -inactive_grad)
 
         if np.dot(dir, curr_grad) >= 0:
             raise BoxSolverError("Inactive Hessian not positive definite")
@@ -129,9 +99,6 @@ def solve_box_constrained(x0, func, grad, hess, lb, ub, max_it=1000, use_bfgs=Fa
             if eval_errors:
                 raise BoxSolverError("Line search failed")
             raise Exception("Line search did not converge")
-
-        prev_grad = curr_grad
-        prev_x = curr_x
 
         curr_x = next_x
 
