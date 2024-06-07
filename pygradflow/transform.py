@@ -1,5 +1,5 @@
 import functools
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 
@@ -17,10 +17,11 @@ class Transformation:
         self,
         orig_problem: Problem,
         params: Params,
-        x0: Optional[np.ndarray],
-        y0: Optional[np.ndarray],
+        x0: np.ndarray | float | None,
+        y0: np.ndarray | float | None,
     ):
         self.orig_problem = orig_problem
+
         (self.x0, self.y0) = self._create_initial_values(orig_problem, x0, y0)
         self.scaling = create_scaling(orig_problem, params, self.x0, self.y0)
         self.params = params
@@ -28,21 +29,26 @@ class Transformation:
         self.evaluator = create_evaluator(self.trans_problem, params)
 
     def _create_initial_values(
-        self, orig_problem, x0: Optional[np.ndarray], y0: Optional[np.ndarray]
+        self,
+        orig_problem,
+        x0: np.ndarray | float | None,
+        y0: np.ndarray | float | None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         orig_lb = orig_problem.var_lb
         orig_ub = orig_problem.var_ub
 
         if x0 is None:
-            x0 = np.zeros(orig_problem.num_vars)
-            x0 = np.clip(x0, orig_lb, orig_ub)
+            x0 = np.clip(0.0, orig_problem.var_lb, orig_problem.var_ub)
         else:
             if (x0 > orig_ub).any() or (x0 < orig_lb).any():
                 logger.warning("Initial point violates variable bounds")
                 x0 = np.clip(x0, orig_lb, orig_ub)
 
         if y0 is None:
-            y0 = np.zeros(orig_problem.num_cons)
+            y0 = 0.0
+
+        x0 = np.broadcast_to(x0, shape=(orig_problem.num_vars,))
+        y0 = np.broadcast_to(y0, shape=(orig_problem.num_cons,))
 
         return (x0, y0)
 

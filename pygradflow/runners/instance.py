@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-import numpy as np
-
 from pygradflow.solver import Solver
 
 
@@ -29,4 +27,4 @@ class Instance(ABC):
         raise NotImplementedError()
 
     def y0(self):
-        return np.zeros((self.num_cons,))
+        return 0.0

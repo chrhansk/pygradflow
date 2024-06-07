@@ -40,7 +40,8 @@ class SolverResult:
         return self._status
 
     def __getattr__(self, name):
-        return self._attrs.get(name, None)
+        attrs = super().__getattribute__("_attrs")
+        return attrs.get(name, None)
 
     def __setitem__(self, name, value):
         self._attrs[name] = value
