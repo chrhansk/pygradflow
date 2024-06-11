@@ -246,23 +246,25 @@ class Runner(ABC):
             "size": instance.size,
         }
 
+        default_props = {
+            "iterations": 0,
+            "num_accepted_steps": 0,
+            "final_scaled_obj": 0.0,
+            "final_stat_res": 0.0,
+            "final_cons_violation": 0.0,
+            "dist_factor": 0.0,
+        }
+
         if result == "timeout":
             return {
                 **info,
                 "status": "timeout",
                 "total_time": args.time_limit,
-                "iterations": 0,
-                "num_accepted_steps": 0,
+                **default_props,
             }
 
         elif result == "error":
-            return {
-                **info,
-                "status": "error",
-                "total_time": 0.0,
-                "iterations": 0,
-                "num_accepted_steps": 0,
-            }
+            return {**info, "status": "error", "total_time": 0.0, **default_props}
         else:
             return {
                 **info,
@@ -270,6 +272,10 @@ class Runner(ABC):
                 "total_time": result.total_time,
                 "iterations": result.iterations,
                 "num_accepted_steps": result.num_accepted_steps,
+                "final_scaled_obj": result.final_scaled_obj,
+                "final_stat_res": result.final_stat_res,
+                "final_cons_violation": result.final_cons_violation,
+                "dist_factor": result.dist_factor,
             }
 
     def solve(self, instances, args):
@@ -292,6 +298,10 @@ class Runner(ABC):
             "total_time",
             "iterations",
             "num_accepted_steps",
+            "final_scaled_obj",
+            "final_stat_res",
+            "final_cons_violation",
+            "dist_factor",
         ]
 
         with open(filename, "w") as output_file:

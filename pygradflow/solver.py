@@ -379,5 +379,8 @@ class Solver:
             num_accepted_steps=accepted_steps,
             total_time=total_time,
             dist_factor=dist_factor,
+            final_scaled_obj=iterate.obj,
+            final_stat_res=iterate.stat_res,
+            final_cons_violation=iterate.cons_violation,
             **result_props,
         )
