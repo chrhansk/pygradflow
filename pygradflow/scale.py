@@ -5,6 +5,7 @@ import scipy as sp
 
 from pygradflow.params import Params, ScalingType
 from pygradflow.problem import Problem
+from pygradflow.util import sparse_zero
 
 
 def scale_symmetric(A):
@@ -244,12 +245,16 @@ def create_scaling(
         raise ValueError("Custom scaling requires explicit scaling")
 
     if scaling_type == ScalingType.Nominal:
-        cons_val = problem.cons(x0)
+        if problem.num_cons > 0:
+            cons_val = problem.cons(x0)
+        else:
+            cons_val = np.array([], dtype=x0.dtype)
         return Scaling.from_nominal_values(x0, cons_val)
 
-    cons_jac = None
     if problem.num_cons > 0:
         cons_jac = problem.cons_jac(x0)
+    else:
+        cons_jac = sparse_zero(shape=(0, problem.num_vars))
 
     if scaling_type == ScalingType.GradJac:
         obj_grad = problem.obj_grad(x0)
