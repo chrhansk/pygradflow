@@ -191,7 +191,11 @@ def iter_cols(problem):
             AttrColumn("Bound inf", 16, "{:16.8e}", IterateAttr("bound_violation"))
         )
 
-    cols.append(AttrColumn("Cons inf", 16, "{:16.8e}", IterateAttr("cons_violation")))
+    if problem.num_cons > 0:
+        cols.append(
+            AttrColumn("Cons inf", 16, "{:16.8e}", IterateAttr("cons_violation"))
+        )
+
     cols.append(AttrColumn("Dual inf", 16, "{:16.8e}", IterateAttr("stat_res")))
 
     return cols
