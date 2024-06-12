@@ -248,6 +248,7 @@ class Runner(ABC):
 
         default_props = {
             "iterations": 0,
+            "lamb_term": 0.0,
             "num_accepted_steps": 0,
             "final_scaled_obj": 0.0,
             "final_stat_res": 0.0,
@@ -271,6 +272,7 @@ class Runner(ABC):
                 "status": SolverStatus.short_name(result.status),
                 "total_time": result.total_time,
                 "iterations": result.iterations,
+                "lamb_term": result.lamb_term,
                 "num_accepted_steps": result.num_accepted_steps,
                 "final_scaled_obj": result.final_scaled_obj,
                 "final_stat_res": result.final_stat_res,
@@ -297,6 +299,7 @@ class Runner(ABC):
             "status",
             "total_time",
             "iterations",
+            "lamb_term",
             "num_accepted_steps",
             "final_scaled_obj",
             "final_stat_res",

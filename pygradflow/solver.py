@@ -133,6 +133,7 @@ class Solver:
         iterations: int,
         accepted_steps: int,
         dist_factor: float,
+        lamb_term: float
     ) -> None:
         rho = self.rho
 
@@ -147,6 +148,7 @@ class Solver:
         logger.info("%20s: %45d", "Accepted steps", accepted_steps)
 
         logger.info("%20s: %45e", "Distance factor", dist_factor)
+        logger.info("%20s: %45e", "Final lambda", lamb_term)
 
         logger.info("%20s: %45e", "Objective", iterate.obj)
         logger.info("%20s: %45e", "Aug Lag violation", iterate.aug_lag_violation(rho))
@@ -353,6 +355,7 @@ class Solver:
             iterations=iterations,
             accepted_steps=accepted_steps,
             dist_factor=dist_factor,
+            lamb_term=lamb,
         )
 
         x = iterate.x
@@ -375,9 +378,10 @@ class Solver:
             y,
             d,
             status,
-            iterations=iterations,
-            num_accepted_steps=accepted_steps,
             total_time=total_time,
+            iterations=iterations,
+            lamb_term=lamb,
+            num_accepted_steps=accepted_steps,
             dist_factor=dist_factor,
             final_scaled_obj=iterate.obj,
             final_stat_res=iterate.stat_res,
