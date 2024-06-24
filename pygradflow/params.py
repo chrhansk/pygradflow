@@ -11,7 +11,7 @@ if typing.TYPE_CHECKING:
 import numpy as np
 
 
-class ActiveSetMethod(Enum):
+class ActiveSetType(Enum):
     Standard = auto()
     SmallestActiveSet = auto()
     LargestActiveSet = auto()
@@ -219,7 +219,8 @@ class Params:
 
     local_infeas_tol: float = 1e-8
 
-    active_set_method: ActiveSetMethod = ActiveSetMethod.Standard
+    active_set_type: ActiveSetType = ActiveSetType.Standard
+    active_set_method: Optional[Callable[..., float]] = None
 
     newton_type: NewtonType = NewtonType.Simplified
     newton_tol: float = 1e-8
