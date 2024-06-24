@@ -69,14 +69,8 @@ class StepFunc(abc.ABC):
     def projection_initial(self, iterate: Iterate, rho: float, tau=None) -> np.ndarray:
         raise NotImplementedError()
 
-    def compute_active_set(self, iterate: Iterate, rho: float) -> np.ndarray:
-        params = self.orig_iterate.params
-        active_set_method = params.active_set_method
-
-        if active_set_method == ActiveSetMethod.Standard:
-            p = self.projection_initial(iterate, rho)
-        else:
-            pass
+    def compute_active_set(self, iterate: Iterate, rho: float, tau=None) -> np.ndarray:
+        p = self.projection_initial(iterate, rho, tau)
         return self.active_set_at_point(p)
 
     @abc.abstractmethod
@@ -127,9 +121,13 @@ class ImplicitFunc(StepFunc):
         dt = self.dt
 
         if tau is not None:
-            lamb = 1. / dt
+            lamb = 1.0 / dt
             x = iterate.x
-            return (1.0 - tau*lamb) * x + (tau*lam) * x_0 - tau * iterate.aug_lag_deriv_x(rho)
+            return (
+                (1.0 - tau * lamb) * x
+                + (tau * lamb) * x_0
+                - tau * iterate.aug_lag_deriv_x(rho)
+            )
 
         return x_0 - dt * iterate.aug_lag_deriv_x(rho)
 
@@ -214,13 +212,13 @@ class ScaledImplicitFunc(StepFunc):
         lamb = self.lamb
 
         if tau is not None:
-            lamb = 1. / dt
+            lamb = 1.0 / self.dt
             x = iterate.x
-            f_x = lamb*(1 - tau*lamb)
-            f_x0 = tau*lamb*lamb
-            f_d = tau*lamb
+            f_x = lamb * (1 - tau * lamb)
+            f_x0 = tau * lamb * lamb
+            f_d = tau * lamb
 
-            return f_x * x + f_x0 * x0 - f_d * iterate.aug_lag_deriv_x(rho)
+            return f_x * x + f_x0 * x_0 - f_d * iterate.aug_lag_deriv_x(rho)
 
         return lamb * x_0 - iterate.aug_lag_deriv_x(rho)
 
@@ -229,7 +227,6 @@ class ScaledImplicitFunc(StepFunc):
 
     def active_set_at_point(self, p):
         return super().compute_active_set_box(p, self.lb, self.ub)
-
 
     def deriv(
         self, jac: sp.sparse.spmatrix, hess: sp.sparse.spmatrix, active_set: np.ndarray

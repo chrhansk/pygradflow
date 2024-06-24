@@ -13,6 +13,8 @@ import numpy as np
 
 class ActiveSetMethod(Enum):
     Standard = auto()
+    SmallestActiveSet = auto()
+    LargestActiveSet = auto()
 
 
 class NewtonType(Enum):
