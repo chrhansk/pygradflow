@@ -66,11 +66,21 @@ class StepFunc(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def projection_initial(self, iterate: Iterate, rho: float) -> np.ndarray:
+    def projection_initial(self, iterate: Iterate, rho: float, tau=None) -> np.ndarray:
         raise NotImplementedError()
 
+    def compute_active_set(self, iterate: Iterate, rho: float) -> np.ndarray:
+        params = self.orig_iterate.params
+        active_set_method = params.active_set_method
+
+        if active_set_method == ActiveSetMethod.Standard:
+            p = self.projection_initial(iterate, rho)
+        else:
+            pass
+        return self.active_set_at_point(p)
+
     @abc.abstractmethod
-    def compute_active_set(self, x: np.ndarray) -> np.ndarray:
+    def active_set_at_point(self, p: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
 
     def apply_project_deriv(self, mat: sp.sparse.spmatrix, active_set: np.ndarray):
@@ -106,15 +116,21 @@ class ImplicitFunc(StepFunc):
 
         return super().project_box(x, lb, ub, active_set)
 
-    def compute_active_set(self, x: np.ndarray):
+    def active_set_at_point(self, p):
         problem = self.problem
         lb = problem.var_lb
         ub = problem.var_ub
-        return super().compute_active_set_box(x, lb, ub)
+        return super().compute_active_set_box(p, lb, ub)
 
-    def projection_initial(self, iterate: Iterate, rho: float):
+    def projection_initial(self, iterate: Iterate, rho: float, tau=None):
         x_0 = self.orig_iterate.x
         dt = self.dt
+
+        if tau is not None:
+            lamb = 1. / dt
+            x = iterate.x
+            return (1.0 - tau*lamb) * x + (tau*lam) * x_0 - tau * iterate.aug_lag_deriv_x(rho)
+
         return x_0 - dt * iterate.aug_lag_deriv_x(rho)
 
     # @override
@@ -125,7 +141,7 @@ class ImplicitFunc(StepFunc):
         p = self.projection_initial(iterate, rho)
 
         if active_set is None:
-            active_set = self.compute_active_set(p)
+            active_set = self.compute_active_set(iterate, rho)
 
         xval = iterate.x - self.project(p, active_set)
         yval = iterate.y - (y_0 + dt * iterate.aug_lag_deriv_y())
@@ -162,8 +178,7 @@ class ImplicitFunc(StepFunc):
         self, iterate: Iterate, rho: float, active_set: Optional[np.ndarray] = None
     ):
         if active_set is None:
-            p = self.projection_initial(iterate, rho)
-            active_set = self.compute_active_set(p)
+            active_set = self.compute_active_set(iterate, rho)
 
         hess = iterate.aug_lag_deriv_xx(rho)
         jac = iterate.aug_lag_deriv_xy()
@@ -187,24 +202,34 @@ class ScaledImplicitFunc(StepFunc):
         p = self.projection_initial(iterate, rho)
 
         if active_set is None:
-            active_set = self.compute_active_set(p)
+            active_set = self.compute_active_set(iterate, rho)
 
         xval = lamb * iterate.x - self.project(p, active_set)
         yval = -(lamb * iterate.y - (lamb * y_0 + iterate.aug_lag_deriv_y()))
 
         return np.concatenate([xval, yval])
 
-    def projection_initial(self, iterate: Iterate, rho: float):
+    def projection_initial(self, iterate: Iterate, rho: float, tau=None):
         x_0 = self.orig_iterate.x
         lamb = self.lamb
+
+        if tau is not None:
+            lamb = 1. / dt
+            x = iterate.x
+            f_x = lamb*(1 - tau*lamb)
+            f_x0 = tau*lamb*lamb
+            f_d = tau*lamb
+
+            return f_x * x + f_x0 * x0 - f_d * iterate.aug_lag_deriv_x(rho)
 
         return lamb * x_0 - iterate.aug_lag_deriv_x(rho)
 
     def project(self, x: np.ndarray, active_set: np.ndarray):
         return super().project_box(x, self.lb, self.ub, active_set)
 
-    def compute_active_set(self, x: np.ndarray):
-        return super().compute_active_set_box(x, self.lb, self.ub)
+    def active_set_at_point(self, p):
+        return super().compute_active_set_box(p, self.lb, self.ub)
+
 
     def deriv(
         self, jac: sp.sparse.spmatrix, hess: sp.sparse.spmatrix, active_set: np.ndarray
@@ -241,8 +266,7 @@ class ScaledImplicitFunc(StepFunc):
         self, iterate: Iterate, rho: float, active_set: Optional[np.ndarray] = None
     ):
         if active_set is None:
-            p = self.projection_initial(iterate, rho)
-            active_set = self.compute_active_set(p)
+            active_set = self.compute_active_set(iterate, rho)
 
         hess = iterate.aug_lag_deriv_xx(rho)
         jac = iterate.aug_lag_deriv_xy()

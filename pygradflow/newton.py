@@ -49,8 +49,8 @@ class SimplifiedNewtonMethod(NewtonMethod):
         self.func = step_solver.func
 
         self.step_solver = step_solver
-        p = self.func.projection_initial(orig_iterate, rho)
-        active_set = self.func.compute_active_set(p)
+        active_set = self.func.compute_active_set(orig_iterate,
+                                                  rho)
 
         self.step_solver.update_active_set(active_set)
         self.step_solver.update_derivs(orig_iterate)
@@ -79,8 +79,8 @@ class FullNewtonMethod(NewtonMethod):
         self.step_solver = step_solver
 
     def step(self, iterate: Iterate) -> StepResult:
-        p = self.func.projection_initial(iterate, self.rho)
-        active_set = self.func.compute_active_set(p)
+        active_set = self.func.compute_active_set(iterate,
+                                                  self.rho)
 
         self.step_solver.update_active_set(active_set)
         self.step_solver.update_derivs(iterate)
@@ -200,8 +200,8 @@ class ActiveSetNewtonMethod(NewtonMethod):
         self.step_solver.update_derivs(orig_iterate)
 
     def step(self, iterate):
-        p = self.func.projection_initial(iterate, self.rho)
-        active_set = self.func.compute_active_set(p)
+        active_set = self.func.compute_active_set(iterate,
+                                                  self.rho)
 
         self.step_solver.update_active_set(active_set)
 
@@ -228,8 +228,7 @@ class GlobalizedNewtonMethod(NewtonMethod):
 
     def _set_iterate(self, iterate):
         self.step_solver.update_derivs(iterate)
-        p = self.func.projection_initial(iterate, self.rho)
-        active_set = self.func.compute_active_set(p)
+        active_set = self.func.compute_active_set(iterate, self.rho)
         self.step_solver.update_active_set(active_set)
 
     def step(self, iterate):
@@ -286,9 +285,12 @@ class GlobalizedNewtonMethod(NewtonMethod):
         logger.debug("Line search converged in %d iterations", it + 1)
 
         next_x = iterate.x + dx
-        active_set = self.func.compute_active_set(next_x)
+        step_result = StepResult(self.orig_iterate, dx, dy, active_set=None, rcond=None)
 
-        return StepResult(self.orig_iterate, dx, dy, active_set, rcond=None)
+        step_result.active_set = self.func.compute_active_set(step_result.iterate,
+                                                              self.rho)
+
+        return step_result
 
 
 def newton_method(

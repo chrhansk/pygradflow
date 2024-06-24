@@ -11,6 +11,10 @@ if typing.TYPE_CHECKING:
 import numpy as np
 
 
+class ActiveSetMethod(Enum):
+    Standard = auto()
+
+
 class NewtonType(Enum):
     """
     The Newton method to be used to solve the semi-smooth systems.
@@ -212,6 +216,8 @@ class Params:
     active_tol: float = 1e-8
 
     local_infeas_tol: float = 1e-8
+
+    active_set_method: ActiveSetMethod = ActiveSetMethod.Standard
 
     newton_type: NewtonType = NewtonType.Simplified
     newton_tol: float = 1e-8
