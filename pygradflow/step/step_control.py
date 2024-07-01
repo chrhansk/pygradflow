@@ -5,6 +5,7 @@ from typing import Optional
 import numpy as np
 
 from pygradflow.display import StateData, inner_display
+from pygradflow.eval import EvalError
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
@@ -92,9 +93,17 @@ class StepController(abc.ABC):
                 self.res_func = res_func
                 self.display = inner_display(self.problem, self.params)
                 logger.debug("     %s", self.display.header)
-            return self.step(iterate, rho, dt, display, timer)
+            step = self.step(iterate, rho, dt, display, timer)
+
+            if step.accepted:
+                step.iterate.check_eval()
+
+            return step
         except StepSolverError as e:
-            logger.debug("Step solver error during step computation: %s", e)
+            logger.warning("Step solver error during step computation: %s", e)
+            return fail_result()
+        except EvalError as e:
+            logger.warning("Evaluation error during step computation: %s", e)
             return fail_result()
 
     def display_step(self, iteration, step):

@@ -15,6 +15,9 @@ class MUMPSSolver(LinearSolver):
 
         self.ctx = mumps.DMumpsContext(sym=sym, par=1)
 
+        # Only output error messages
+        self.ctx.set_icntl(4, 1)
+
         self.ctx.set_icntl(13, 1)
 
         self.mat = mat

@@ -5,6 +5,7 @@ from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
 from pygradflow.newton import newton_method
 from pygradflow.params import (
+    ActiveSetType,
     DerivCheck,
     LinearSolverType,
     NewtonType,
@@ -200,7 +201,6 @@ def test_solve_tame(tame_instance):
     solve_and_test_instance(tame_instance, solver)
 
 
-# TODO: Find out why full Newton does not converge
 @pytest.mark.parametrize(
     "newton_type", [NewtonType.ActiveSet, NewtonType.Simplified, NewtonType.Full]
 )
@@ -209,6 +209,24 @@ def test_solve_with_newton_types(hs71_instance, newton_type):
 
     params = Params(
         newton_type=newton_type, rho=1.0, penalty_update=PenaltyUpdate.Constant
+    )
+
+    solver = Solver(problem, params)
+
+    solve_and_test_instance(hs71_instance, solver)
+
+
+@pytest.mark.parametrize("active_set_type", list(ActiveSetType), ids=lambda x: x.name)
+def test_solve_with_active_set_types(hs71_instance, active_set_type):
+    problem = hs71_instance.problem
+
+    # LargestActiveSet requires a lot of iterations
+    params = Params(
+        active_set_type=active_set_type,
+        iteration_limit=10000,
+        newton_type=NewtonType.Full,
+        rho=1.0,
+        penalty_update=PenaltyUpdate.Constant,
     )
 
     solver = Solver(problem, params)

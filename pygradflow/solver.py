@@ -4,6 +4,7 @@ import numpy as np
 
 from pygradflow.callbacks import Callbacks, CallbackType
 from pygradflow.display import Format, StateData, print_problem_stats, solver_display
+from pygradflow.eval import EvalError
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.params import Params
@@ -228,6 +229,11 @@ class Solver:
         display = solver_display(problem, params)
 
         iterate = self.transform.initial_iterate
+
+        try:
+            iterate.check_eval()
+        except EvalError as e:
+            raise Exception("Failed to evaluate initial iterate") from e
 
         print_problem_stats(problem, iterate)
 

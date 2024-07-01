@@ -41,7 +41,7 @@ def test_newton_active_set(rosenbrock_instance):
 
     func = ImplicitFunc(problem, iterate, dt)
 
-    active_set = func.compute_active_set(x_0)
+    active_set = func.active_set_at_point(x_0)
 
     assert (active_set).all()
 
@@ -49,7 +49,7 @@ def test_newton_active_set(rosenbrock_instance):
     problem.var_ub = x_0 + np.ones((n,))
     problem.var_ub[-1] = np.inf
 
-    active_set = func.compute_active_set(x_0)
+    active_set = func.active_set_at_point(x_0)
 
     assert np.logical_not(active_set).all()
 
