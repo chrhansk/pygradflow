@@ -196,3 +196,13 @@ class Iterate:
             problem = self.problem
             return np.zeros((problem.num_cons,))
         return (other.cons - next_cons) / dx_dot
+
+    def check_eval(self):
+        # Check for and raise EvalError if any of the
+        # evaluations are fail
+        self.obj
+        self.obj_grad
+
+        if self.problem.num_cons > 0:
+            self.cons
+            self.cons_jac
