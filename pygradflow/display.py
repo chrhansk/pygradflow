@@ -18,10 +18,13 @@ class StateData:
         self._entries[key] = value
 
     def __getitem__(self, key):
-        entry = self._entries[key]
-        if callable(entry):
-            return entry()
-        return entry
+        try:
+            entry = self._entries[key]
+            if callable(entry):
+                return entry()
+            return entry
+        except Exception:
+            return None
 
 
 class Format:
@@ -98,6 +101,11 @@ class AttrColumn(Column):
         self.attr = attr
 
     def content(self, state, _) -> str:
+        value = self.attr(state)
+
+        if value is None:
+            return "{0:>{1}}".format("n/a", self.width)
+
         return self.format(self.attr(state))
 
 
