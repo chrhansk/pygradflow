@@ -21,9 +21,10 @@ formatter = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
 def solve_instance(instance, params, log_filename, verbose):
     logger.handlers.clear()
 
-    handler = logging.FileHandler(log_filename)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if log_filename is not None:
+        handler = logging.FileHandler(log_filename)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     if verbose:
         handler = logging.StreamHandler()
@@ -93,6 +94,8 @@ class Runner(ABC):
         return params
 
     def log_filename(self, args, instance):
+        if args.no_output:
+            return None
         return self.output_filename(args, f"{instance.name}.log")
 
     def solve_instances_sequential(self, instances, args, params):
@@ -209,6 +212,7 @@ class Runner(ABC):
         group = parser.add_argument_group(title="runner")
 
         parser.add_argument("--output", type=str)
+        parser.add_argument("--no_output", action="store_true")
         parser.add_argument("--max_size", type=int)
         parser.add_argument("--name", type=str)
         parser.add_argument("--unconstrained", action="store_true")
@@ -228,11 +232,14 @@ class Runner(ABC):
 
         args = self.parser().parse_args()
 
-        if args.output is None:
-            now = datetime.datetime.now().isoformat("T", "seconds")
-            args.output = f"output_{self.name}_{now}"
+        with_output = not (args.no_output)
 
-        os.makedirs(args.output, exist_ok=True)
+        if with_output:
+            if args.output is None:
+                now = datetime.datetime.now().isoformat("T", "seconds")
+                args.output = f"output_{self.name}_{now}"
+
+            os.makedirs(args.output, exist_ok=True)
 
         instances = self.filter_instances(args)
 
@@ -281,13 +288,17 @@ class Runner(ABC):
     def solve(self, instances, args):
         import csv
 
+        with_output = not (args.no_output)
+
         params = self.create_params(args)
+        filename = None
 
-        params.write(self.output_filename(args, "params.yml"))
+        if with_output:
+            params.write(self.output_filename(args, "params.yml"))
 
-        filename = self.output_filename(args, "output.csv")
+            filename = self.output_filename(args, "output.csv")
 
-        run_logger.info("Writing results to '%s'", filename)
+            run_logger.info("Writing results to '%s'", filename)
 
         fieldnames = [
             "instance",
@@ -304,11 +315,16 @@ class Runner(ABC):
             "dist_factor",
         ]
 
-        with open(filename, "w") as output_file:
-            writer = csv.DictWriter(output_file, fieldnames=fieldnames)
-            writer.writeheader()
+        if with_output:
+            with open(filename, "w") as output_file:
+                writer = csv.DictWriter(output_file, fieldnames=fieldnames)
+                writer.writeheader()
 
+                for instance, result in self.solve_instances(instances, args):
+                    run_logger.info("Finished instance %s", instance.name)
+                    writer.writerow(self.create_csv_row(args, instance, result))
+                    output_file.flush()
+
+        else:
             for instance, result in self.solve_instances(instances, args):
                 run_logger.info("Finished instance %s", instance.name)
-                writer.writerow(self.create_csv_row(args, instance, result))
-                output_file.flush()
