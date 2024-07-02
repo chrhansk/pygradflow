@@ -31,9 +31,9 @@ class DistanceRatioController(NewtonController):
 
         self.display_step(0, mid_step)
 
-        mid_func_norm = np.linalg.norm(func.value_at(mid_iterate, rho))
+        mid_func_res = np.linalg.norm(func.value_at(mid_iterate, rho))
 
-        if mid_func_norm <= params.newton_tol:
+        if mid_func_res <= params.newton_tol:
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
             logger.debug("Newton converged during first iteration, lamb_n = %f", lamb_n)
             return StepControlResult.from_step_result(mid_step, lamb_n, True)
@@ -73,6 +73,14 @@ class DistanceRatioController(NewtonController):
             lamb,
             lamb_n,
         )
+
+        if accepted:
+            x = final_step.iterate.x
+            lb = problem.var_lb
+            ub = problem.var_ub
+
+            if (x > ub).any() or (x < lb).any():
+                return StepControlResult.from_step_result(final_step, 2*lamb, False)
 
         self.lamb = lamb_n
         return StepControlResult.from_step_result(final_step, lamb_n, accepted)
