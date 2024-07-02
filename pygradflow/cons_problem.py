@@ -129,6 +129,7 @@ class ConstrainedProblem(Problem):
     def transform_sol(self, orig_x, orig_y):
         assert orig_x.shape == (self.problem.num_vars,)
         assert orig_y.shape == (self.problem.num_cons,)
+        problem = self.problem
 
         num_slacks = len(self.slack_positions)
 
@@ -139,8 +140,16 @@ class ConstrainedProblem(Problem):
 
         orig_cons_vals = self.problem.cons(orig_x)
 
+        # Ensure that initial solution satisfies variable bounds
+        # of transformed problem even if constraints at
+        # initial point are violated
         for i, pos in enumerate(self.slack_positions):
-            slack_vals[i] = orig_cons_vals[pos]
+            cons_val = orig_cons_vals[pos]
+            lb_val = problem.cons_lb[pos]
+            ub_val = problem.cons_ub[pos]
+
+            slack_val = np.clip(cons_val, lb_val, ub_val)
+            slack_vals[i] = slack_val
 
         x = np.concatenate([orig_x, slack_vals])
         y = orig_y
