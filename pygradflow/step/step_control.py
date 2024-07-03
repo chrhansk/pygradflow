@@ -92,7 +92,6 @@ class StepController(abc.ABC):
 
                 self.res_func = res_func
                 self.display = inner_display(self.problem, self.params)
-                logger.debug("     %s", self.display.header)
             step = self.step(iterate, rho, dt, display, timer)
 
             if step.accepted:
@@ -117,7 +116,8 @@ class StepController(abc.ABC):
         state["residuum"] = lambda: self.res_func(iterate)
         state["dist"] = lambda: step.diff
         state["active_set_size"] = lambda: step.active_set.sum()
-        logger.debug("     %s", self.display.row(state))
+
+        self.display.display(state, prefix="    ", level=logging.DEBUG)
 
 
 def step_controller(problem: Problem, params: Params) -> StepController:

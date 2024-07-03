@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Literal
+import logging
+import os
 
 import numpy as np
 from termcolor import colored
@@ -8,6 +10,8 @@ from pygradflow.log import logger
 from pygradflow.params import Params
 from pygradflow.problem import Problem
 from pygradflow.timer import SimpleTimer
+
+min_header_interval = 25
 
 
 class StateData:
@@ -120,6 +124,8 @@ class Display:
             self.timer = SimpleTimer()
         self.last_state = None
 
+        self.last_header_offset = 0
+
     def should_display(self):
         if self.timer is None:
             return True
@@ -137,6 +143,18 @@ class Display:
         row = " ".join([col.content(state, self.last_state) for col in self.cols])
         self.last_state = state
         return row
+
+    def header_interval(self):
+        lines = os.get_terminal_size().lines
+        return max(lines - 2, min_header_interval)
+
+    def display(self, state, prefix="", level=logging.INFO):
+        if self.last_header_offset <= 0:
+            logger.log(level, "%s%s", prefix, self.header)
+            self.last_header_offset = self.header_interval()
+        else:
+            self.last_header_offset -= 1
+        logger.log(level, "%s%s", prefix, self.row(state))
 
 
 class StateAttr:

@@ -20,8 +20,6 @@ from pygradflow.step.step_control import (
 from pygradflow.timer import Timer
 from pygradflow.transform import Transformation
 
-header_interval = 25
-
 
 class Solver:
     """
@@ -135,6 +133,7 @@ class Solver:
         accepted_steps: int,
         dist_factor: float,
     ) -> None:
+        problem = self.problem
         rho = self.rho
 
         desc = "{:>45s}".format(SolverStatus.description(status))
@@ -150,6 +149,7 @@ class Solver:
         logger.info("%20s: %45e", "Distance factor", dist_factor)
 
         logger.info("%20s: %45e", "Objective", iterate.obj)
+
         logger.info("%20s: %45e", "Aug Lag violation", iterate.aug_lag_violation(rho))
         logger.info("%20s: %45e", "Aug Lag dual", iterate.aug_lag_dual())
 
@@ -250,8 +250,6 @@ class Solver:
         status = None
         iteration = 0
 
-        logger.info(display.header)
-
         path_dist = 0.0
         initial_iterate = iterate
         accepted_steps = 0
@@ -312,7 +310,7 @@ class Solver:
                 state["step_accept"] = lambda: accept
                 state["rcond"] = lambda: step_result.rcond
 
-                logger.info(display.row(state))
+                display.display(state)
 
             if accept:
                 # Accept
