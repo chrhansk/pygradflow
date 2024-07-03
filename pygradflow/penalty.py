@@ -1,4 +1,5 @@
 import abc
+from typing import List, Tuple
 
 import numpy as np
 
@@ -6,6 +7,20 @@ from pygradflow.iterate import Iterate
 from pygradflow.log import logger
 from pygradflow.params import Params, PenaltyUpdate
 from pygradflow.problem import Problem
+
+
+class PenaltyResult:
+    def __init__(self, next_rho, accept) -> None:
+        self.next_rho = next_rho
+        self.accept = accept
+
+    @staticmethod
+    def accept_with_penalty(next_rho):
+        return PenaltyResult(next_rho, True)
+
+    @staticmethod
+    def reject_with_penalty(next_rho):
+        return PenaltyResult(next_rho, False)
 
 
 class PenaltyStrategy(abc.ABC):
@@ -16,7 +31,7 @@ class PenaltyStrategy(abc.ABC):
     def initial(self, iterate) -> float:
         return self.params.rho
 
-    def update(self, prev_iterate, next_iterate) -> float:
+    def update(self, prev_iterate, next_iterate) -> PenaltyResult:
         raise NotImplementedError()
 
 
@@ -24,8 +39,8 @@ class ConstantPenalty(PenaltyStrategy):
     def __init__(self, problem: Problem, params: Params) -> None:
         super().__init__(problem, params)
 
-    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
-        return self.params.rho
+    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> PenaltyResult:
+        return PenaltyResult.accept_with_penalty(self.params.rho)
 
 
 class DualNormUpdate(PenaltyStrategy):
@@ -41,11 +56,11 @@ class DualNormUpdate(PenaltyStrategy):
         self.rho = self.params.rho
         return self.rho
 
-    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
+    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> PenaltyResult:
         iterate = next_iterate
 
         if self.problem.num_cons == 0:
-            return self.rho
+            return PenaltyResult.accept_with_penalty(self.rho)
 
         ynorm = float(np.linalg.norm(iterate.y, ord=np.inf))
 
@@ -56,7 +71,7 @@ class DualNormUpdate(PenaltyStrategy):
             assert next_rho > self.rho
             self.rho = next_rho
 
-        return self.rho
+        return PenaltyResult.accept_with_penalty(self.rho)
 
 
 class DualEquilibration(PenaltyStrategy):
@@ -72,7 +87,7 @@ class DualEquilibration(PenaltyStrategy):
         self.rho = self.params.rho
         return self.rho
 
-    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
+    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> PenaltyResult:
         iterate = next_iterate
 
         cons = iterate.cons
@@ -84,7 +99,7 @@ class DualEquilibration(PenaltyStrategy):
         assert viol >= 0.0
 
         if viol == 0.0:
-            return self.rho
+            return PenaltyResult.accept_with_penalty(self.rho)
 
         target_rho = 0.01 * yprod / viol
 
@@ -94,7 +109,7 @@ class DualEquilibration(PenaltyStrategy):
 
             self.rho = next_rho
 
-        return self.rho
+        return PenaltyResult.accept_with_penalty(self.rho)
 
 
 class ParetoDecrease(PenaltyStrategy):
@@ -116,7 +131,7 @@ class ParetoDecrease(PenaltyStrategy):
         self.rho = self.params.rho
         return self.rho
 
-    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> float:
+    def update(self, prev_iterate: Iterate, next_iterate: Iterate) -> PenaltyResult:
         iterate = next_iterate
         params = self.params
 
@@ -126,7 +141,7 @@ class ParetoDecrease(PenaltyStrategy):
 
         # Don't update if we are already feasible
         if viol <= params.opt_tol:
-            return self.rho
+            return PenaltyResult.accept_with_penalty(self.rho)
 
         cons_jac = iterate.cons_jac
 
@@ -134,7 +149,7 @@ class ParetoDecrease(PenaltyStrategy):
 
         # Cannot find bound if we are locally infeasible
         if np.linalg.norm(infeas_opt_res, ord=np.inf) <= params.local_infeas_tol:
-            return self.rho
+            return PenaltyResult.accept_with_penalty(self.rho)
 
         obj_bound = np.inf
 
@@ -164,7 +179,48 @@ class ParetoDecrease(PenaltyStrategy):
         assert next_rho >= self.rho
 
         self.rho = next_rho
-        return self.rho
+
+        return PenaltyResult.accept_with_penalty(self.rho)
+
+
+class PenaltyFilter(PenaltyStrategy):
+    """
+    Filter maintaining a set of Pareto optimal points of
+    objective and constraint violation. The penalty is
+    increased at a point if it is dominated by any
+    other point in the filter.
+
+    Note: The running time is linear in the size of the
+    filter, this could be improved to be logarithmic
+    """
+
+    def __init__(self, problem: Problem, params: Params) -> None:
+        super().__init__(problem, params)
+        self.entries: List[Tuple[float, float]] = []
+        self.rho = self.params.rho
+
+    def filter_insert(self, obj, violation) -> bool:
+        entry = (obj, violation)
+
+        def dominates(first, second):
+            return first[0] <= second[0] and first[1] <= second[1]
+
+        if any(dominates(e, entry) for e in self.entries):
+            return False
+
+        self.entries = [e for e in self.entries if not dominates(entry, e)]
+        self.entries.append(entry)
+
+        return True
+
+    def update(self, prev_iterate, next_iterate) -> PenaltyResult:
+        next_obj = next_iterate.obj
+        next_violation = next_iterate.cons_violation
+
+        if self.filter_insert(next_obj, next_violation):
+            return PenaltyResult.accept_with_penalty(self.rho)
+
+        return PenaltyResult.reject_with_penalty(10.0 * self.rho)
 
 
 def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
@@ -178,5 +234,7 @@ def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
         return DualEquilibration(problem, params)
     elif penalty_update == PenaltyUpdate.ParetoDecrease:
         return ParetoDecrease(problem, params)
+    elif penalty_update == PenaltyUpdate.Filter:
+        return PenaltyFilter(problem, params)
 
     raise ValueError("Invalid penalty update strategy")
