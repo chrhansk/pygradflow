@@ -122,7 +122,12 @@ def test_solve_hs71_constrained(hs71_constrained_instance):
 
 @pytest.mark.parametrize(
     "penalty_update",
-    [PenaltyUpdate.Constant, PenaltyUpdate.DualNorm, PenaltyUpdate.ParetoDecrease],
+    [
+        PenaltyUpdate.Constant,
+        PenaltyUpdate.DualNorm,
+        PenaltyUpdate.ParetoDecrease,
+        PenaltyUpdate.Filter,
+    ],
 )
 def test_penalty_update(hs71_instance, penalty_update):
     problem = hs71_instance.problem

@@ -315,8 +315,11 @@ class Solver:
                 logger.info(display.row(state))
 
             if accept:
-                # Accept
-                next_rho = self.penalty.update(iterate, next_iterate)
+                penalty_result = self.penalty.update(iterate, next_iterate)
+                next_rho = penalty_result.next_rho
+                accept = penalty_result.accept
+
+            if accept:
 
                 if next_rho != self.rho:
                     logger.debug(

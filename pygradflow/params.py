@@ -123,6 +123,7 @@ class PenaltyUpdate(Enum):
     DualNorm = auto()
     DualEquilibration = auto()
     ParetoDecrease = auto()
+    Filter = auto()
 
 
 class Precision(Enum):
