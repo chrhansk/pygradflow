@@ -198,7 +198,7 @@ class Params:
     using a :py:class:`pygradflow.solver.Solver`
     """
 
-    rho: float = 1e2
+    rho: float = 1e-8
 
     theta_max: float = 0.9
     theta_ref: float = 0.5
