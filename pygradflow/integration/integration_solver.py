@@ -118,7 +118,7 @@ class IntegrationSolver:
         fixed_indices[ambiguous_lb] = ddx[ambiguous_lb] < 0
 
         ambiguous_ub = np.logical_and(at_ub, dx_zero)
-        fixed_indices[ambiguous_ub] = ddx[ambiguous_lb] > 0
+        fixed_indices[ambiguous_ub] = ddx[ambiguous_ub] > 0
 
         return np.logical_not(fixed_indices)
 
