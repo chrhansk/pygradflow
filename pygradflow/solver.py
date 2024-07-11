@@ -261,6 +261,7 @@ class Solver:
 
         if params.collect_path:
             path: Optional[List[np.ndarray]] = [initial_iterate.z]
+            path_times = [0.0]
         else:
             path = None
 
@@ -331,6 +332,7 @@ class Solver:
 
                 if path is not None:
                     path.append(next_iterate.z)
+                    path_times.append(path_times[-1] + (1.0 / lamb))
 
                 iterate = next_iterate
 
@@ -370,16 +372,8 @@ class Solver:
 
         (x, y, d) = self.transform.restore_sol(x, y, d)
 
-        result_props = dict()
-
-        if path is not None:
-            complete_path: np.ndarray = np.vstack(path).T
-            num_vars = problem.num_vars
-            result_props["path"] = complete_path
-            result_props["primal_path"] = complete_path[:num_vars, :]
-            result_props["dual_path"] = complete_path[num_vars:, :]
-
-        return SolverResult(
+        result = SolverResult(
+            problem,
             x,
             y,
             d,
@@ -391,5 +385,11 @@ class Solver:
             final_scaled_obj=iterate.obj,
             final_stat_res=iterate.stat_res,
             final_cons_violation=iterate.cons_violation,
-            **result_props,
         )
+
+        if path is not None:
+            complete_path = np.vstack(path).T
+            model_times = np.hstack(path_times)
+            result._set_path(complete_path, model_times)
+
+        return result

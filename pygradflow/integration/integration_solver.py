@@ -332,6 +332,7 @@ class IntegrationSolver:
             assert (path[-1][:, -1] == curr_z).all()
             assert (path[-1][:, -1] == ivp_result.y[:, 0]).all()
             path.append(ivp_result.y[:, 1:])
+            self.path_times.append(ivp_result.t[1:])
             path[-1][:, -1] = next_z
 
         dist = np.linalg.norm(
@@ -364,6 +365,7 @@ class IntegrationSolver:
         initial_iterate = self.transform.initial_iterate
 
         self.path = [initial_iterate.z[:, None]]
+        self.path_times = [np.array([0.0])]
 
         print_problem_stats(problem, initial_iterate)
 
@@ -476,18 +478,6 @@ class IntegrationSolver:
         (curr_x, curr_y) = self.flow.split_states(curr_z)
         iterate = Iterate(problem, params, curr_x, curr_y)
 
-        result_props = dict()
-
-        if params.collect_path:
-            complete_path = np.hstack(self.path)
-            self.path = None
-
-            num_vars = problem.num_vars
-
-            result_props["path"] = complete_path
-            result_props["primal_path"] = complete_path[:num_vars, :]
-            result_props["dual_path"] = complete_path[num_vars:, :]
-
         x = iterate.x
         y = iterate.y
         d = iterate.bounds_dual
@@ -506,7 +496,8 @@ class IntegrationSolver:
 
         (x, y, d) = self.transform.restore_sol(x, y, d)
 
-        return SolverResult(
+        solver_result = SolverResult(
+            problem,
             x,
             y,
             d,
@@ -515,5 +506,9 @@ class IntegrationSolver:
             num_accepted_steps=accepted_steps,
             total_time=total_time,
             dist_factor=dist_factor,
-            **result_props,
         )
+
+        if params.collect_path:
+            solver_result._set_path(np.hstack(self.path), np.hstack(self.path_times))
+
+        return solver_result
