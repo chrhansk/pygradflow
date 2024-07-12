@@ -1,5 +1,6 @@
 import numpy as np
 
+from pygradflow.problem import Problem
 from pygradflow.status import SolverStatus
 
 
@@ -11,6 +12,7 @@ class SolverResult:
 
     def __init__(
         self,
+        problem: Problem,
         x: np.ndarray,
         y: np.ndarray,
         d: np.ndarray,
@@ -21,6 +23,7 @@ class SolverResult:
         dist_factor: float,
         **attrs
     ):
+        self.problem = problem
         self._attrs = attrs
 
         self._x = x
@@ -32,6 +35,38 @@ class SolverResult:
         self.total_time = total_time
         self.dist_factor = dist_factor
 
+    def _set_path(self, path, model_times):
+        self._attrs["path"] = path
+        self._attrs["model_times"] = model_times
+
+        num_vars = self.problem.num_vars
+        num_cons = self.problem.num_cons
+
+        assert model_times.ndim == 1
+        assert path.shape == (num_vars + num_cons, len(model_times))
+
+        self._attrs["primal_path"] = lambda: path[:num_vars]
+        self._attrs["dual_path"] = lambda: path[num_vars:]
+
+        def speed():
+            return np.linalg.norm(np.diff(self.path, axis=1), axis=0) / np.diff(
+                model_times
+            )
+
+        def primal_speed():
+            return np.linalg.norm(np.diff(self.primal_path, axis=1), axis=0) / np.diff(
+                model_times
+            )
+
+        def dual_speed():
+            return np.linalg.norm(np.diff(self.dual_path, axis=1), axis=0) / np.diff(
+                model_times
+            )
+
+        self._attrs["model_speed"] = speed
+        self._attrs["primal_model_speed"] = primal_speed
+        self._attrs["dual_model_speed"] = dual_speed
+
     @property
     def status(self) -> SolverStatus:
         """
@@ -41,7 +76,15 @@ class SolverResult:
 
     def __getattr__(self, name):
         attrs = super().__getattribute__("_attrs")
-        return attrs.get(name, None)
+        val = attrs.get(name, None)
+
+        if val is None:
+            return val
+
+        if callable(val):
+            return val()
+
+        return val
 
     def __setitem__(self, name, value):
         self._attrs[name] = value
