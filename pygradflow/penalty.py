@@ -199,8 +199,8 @@ class PenaltyFilter(PenaltyStrategy):
         self.entries: List[Tuple[float, float]] = []
         self.rho = self.params.rho
 
-    def filter_insert(self, obj, violation) -> bool:
-        entry = (obj, violation)
+    def filter_insert(self, first, second) -> bool:
+        entry = (first, second)
 
         def dominates(first, second):
             return first[0] <= second[0] and first[1] <= second[1]
@@ -213,14 +213,46 @@ class PenaltyFilter(PenaltyStrategy):
 
         return True
 
-    def update(self, prev_iterate, next_iterate) -> PenaltyResult:
-        next_obj = next_iterate.obj
-        next_violation = next_iterate.cons_violation
+    @abc.abstractmethod
+    def iterate_entry(self, iterate):
+        raise NotImplementedError()
 
-        if self.filter_insert(next_obj, next_violation):
+    def update(self, prev_iterate, next_iterate) -> PenaltyResult:
+        next_entry = self.iterate_entry(next_iterate)
+
+        if self.filter_insert(*next_entry):
             return PenaltyResult.accept_with_penalty(self.rho)
 
-        return PenaltyResult.reject_with_penalty(10.0 * self.rho)
+        self.rho *= 10.0
+        return PenaltyResult.reject_with_penalty(self.rho)
+
+
+class ObjectivePenaltyFilter(PenaltyFilter):
+    def __init__(self, problem: Problem, params: Params) -> None:
+        super().__init__(problem, params)
+
+    def iterate_entry(self, iterate):
+        obj = iterate.obj
+        violation = iterate.cons_violation
+
+        return (obj, violation)
+
+
+class LagrangianPenaltyFilter(PenaltyFilter):
+    def __init__(self, problem: Problem, params: Params) -> None:
+        super().__init__(problem, params)
+
+    def iterate_entry(self, iterate):
+        rho = self.rho
+
+        lag_x = iterate.aug_lag_deriv_x(rho)
+        lag_y = iterate.aug_lag_deriv_y()
+        lag_norm_sq = np.dot(lag_x, lag_x) + np.dot(lag_y, lag_y)
+
+        cons = iterate.cons
+        cons_val = np.linalg.norm(cons)
+
+        return (lag_norm_sq, cons_val)
 
 
 def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
@@ -234,7 +266,9 @@ def penalty_strategy(problem: Problem, params: Params) -> PenaltyStrategy:
         return DualEquilibration(problem, params)
     elif penalty_update == PenaltyUpdate.ParetoDecrease:
         return ParetoDecrease(problem, params)
-    elif penalty_update == PenaltyUpdate.Filter:
-        return PenaltyFilter(problem, params)
+    elif penalty_update == PenaltyUpdate.ObjectiveFilter:
+        return ObjectivePenaltyFilter(problem, params)
+    elif penalty_update == PenaltyUpdate.LagrangianFilter:
+        return LagrangianPenaltyFilter(problem, params)
 
     raise ValueError("Invalid penalty update strategy")

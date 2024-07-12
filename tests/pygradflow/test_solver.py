@@ -126,7 +126,8 @@ def test_solve_hs71_constrained(hs71_constrained_instance):
         PenaltyUpdate.Constant,
         PenaltyUpdate.DualNorm,
         PenaltyUpdate.ParetoDecrease,
-        PenaltyUpdate.Filter,
+        PenaltyUpdate.ObjectiveFilter,
+        PenaltyUpdate.LagrangianFilter,
     ],
 )
 def test_penalty_update(hs71_instance, penalty_update):
