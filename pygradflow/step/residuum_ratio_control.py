@@ -101,11 +101,25 @@ class ResiduumRatioController(NewtonController):
         pos_ratio = (ub[pos_dir] - mid_primal_value[pos_dir]) / primal_dir[pos_dir]
         neg_ratio = (lb[neg_dir] - mid_primal_value[neg_dir]) / primal_dir[neg_dir]
 
-        max_dt = np.minimum(np.min(pos_ratio), np.min(neg_ratio))
+        recovery_dt = np.minimum(np.min(pos_ratio), np.min(neg_ratio))
+        recovery_dt = np.minimum(dt, recovery_dt)
 
-        recovery_dx = max_dt * primal_dir
-        recovery_dy = max_dt * dual_dir
+        recovery_dx = recovery_dt * primal_dir
+        recovery_dy = recovery_dt * dual_dir
 
         recovery_step = StepResult(iterate, recovery_dx, recovery_dy, active_set)
 
-        return StepControlResult.from_step_result(recovery_step, lamb, accepted=True)
+        recovery_func = ImplicitFunc(problem, iterate, recovery_dt)
+
+        recovery_value = recovery_func.value_at(recovery_step.iterate, rho)
+        recovery_norm = np.linalg.norm(recovery_value)
+
+        recovery_theta = recovery_norm / orig_norm
+        accepted = recovery_theta <= params.theta_max
+
+        if accepted:
+            lamb_n = lamb
+        else:
+            lamb_n = 2.0 * lamb
+
+        return StepControlResult.from_step_result(recovery_step, lamb_n, accepted=accepted)
