@@ -6,6 +6,7 @@ from pygradflow.log import logger
 from pygradflow.params import Params
 from pygradflow.problem import Problem
 from pygradflow.step.newton_control import NewtonController
+from pygradflow.step.solver.step_solver import StepResult
 from pygradflow.step.step_control import StepControlResult
 
 
@@ -29,7 +30,8 @@ class ResiduumRatioController(NewtonController):
         mid_step = next(next_steps)
         mid_iterate = mid_step.iterate
 
-        mid_norm = np.linalg.norm(func.value_at(mid_iterate, rho))
+        mid_value = func.value_at(mid_iterate, rho)
+        mid_norm = np.linalg.norm(mid_value)
 
         self.display_step(0, mid_step)
 
@@ -43,21 +45,67 @@ class ResiduumRatioController(NewtonController):
         theta = mid_norm / orig_norm
         accepted = theta <= params.theta_max
 
-        if accepted:
-            lamb_mod = self.controller.update(theta)
-            lamb_n = max(params.lamb_min, lamb / lamb_mod)
-        else:
-            lamb_n = lamb * params.lamb_inc
-            if self.controller.error_sum > 0.0:
-                self.controller.reset()
-
         logger.debug(
-            "StepController: theta: %e, accepted: %s, lamb: %e, lamb_n: %e",
+            "StepController: theta: %e, accepted: %s, lamb: %e",
             theta,
             accepted,
             lamb,
-            lamb_n,
         )
 
-        self.lamb = lamb_n
-        return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
+        if accepted:
+            lamb_mod = self.controller.update(theta)
+            lamb_n = max(params.lamb_min, lamb / lamb_mod)
+            self.lamb = lamb_n
+            return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
+
+        # Step would be rejected
+        lamb_n = lamb * params.lamb_inc
+
+        if self.controller.error_sum > 0.0:
+            self.controller.reset()
+
+        # Recovery starts here
+
+        active_set = func.compute_active_set(iterate, rho)
+        mid_active_set = func.compute_active_set(mid_iterate, rho)
+
+        if (active_set == mid_active_set).all():
+            return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
+
+        mid_primal_value = mid_value[: self.problem.num_vars]
+
+        mid_primal_norm = np.linalg.norm(mid_primal_value)
+
+        mid_unchanged_primal_value = mid_primal_value[mid_active_set == active_set]
+        mid_unchanged_primal_norm = np.linalg.norm(mid_unchanged_primal_value)
+
+        norm_factor = mid_unchanged_primal_norm / mid_primal_norm
+
+        if norm_factor >= 1e-6:
+            self.lamb = lamb_n
+            return StepControlResult.from_step_result(mid_step, lamb_n, accepted)
+
+        dir = func.flow_rhs(mid_iterate, rho)
+
+        # Track back until first active step change...
+
+        primal_dir = dir[: self.problem.num_vars]
+        dual_dir = dir[self.problem.num_vars :]
+
+        pos_dir = primal_dir > 0.0
+        neg_dir = primal_dir < 0.0
+
+        lb = problem.var_lb
+        ub = problem.var_ub
+
+        pos_ratio = (ub[pos_dir] - mid_primal_value[pos_dir]) / primal_dir[pos_dir]
+        neg_ratio = (lb[neg_dir] - mid_primal_value[neg_dir]) / primal_dir[neg_dir]
+
+        max_dt = np.minimum(np.min(pos_ratio), np.min(neg_ratio))
+
+        recovery_dx = max_dt * primal_dir
+        recovery_dy = max_dt * dual_dir
+
+        recovery_step = StepResult(iterate, recovery_dx, recovery_dy, active_set)
+
+        return StepControlResult.from_step_result(recovery_step, lamb, accepted=True)
