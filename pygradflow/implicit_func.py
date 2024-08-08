@@ -116,6 +116,25 @@ class ImplicitFunc(StepFunc):
         ub = problem.var_ub
         return super().compute_active_set_box(p, lb, ub)
 
+    def flow_rhs(self, iterate: Iterate, rho: float) -> np.ndarray:
+
+        lb = self.problem.var_lb
+        ub = self.problem.var_ub
+        x = iterate.x
+
+        xflow = -iterate.aug_lag_deriv_x(rho)
+
+        # Project flow onto tnagent cone of box constraints at given x
+        at_lb = np.where(x < lb - 1e-8)[0]
+        at_ub = np.where(x > ub + 1e-8)[0]
+
+        xflow[at_lb] = np.maximum(0.0, xflow[at_lb])
+        xflow[at_ub] = np.minimum(0.0, xflow[at_ub])
+
+        yflow = iterate.aug_lag_deriv_y()
+
+        return np.concatenate([xflow, yflow])
+
     def projection_initial(self, iterate: Iterate, rho: float, tau=None):
         x_0 = self.orig_iterate.x
         dt = self.dt
