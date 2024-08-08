@@ -36,7 +36,7 @@ class ResiduumRatioController(NewtonController):
         if mid_norm <= params.newton_tol:
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
             logger.debug("Newton converged during first iteration, lamb_n = %f", lamb_n)
-            return StepControlResult.from_step_result(mid_step, lamb, True)
+            return StepControlResult.from_step_result(mid_step, lamb_n, True)
 
         orig_norm = np.linalg.norm(func.value_at(iterate, rho))
 
