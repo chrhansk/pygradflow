@@ -3,8 +3,10 @@ import numpy as np
 import scipy as sp
 from scipy.optimize import Bounds, minimize
 
+from pygradflow.step.box_objective import BoxObjective
 from pygradflow.implicit_func import ImplicitFunc
 from pygradflow.iterate import Iterate
+from pygradflow.log import logger
 from pygradflow.step.step_control import (
     StepController,
     StepControlResult,
@@ -38,6 +40,8 @@ class BoxReducedProblem(cyipopt.Problem):
 
         self.num_vars = self.problem.num_vars
 
+        self.obj = BoxObjective(iterate, lamb, rho)
+
         super(BoxReducedProblem, self).__init__(
             n=self.num_vars,
             m=0,
@@ -46,10 +50,10 @@ class BoxReducedProblem(cyipopt.Problem):
         )
 
     def objective(self, x):
-        return self.step_controller.objective(self.iterate, x, self.lamb, self.rho)
+        return self.obj.obj(x)
 
     def gradient(self, x):
-        return self.step_controller.gradient(self.iterate, x, self.lamb, self.rho)
+        return self.obj.grad(x)
 
     def constraint(self, x):
         return np.array([])
@@ -59,7 +63,7 @@ class BoxReducedProblem(cyipopt.Problem):
 
     def hessianstructure(self):
         x0 = self.x0
-        hess = self.step_controller.hessian(self.iterate, x0, self.lamb, self.rho)
+        hess = self.obj.hess(x0)
         hess = hess.tocoo()
         rows = hess.row
         cols = hess.col
@@ -69,7 +73,7 @@ class BoxReducedProblem(cyipopt.Problem):
         return rows[hess_filter], cols[hess_filter]
 
     def hessian(self, x, lag, obj_factor):
-        hess = self.step_controller.hessian(self.iterate, x, self.lamb, self.rho)
+        hess = self.obj.hess(x)
         hess = hess.tocoo()
 
         rows = hess.row
@@ -115,56 +119,6 @@ class BoxReducedProblem(cyipopt.Problem):
 
 class BoxReducedController(StepController):
 
-    def objective(self, iterate, x, lamb, rho):
-        eval = iterate.eval
-        xhat = iterate.x
-        yhat = iterate.y
-
-        obj = eval.obj(x)
-        cons = eval.cons(x)
-
-        dx = x - xhat
-        dx_norm_sq = np.dot(dx, dx)
-
-        w = -1 / lamb * cons
-        dy = w - yhat
-        dy_norm_sq = np.dot(dy, dy)
-
-        curr_obj = obj + 0.5 * rho * np.dot(cons, cons)
-        curr_obj += 0.5 * lamb * (dx_norm_sq + dy_norm_sq)
-
-        return curr_obj
-
-    def gradient(self, iterate, x, lamb, rho):
-        eval = iterate.eval
-        xhat = iterate.x
-        yhat = iterate.y
-
-        obj_grad = eval.obj_grad(x)
-        cons = eval.cons(x)
-        cons_jac = eval.cons_jac(x)
-
-        dx = x - xhat
-        cons_jac_factor = (rho + (1 / lamb)) * cons + yhat
-        return obj_grad + lamb * dx + cons_jac.T.dot(cons_jac_factor)
-
-    def hessian(self, iterate, x, lamb, rho):
-        eval = iterate.eval
-        (n,) = x.shape
-
-        yhat = iterate.y
-
-        cons = eval.cons(x)
-        jac = eval.cons_jac(x)
-        cons_factor = 1 / lamb + rho
-        y = cons_factor * cons + yhat
-
-        hess = eval.lag_hess(x, y)
-        hess += sp.sparse.diags([lamb], shape=(n, n))
-        hess += cons_factor * (jac.T @ jac)
-
-        return hess
-
     def solve_step_scipy(self, iterate, rho, dt, timer):
         problem = self.problem
 
@@ -185,11 +139,13 @@ class BoxReducedController(StepController):
 
             return np.linalg.norm(grad, ord=np.inf)
 
+        obj = BoxObjective(iterate, lamb, rho)
+
         def objective(x):
-            return self.objective(iterate, x, lamb, rho)
+            return obj.obj(x)
 
         def gradient(x):
-            return self.gradient(iterate, x, lamb, rho)
+            return obj.grad(x)
 
         def callback(x):
             if timer.reached_time_limit():
@@ -221,14 +177,16 @@ class BoxReducedController(StepController):
         problem = self.problem
         lamb = 1.0 / dt
 
+        obj = BoxObjective(iterate, lamb, rho)
+
         def objective(x):
-            return self.objective(iterate, x, lamb, rho)
+            return obj.obj(x)
 
         def gradient(x):
-            return self.gradient(iterate, x, lamb, rho)
+            return obj.grad(x)
 
         def hessian(x):
-            return self.hessian(iterate, x, lamb, rho)
+            return obj.hess(x)
 
         try:
             return solve_box_constrained(
@@ -266,6 +224,15 @@ class BoxReducedController(StepController):
         value = implicit_func.value_at(next_iterate, rho)
 
         residuum = np.linalg.norm(value)
+
+        obj = BoxObjective(iterate, lamb, rho)
+
+        initial_obj = obj.obj(iterate.x)
+        next_obj = obj.obj(next_iterate.x)
+
+        logger.info("Objective: initial=%e, final=%e", initial_obj, next_obj)
+
+        # improved = next_obj < initial_obj * (1 - 1e-4)
 
         if residuum <= 1e-6:
             return StepControlResult(
