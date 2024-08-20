@@ -16,20 +16,45 @@ from pygradflow.util import norm_mult
 class StepResult:
     def __init__(self, orig_iterate, dx, dy, active_set, rcond=None):
         self.orig_iterate = orig_iterate
-        self.dx = dx
         self.dy = dy
         self.active_set = active_set
         self.rcond = rcond
+
+        self._compute_xn(dx)
+
+    def _compute_xn(self, dx):
+        iterate = self.orig_iterate
+        problem = iterate.problem
+
+        var_lb = problem.var_lb
+        var_ub = problem.var_ub
+
+        xn = iterate.x - dx
+        dx = np.copy(dx)
+
+        at_lb = xn < var_lb
+        xn[at_lb] = var_lb[at_lb]
+        dx[at_lb] = iterate.x[at_lb] - var_lb[at_lb]
+
+        at_ub = xn > var_ub
+        xn[at_ub] = var_ub[at_ub]
+        dx[at_ub] = iterate.x[at_ub] - var_ub[at_ub]
+
+        self.dx = dx
+        self.xn = xn
 
     @functools.cached_property
     def iterate(self):
         iterate = self.orig_iterate
 
+        xn = self.xn.astype(iterate.x.dtype, copy=False)
+        yn = iterate.y - self.dy
+
         return Iterate(
             iterate.problem,
             iterate.params,
-            iterate.x - self.dx,
-            iterate.y - self.dy,
+            xn,
+            yn,
             iterate.eval,
         )
 
