@@ -339,11 +339,6 @@ class Solver:
                 path_dist += primal_step_norm + dual_step_norm
                 accepted_steps += 1
 
-                if (lamb <= params.lamb_term) and (delta <= params.opt_tol):
-                    logger.debug("Convergence achieved")
-                    status = SolverStatus.Optimal
-                    break
-
             iteration += 1
 
         total_time = timer.elapsed()
