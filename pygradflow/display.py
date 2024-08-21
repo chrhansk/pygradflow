@@ -116,7 +116,7 @@ class Display:
 
         self.timer = None
         if self.interval is not None:
-            assert self.interval > 0
+            assert self.interval >= 0
             self.timer = SimpleTimer()
         self.last_state = None
 
