@@ -26,6 +26,8 @@ class DistanceRatioController(NewtonController):
 
         func = ImplicitFunc(problem, iterate, dt)
 
+        orig_norm = np.linalg.norm(func.value_at(iterate, rho), np.inf)
+
         mid_step = next(next_steps)
         mid_iterate = mid_step.iterate
 
@@ -37,6 +39,10 @@ class DistanceRatioController(NewtonController):
             lamb_n = max(lamb * params.lamb_red, params.lamb_min)
             logger.debug("Newton converged during first iteration, lamb_n = %f", lamb_n)
             return StepControlResult.from_step_result(mid_step, lamb_n, True)
+        elif mid_func_norm >= 10 * orig_norm:
+            lamb_n = lamb * params.lamb_inc
+            logger.debug("Newton diverged during first iteration, lamb_n = %f", lamb_n)
+            return StepControlResult.from_step_result(mid_step, lamb_n, False)
 
         first_diff = mid_step.diff
 
