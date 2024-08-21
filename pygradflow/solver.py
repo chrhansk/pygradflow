@@ -328,8 +328,6 @@ class Solver:
                     )
                     self.rho = next_rho
 
-                delta = iterate.dist(next_iterate)
-
                 if path is not None:
                     path.append(next_iterate.z)
                     path_times.append(path_times[-1] + (1.0 / lamb))
@@ -338,11 +336,6 @@ class Solver:
 
                 path_dist += primal_step_norm + dual_step_norm
                 accepted_steps += 1
-
-                if (lamb <= params.lamb_term) and (delta <= params.opt_tol):
-                    logger.debug("Convergence achieved")
-                    status = SolverStatus.Optimal
-                    break
 
             iteration += 1
 
