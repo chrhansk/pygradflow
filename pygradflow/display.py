@@ -328,7 +328,9 @@ def print_problem_stats(problem, iterate):
     bounded_below = np.logical_and(np.logical_not(inf_lb), inf_ub)
     bounded_above = np.logical_and(inf_lb, np.logical_not(inf_ub))
     bounded = np.logical_or(bounded_below, bounded_above)
+    fixed = var_lb[ranged] == var_ub[ranged]
 
+    num_fixed = np.sum(fixed)
     num_unbounded = np.sum(unbounded)
     num_ranged = np.sum(ranged)
     num_bounded = np.sum(bounded)
@@ -339,6 +341,7 @@ def print_problem_stats(problem, iterate):
     if has_cons:
         logger.info("          Jacobian nnz: %s", cons_jac.nnz)
 
+    logger.info("       Fixed variables: %s", num_fixed)
     logger.info("        Free variables: %s", num_unbounded)
     logger.info("     Bounded variables: %s", num_bounded)
     logger.info("      Ranged variables: %s", num_ranged)
