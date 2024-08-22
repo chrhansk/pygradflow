@@ -7,7 +7,7 @@ from pygradflow.display import Format, StateData, print_problem_stats, solver_di
 from pygradflow.eval import EvalError
 from pygradflow.iterate import Iterate
 from pygradflow.log import logger
-from pygradflow.params import Params
+from pygradflow.params import Params, PenaltyUpdate
 from pygradflow.penalty import penalty_strategy
 from pygradflow.problem import Problem
 from pygradflow.result import SolverResult
@@ -134,6 +134,9 @@ class Solver:
         iterations: int,
         accepted_steps: int,
         dist_factor: float,
+        rho_init: float,
+        rho_final: float,
+        num_penalty_changes: float,
     ) -> None:
         rho = self.rho
 
@@ -148,6 +151,11 @@ class Solver:
         logger.info("%20s: %45d", "Accepted steps", accepted_steps)
 
         logger.info("%20s: %45e", "Distance factor", dist_factor)
+
+        if self.params.penalty_update != PenaltyUpdate.Constant:
+            logger.info("%20s: %45e", "Initial penalty", rho_init)
+            logger.info("%20s: %45e", "Final penalty", rho_final)
+            logger.info("%20s: %45d", "Penalty changes", num_penalty_changes)
 
         logger.info("%20s: %45e", "Objective", iterate.obj)
         logger.info("%20s: %45e", "Aug Lag violation", iterate.aug_lag_violation(rho))
@@ -223,7 +231,7 @@ class Solver:
 
         self.evaluator = self.transform.evaluator
 
-        self.penalty = penalty_strategy(self.problem, params)
+        self.penalty_strategy = penalty_strategy(self.problem, params)
         self.rho = -1.0
 
         display = solver_display(problem, params)
@@ -243,7 +251,8 @@ class Solver:
 
         self._deriv_check(iterate.x, iterate.y)
 
-        self.rho = self.penalty.initial(iterate)
+        rho_init = self.penalty_strategy.initial(iterate)
+        self.rho = rho_init
 
         logger.debug("Initial Aug Lag: %.10e", iterate.aug_lag(self.rho))
 
@@ -256,6 +265,8 @@ class Solver:
         initial_iterate = iterate
         accepted_steps = 0
         iteration = 0
+
+        num_penalty_changes = 0
 
         timer = Timer(params.time_limit)
 
@@ -316,7 +327,7 @@ class Solver:
                 logger.info(display.row(state))
 
             if accept:
-                penalty_result = self.penalty.update(iterate, next_iterate)
+                penalty_result = self.penalty_strategy.update(iterate, next_iterate)
                 next_rho = penalty_result.next_rho
                 accept = penalty_result.accept
 
@@ -327,6 +338,7 @@ class Solver:
                         "Updating penalty parameter from %e to %e", self.rho, next_rho
                     )
                     self.rho = next_rho
+                    num_penalty_changes += 1
 
                 if path is not None:
                     path.append(next_iterate.z)
@@ -357,6 +369,9 @@ class Solver:
             iterations=iterations,
             accepted_steps=accepted_steps,
             dist_factor=dist_factor,
+            rho_init=rho_init,
+            rho_final=self.rho,
+            num_penalty_changes=num_penalty_changes,
         )
 
         x = iterate.x
