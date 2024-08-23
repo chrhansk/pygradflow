@@ -100,6 +100,21 @@ class StepFunc(abc.ABC):
 
 
 class ImplicitFunc(StepFunc):
+    """
+    Standard residual function for implicit Euler steps
+    with the value
+
+    .. math::
+        F(x, y; \\hat{x}, \\hat{y}) =
+        \\begin{pmatrix}
+            x - P_{C} (\\hat{x} - \\Delta t \\nabla_{x} \\mathcal{L}^{\\rho}(x, y)) \\\\
+            y - (\\hat{y} + \\Delta t \\nabla_{y} \\mathcal{L}^{\\rho}(x, y)
+        \\end{pmatrix}
+
+    The values :math:`\\hat{x}` and :math:`\\hat{y}` are obtained
+    from the iteratre provided in the constructor
+    """
+
     def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
         super().__init__(problem, iterate, dt)
 
@@ -185,6 +200,14 @@ class ImplicitFunc(StepFunc):
 
 
 class ScaledImplicitFunc(StepFunc):
+    """
+    The *scaled* residual function for implicit Euler steps
+    is defined as the normal residual function
+    given by :py:class:`pygradflow.implicit_func.ImplicitFunc`
+    scaled by a factor
+    of :math:`\\lambda = 1 / \\Delta t`.
+    """
+
     def __init__(self, problem: Problem, iterate: Iterate, dt: float) -> None:
         super().__init__(problem, iterate, dt)
         self.lamb = 1.0 / dt
