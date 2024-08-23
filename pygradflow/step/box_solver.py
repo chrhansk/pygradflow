@@ -1,3 +1,4 @@
+from enum import Enum, auto
 from typing import Callable
 
 import numpy as np
@@ -10,6 +11,22 @@ class BoxSolverError(Exception):
     pass
 
 
+class BoxSolverStatus(Enum):
+    Optimal = auto()
+    Unbounded = auto()
+    IterationLimit = auto()
+
+
+class BoxSolverResult:
+    def __init__(self, x, status, iterations):
+        self.x = x
+        self.status = status
+
+    @property
+    def success(self):
+        return self.status == BoxSolverStatus.Optimal
+
+
 # Based on "Projected Newton Methods for Optimization Problems with Simple Constraints"
 def solve_box_constrained(
     x0: np.ndarray,
@@ -18,10 +35,11 @@ def solve_box_constrained(
     hess: Callable[[np.ndarray], sp.sparse.spmatrix],
     lb: np.ndarray,
     ub: np.ndarray,
+    obj_lower: float,
     max_it=1000,
-    atol: float = 1e-8,
-    rtol: float = 1e-8,
-):
+    atol: float = 1e-6,
+    rtol: float = 1e-6,
+) -> BoxSolverResult:
 
     (n,) = x0.shape
     assert lb.shape == (n,)
@@ -32,9 +50,15 @@ def solve_box_constrained(
     beta = 0.5
     sigma = 1e-3
 
+    status = BoxSolverStatus.IterationLimit
+
     for iteration in range(max_it):
         curr_func = func(curr_x)
         curr_grad = grad(curr_x)
+
+        if curr_func <= obj_lower:
+            status = BoxSolverStatus.Unbounded
+            break
 
         assert curr_grad.shape == (n,)
 
@@ -52,9 +76,11 @@ def solve_box_constrained(
         grad_norm = np.linalg.norm(curr_grad, ord=np.inf)
 
         if grad_norm < atol:
+            status = BoxSolverStatus.Optimal
             break
 
         if (residuum < atol) or (residuum / grad_norm) < rtol:
+            status = BoxSolverStatus.Optimal
             break
 
         active = np.logical_or(active_lower, active_upper)
@@ -105,4 +131,4 @@ def solve_box_constrained(
     else:
         raise BoxSolverError(f"Did not converge after {max_it} iterations")
 
-    return curr_x
+    return BoxSolverResult(curr_x, status, iteration)

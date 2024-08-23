@@ -216,9 +216,10 @@ class BoxReducedController(StepController):
         return reduced_problem.solve(timer=timer)
 
     def solve_step_box(self, iterate, rho, dt, timer):
-        from .box_solver import BoxSolverError, solve_box_constrained
+        from .box_solver import BoxSolverError, BoxSolverStatus, solve_box_constrained
 
         problem = self.problem
+        params = self.params
         lamb = 1.0 / dt
 
         def objective(x):
@@ -231,9 +232,28 @@ class BoxReducedController(StepController):
             return self.hessian(iterate, x, lamb, rho)
 
         try:
-            return solve_box_constrained(
-                iterate.x, objective, gradient, hessian, problem.var_lb, problem.var_ub
+            result = solve_box_constrained(
+                iterate.x,
+                objective,
+                gradient,
+                hessian,
+                problem.var_lb,
+                problem.var_ub,
+                obj_lower=params.obj_lower_limit,
             )
+
+            if result.success:
+                return result.x
+
+            elif result.status == BoxSolverStatus.Unbounded:
+                return result.x
+            else:
+                raise StepSolverError(
+                    "Box-constrained solver failed to converge (status = {})".format(
+                        result.status
+                    )
+                )
+
         except BoxSolverError as e:
             raise StepSolverError("Box-constrained solver failed to converge") from e
 
