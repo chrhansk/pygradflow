@@ -200,11 +200,17 @@ class ActiveSetNewtonMethod(NewtonMethod):
 
         self.step_solver = step_solver
         self.step_solver.update_derivs(orig_iterate)
+        self._curr_active_set = None
 
     def step(self, iterate):
         active_set = self.func.compute_active_set(iterate, self.rho, self.tau)
 
-        self.step_solver.update_active_set(active_set)
+        if self._curr_active_set is None:
+            self.step_solver.update_active_set(active_set)
+        elif (self._curr_active_set != active_set).any():
+            self.step_solver.update_active_set(active_set)
+
+        self._curr_active_set = active_set
 
         return self.step_solver.solve(iterate)
 
