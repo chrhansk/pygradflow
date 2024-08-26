@@ -253,6 +253,9 @@ class GlobalizedNewtonMethod(NewtonMethod):
         func_value = self.func.value_at(iterate, self.rho)
         res_value = 0.5 * np.dot(func_value, func_value)
 
+        if res_value <= params.newton_tol:
+            return step_result
+
         # TODO: Create a method in the step function
         # to compute a forward product instead to make
         # everything more efficient
@@ -277,7 +280,7 @@ class GlobalizedNewtonMethod(NewtonMethod):
             next_func_value = self.func.value_at(next_iterate, self.rho)
             next_res_value = 0.5 * np.dot(next_func_value, next_func_value)
 
-            if np.isclose(next_res_value, 0.0):
+            if next_res_value <= params.newton_tol:
                 break
 
             if next_res_value <= res_value + (1e-4 * alpha * inner_product):
