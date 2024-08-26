@@ -23,7 +23,8 @@ class SolverResult:
         dist_factor: float,
         **attrs
     ):
-        self.problem = problem
+        self.num_vars = problem.num_vars
+        self.num_cons = problem.num_cons
         self._attrs = attrs
 
         self._x = x
@@ -39,8 +40,8 @@ class SolverResult:
         self._attrs["path"] = path
         self._attrs["model_times"] = model_times
 
-        num_vars = self.problem.num_vars
-        num_cons = self.problem.num_cons
+        num_vars = self.num_vars
+        num_cons = self.num_cons
 
         assert model_times.ndim == 1
         assert path.shape == (num_vars + num_cons, len(model_times))

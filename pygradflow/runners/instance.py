@@ -9,6 +9,9 @@ class Instance(ABC):
         self.num_vars = num_vars
         self.num_cons = num_cons
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.name})"
+
     @property
     def size(self):
         return self.num_vars + self.num_cons
