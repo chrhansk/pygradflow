@@ -11,7 +11,9 @@ from pygradflow.timer import SimpleTimer
 
 
 class StateData:
-    def __init__(self):
+    def __init__(self, iterate, step_result):
+        self.iterate = iterate
+        self.step_result = step_result
         self._entries = dict()
 
     def __setitem__(self, key, value):
@@ -21,7 +23,7 @@ class StateData:
         try:
             entry = self._entries[key]
             if callable(entry):
-                return entry()
+                return entry(self.iterate, self.step_result)
             return entry
         except Exception:
             return None

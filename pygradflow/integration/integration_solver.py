@@ -432,7 +432,7 @@ class IntegrationSolver:
             path_dist += result.dist
 
             if display.should_display():
-                state = StateData()
+                state = StateData(curr_it, step_result=None)
                 curr_x, curr_y = self.flow.split_states(curr_z)
                 iterate = curr_it
                 state["iterate"] = iterate

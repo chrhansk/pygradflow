@@ -305,24 +305,26 @@ class Solver:
             self.callbacks(CallbackType.ComputedStep, iterate, next_iterate, accept)
 
             if display_iterate:
-                state = StateData()
+                state = StateData(iterate, step_result)
                 state["iterate"] = iterate
-                state["active_set"] = lambda: step_result.active_set
-                state["obj_nonlin"] = lambda: iterate.obj_nonlin(next_iterate)
+                state["active_set"] = lambda _, step_result: step_result.active_set
+                state["obj_nonlin"] = lambda iterate, _: iterate.obj_nonlin(
+                    step_result.iterate
+                )
 
                 if problem.num_cons > 0:
-                    state["cons_nonlin"] = lambda: np.linalg.norm(
-                        iterate.cons_nonlin(next_iterate), ord=np.inf
+                    state["cons_nonlin"] = lambda iterate, _: np.linalg.norm(
+                        iterate.cons_nonlin(step_result.iterate), ord=np.inf
                     )
 
-                state["aug_lag"] = lambda: iterate.aug_lag(self.rho)
-                state["obj"] = lambda: iterate.obj()
+                state["aug_lag"] = lambda iterate, _: iterate.aug_lag(self.rho)
+                state["obj"] = lambda iterate, _: iterate.obj()
                 state["iter"] = iteration + 1
-                state["primal_step_norm"] = lambda: primal_step_norm
-                state["dual_step_norm"] = lambda: dual_step_norm
-                state["lamb"] = lambda: lamb
-                state["step_accept"] = lambda: accept
-                state["rcond"] = lambda: step_result.rcond
+                state["primal_step_norm"] = primal_step_norm
+                state["dual_step_norm"] = dual_step_norm
+                state["lamb"] = lamb
+                state["step_accept"] = accept
+                state["rcond"] = lambda _, step_result: step_result.rcond
 
                 logger.info(display.row(state))
 
