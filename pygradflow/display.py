@@ -219,7 +219,12 @@ def solver_display(problem: Problem, params: Params):
     cols.append(
         AttrColumn("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm"))
     )
-    cols.append(AttrColumn("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm")))
+
+    if problem.num_cons > 0:
+        cols.append(
+            AttrColumn("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm"))
+        )
+
     cols.append(AttrColumn("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
 
     if problem.var_bounded:
