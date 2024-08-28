@@ -11,7 +11,9 @@ from pygradflow.timer import SimpleTimer
 
 
 class StateData:
-    def __init__(self):
+    def __init__(self, iterate, step_result):
+        self.iterate = iterate
+        self.step_result = step_result
         self._entries = dict()
 
     def __setitem__(self, key, value):
@@ -21,7 +23,7 @@ class StateData:
         try:
             entry = self._entries[key]
             if callable(entry):
-                return entry()
+                return entry(self.iterate, self.step_result)
             return entry
         except Exception:
             return None
@@ -219,7 +221,12 @@ def solver_display(problem: Problem, params: Params):
     cols.append(
         AttrColumn("Primal step", 16, "{:16.8e}", StateAttr("primal_step_norm"))
     )
-    cols.append(AttrColumn("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm")))
+
+    if problem.num_cons > 0:
+        cols.append(
+            AttrColumn("Dual step", 16, "{:16.8e}", StateAttr("dual_step_norm"))
+        )
+
     cols.append(AttrColumn("Lambda", 16, "{:16.8e}", StateAttr("lamb")))
 
     if problem.var_bounded:
