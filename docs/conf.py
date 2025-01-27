@@ -12,9 +12,9 @@ import sys
 sys.path.append(os.path.abspath(".."))
 
 project = "pygradflow"
-copyright = "2023, Christoph Hansknecht"
+copyright = "2025, Christoph Hansknecht"
 author = "Christoph Hansknecht"
-release = "0.5.20"
+release = "0.5.21"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
