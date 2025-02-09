@@ -59,13 +59,18 @@ class NewtonController(StepController):
 
     def compute_tau(self, initial_iterate: Iterate, rho: float) -> Optional[float]:
         params = self.params
-
         active_set_method = params.active_set_method
+        active_set_type = params.active_set_type
+
+        if active_set_type == ActiveSetType.Explicit:
+            assert params.active_set_tau is not None
+            assert active_set_method is None
+            return params.active_set_tau
+        else:
+            assert params.active_set_tau is None
 
         if active_set_method is not None:
             return active_set_method(initial_iterate, self.lamb, rho)
-
-        active_set_type = params.active_set_type
 
         if active_set_type == ActiveSetType.Standard:
             return None

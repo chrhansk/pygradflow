@@ -13,6 +13,7 @@ import numpy as np
 
 class ActiveSetType(Enum):
     Standard = auto()
+    Explicit = auto()
     SmallestActiveSet = auto()
     LargestActiveSet = auto()
 
@@ -223,6 +224,7 @@ class Params:
 
     active_set_type: ActiveSetType = ActiveSetType.Standard
     active_set_method: Optional[Callable[..., float]] = None
+    active_set_tau: Optional[float] = None
 
     newton_type: NewtonType = NewtonType.Simplified
     newton_tol: float = 1e-8

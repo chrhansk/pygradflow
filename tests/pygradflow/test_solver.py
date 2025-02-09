@@ -247,6 +247,9 @@ def test_solve_with_active_set_types(hs71_instance, active_set_type):
         penalty_update=PenaltyUpdate.Constant,
     )
 
+    if active_set_type == ActiveSetType.Explicit:
+        params.active_set_tau = 1.0
+
     solver = Solver(problem, params)
 
     solve_and_test_instance(hs71_instance, solver)
