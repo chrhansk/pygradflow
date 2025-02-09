@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -206,7 +206,7 @@ class Solver:
 
     def perform_iteration(
         self, x0: np.ndarray | float | None = None, y0: np.ndarray | float | None = None
-    ) -> Iterate:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         params = self.params
         problem = self.problem
         iterate = self.transform.create_transformed_iterate(x0, y0)
@@ -222,7 +222,13 @@ class Solver:
             controller, iterate, rho_init, 1.0 / lamb, False, timer
         )
 
-        return step_result.iterate
+        iterate = step_result.iterate
+
+        x = iterate.x
+        y = iterate.y
+        d = iterate.bounds_dual
+
+        return self.transform.restore_sol(x, y, d)
 
     def solve(
         self,
