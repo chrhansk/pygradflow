@@ -352,7 +352,7 @@ class IntegrationSolver:
 
     def solve(self, x0: Optional[np.ndarray] = None, y0: Optional[np.ndarray] = None):
 
-        self.transform = Transformation(self.orig_problem, self.params, x0, y0)
+        self.transform = Transformation(self.orig_problem, self.params)
 
         self.problem = self.transform.trans_problem
         self.evaluator = self.transform.evaluator
@@ -362,7 +362,7 @@ class IntegrationSolver:
         self.flow = Flow(problem, params, self.evaluator)
         self.rho = self.params.rho
 
-        initial_iterate = self.transform.initial_iterate
+        initial_iterate = self.transform.create_transformed_iterate(x0, y0)
 
         self.path = [initial_iterate.z[:, None]]
         self.path_times = [np.array([0.0])]

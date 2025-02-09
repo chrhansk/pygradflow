@@ -84,6 +84,9 @@ class Solver:
         self.params = params
         self.callbacks = Callbacks()
 
+        self.transform = Transformation(self.orig_problem, self.params)
+        self.problem = self.transform.trans_problem
+
     def compute_step(
         self,
         controller: StepController,
@@ -222,10 +225,6 @@ class Solver:
             solutions
         """
 
-        self.transform = Transformation(self.orig_problem, self.params, x0, y0)
-
-        self.problem = self.transform.trans_problem
-
         params = self.params
         problem = self.problem
 
@@ -236,7 +235,7 @@ class Solver:
 
         display = solver_display(problem, params)
 
-        iterate = self.transform.initial_iterate
+        iterate = self.transform.create_transformed_iterate(x0, y0)
 
         try:
             iterate.check_eval()

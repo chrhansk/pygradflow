@@ -241,6 +241,10 @@ class Params:
     precision: Precision = Precision.Double
 
     scaling_type: ScalingType = ScalingType.NoScaling
+
+    scaling_primal: Optional[np.ndarray] = None
+    scaling_dual: Optional[np.ndarray] = None
+
     scaling: Optional["Scaling"] = None
 
     validate_input: bool = True

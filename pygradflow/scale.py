@@ -231,7 +231,10 @@ class ScaledProblem(Problem):
 
 
 def create_scaling(
-    problem: Problem, params: Params, x0: np.ndarray, y0: np.ndarray
+    problem: Problem,
+    params: Params,
+    scaling_primal: Optional[np.ndarray],
+    scaling_dual: Optional[np.ndarray],
 ) -> Optional[Scaling]:
     scaling_type = params.scaling_type
 
@@ -244,23 +247,34 @@ def create_scaling(
     elif scaling_type == ScalingType.Custom:
         raise ValueError("Custom scaling requires explicit scaling")
 
+    if scaling_primal is None:
+        raise ValueError("Primal point required for scaling computation")
+
+    assert scaling_primal is not None
+    assert scaling_primal.shape == (problem.num_vars,)
+
     if scaling_type == ScalingType.Nominal:
         if problem.num_cons > 0:
-            cons_val = problem.cons(x0)
+            cons_val = problem.cons(scaling_primal)
         else:
-            cons_val = np.array([], dtype=x0.dtype)
-        return Scaling.from_nominal_values(x0, cons_val)
+            cons_val = np.array([], dtype=scaling_primal.dtype)
+        return Scaling.from_nominal_values(scaling_primal, cons_val)
 
     if problem.num_cons > 0:
-        cons_jac = problem.cons_jac(x0)
+        cons_jac = problem.cons_jac(scaling_primal)
     else:
         cons_jac = sparse_zero(shape=(0, problem.num_vars))
 
     if scaling_type == ScalingType.GradJac:
-        obj_grad = problem.obj_grad(x0)
+        obj_grad = problem.obj_grad(scaling_primal)
         return Scaling.from_grad_jac(obj_grad, cons_jac)
     elif scaling_type == ScalingType.KKT:
-        lag_hess = problem.lag_hess(x0, y0)
+
+        if scaling_dual is None:
+            raise ValueError("Dual point required for KKT scaling computation")
+
+        assert scaling_dual.shape == (problem.num_cons,)
+        lag_hess = problem.lag_hess(scaling_primal, scaling_dual)
         return Scaling.from_equilibrated_kkt(lag_hess, cons_jac)
     else:
         raise ValueError(f"Unknown scaling type {scaling_type}")
