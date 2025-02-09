@@ -207,6 +207,18 @@ def test_solve_tame(tame_instance):
     solve_and_test_instance(tame_instance, solver)
 
 
+def test_perform_iteration(tame_instance):
+    problem = tame_instance.problem
+    params = Params(newton_type=NewtonType.Full, deriv_check=DerivCheck.CheckAll)
+
+    solver = Solver(problem, params)
+
+    x_0 = tame_instance.x_0
+    y_0 = tame_instance.y_0
+
+    solver.perform_iteration(x_0, y_0)
+
+
 @pytest.mark.parametrize(
     "newton_type", [NewtonType.ActiveSet, NewtonType.Simplified, NewtonType.Full]
 )

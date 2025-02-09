@@ -32,24 +32,24 @@ class Transformation:
         orig_problem = self.orig_problem
 
         if x0 is None:
-            x0 = np.clip(
+            x: np.ndarray = np.clip(
                 np.zeros((orig_problem.num_vars,)),
                 orig_problem.var_lb,
                 orig_problem.var_ub,
             )
         else:
-            x0 = np.broadcast_to(x0, (orig_problem.num_vars,))
+            x = np.broadcast_to(x0, (orig_problem.num_vars,))
 
         if y0 is None:
-            y0 = np.zeros((orig_problem.num_vars,))
+            y: np.ndarray = np.zeros((orig_problem.num_vars,))
         else:
-            y0 = np.broadcast_to(y0, (orig_problem.num_cons,))
+            y = np.broadcast_to(y0, (orig_problem.num_cons,))
 
-        (x0, y0) = self.transform_sol(x0, y0)
+        (x, y) = self.transform_sol(x, y)
         dtype = self.params.dtype
 
-        x = x0.astype(dtype)
-        y = y0.astype(dtype)
+        x = x.astype(dtype)
+        y = y.astype(dtype)
 
         return Iterate(self.trans_problem, self.params, x, y, self.evaluator)
 
