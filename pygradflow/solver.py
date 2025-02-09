@@ -84,17 +84,21 @@ class Solver:
         self.params = params
         self.callbacks = Callbacks()
 
-    def compute_step(
+        self.transform = Transformation(self.orig_problem, self.params)
+        self.problem = self.transform.trans_problem
+
+    def _compute_step(
         self,
         controller: StepController,
         iterate: Iterate,
+        rho: float,
         dt: float,
         display: bool,
         timer: Timer,
     ) -> StepControlResult:
 
-        assert self.rho != -1.0
-        return controller.compute_step(iterate, self.rho, dt, display, timer)
+        assert rho != -1.0
+        return controller.compute_step(iterate, rho, dt, display, timer)
 
     def _deriv_check(self, x: np.ndarray, y: np.ndarray) -> None:
         from pygradflow.deriv_check import deriv_check
@@ -200,6 +204,26 @@ class Solver:
             logger.debug("Unboundedness detected")
             return SolverStatus.Unbounded
 
+    def perform_iteration(
+        self, x0: np.ndarray | float | None = None, y0: np.ndarray | float | None = None
+    ) -> Iterate:
+        params = self.params
+        problem = self.problem
+        iterate = self.transform.create_transformed_iterate(x0, y0)
+
+        lamb = params.lamb_init
+        rho_init = params.rho
+
+        controller = step_controller(problem, params)
+
+        timer = Timer(float(np.inf))
+
+        step_result = self._compute_step(
+            controller, iterate, rho_init, 1.0 / lamb, False, timer
+        )
+
+        return step_result.iterate
+
     def solve(
         self,
         x0: np.ndarray | float | None = None,
@@ -222,10 +246,6 @@ class Solver:
             solutions
         """
 
-        self.transform = Transformation(self.orig_problem, self.params, x0, y0)
-
-        self.problem = self.transform.trans_problem
-
         params = self.params
         problem = self.problem
 
@@ -236,7 +256,7 @@ class Solver:
 
         display = solver_display(problem, params)
 
-        iterate = self.transform.initial_iterate
+        iterate = self.transform.create_transformed_iterate(x0, y0)
 
         try:
             iterate.check_eval()
@@ -283,8 +303,8 @@ class Solver:
 
             display_iterate = display.should_display()
 
-            step_result = self.compute_step(
-                controller, iterate, 1.0 / lamb, display_iterate, timer
+            step_result = self._compute_step(
+                controller, iterate, self.rho, 1.0 / lamb, display_iterate, timer
             )
 
             x = iterate.x

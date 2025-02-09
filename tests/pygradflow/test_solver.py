@@ -207,6 +207,18 @@ def test_solve_tame(tame_instance):
     solve_and_test_instance(tame_instance, solver)
 
 
+def test_perform_iteration(tame_instance):
+    problem = tame_instance.problem
+    params = Params(newton_type=NewtonType.Full, deriv_check=DerivCheck.CheckAll)
+
+    solver = Solver(problem, params)
+
+    x_0 = tame_instance.x_0
+    y_0 = tame_instance.y_0
+
+    solver.perform_iteration(x_0, y_0)
+
+
 @pytest.mark.parametrize(
     "newton_type", [NewtonType.ActiveSet, NewtonType.Simplified, NewtonType.Full]
 )
@@ -234,6 +246,9 @@ def test_solve_with_active_set_types(hs71_instance, active_set_type):
         rho=1.0,
         penalty_update=PenaltyUpdate.Constant,
     )
+
+    if active_set_type == ActiveSetType.Explicit:
+        params.active_set_tau = 1.0
 
     solver = Solver(problem, params)
 

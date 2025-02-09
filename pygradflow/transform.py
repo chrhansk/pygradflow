@@ -1,12 +1,10 @@
 import functools
-from typing import Tuple
 
 import numpy as np
 
 from pygradflow.cons_problem import ConstrainedProblem
 from pygradflow.eval import create_evaluator
 from pygradflow.iterate import Iterate
-from pygradflow.log import logger
 from pygradflow.params import Params
 from pygradflow.problem import Problem
 from pygradflow.scale import ScaledProblem, create_scaling
@@ -17,40 +15,43 @@ class Transformation:
         self,
         orig_problem: Problem,
         params: Params,
-        x0: np.ndarray | float | None,
-        y0: np.ndarray | float | None,
     ):
         self.orig_problem = orig_problem
 
-        (self.x0, self.y0) = self._create_initial_values(orig_problem, x0, y0)
-        self.scaling = create_scaling(orig_problem, params, self.x0, self.y0)
+        # (self.x0, self.y0) = self._create_initial_values(orig_problem, x0, y0)
+        self.scaling = create_scaling(
+            orig_problem, params, params.scaling_primal, params.scaling_dual
+        )
         self.params = params
 
         self.evaluator = create_evaluator(self.trans_problem, params)
 
-    def _create_initial_values(
-        self,
-        orig_problem,
-        x0: np.ndarray | float | None,
-        y0: np.ndarray | float | None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        orig_lb = orig_problem.var_lb
-        orig_ub = orig_problem.var_ub
+    def create_transformed_iterate(
+        self, x0: np.ndarray | float | None, y0: np.ndarray | float | None
+    ) -> Iterate:
+        orig_problem = self.orig_problem
 
         if x0 is None:
-            x0 = np.clip(0.0, orig_problem.var_lb, orig_problem.var_ub)
+            x: np.ndarray = np.clip(
+                np.zeros((orig_problem.num_vars,)),
+                orig_problem.var_lb,
+                orig_problem.var_ub,
+            )
         else:
-            if (x0 > orig_ub).any() or (x0 < orig_lb).any():
-                logger.warning("Initial point violates variable bounds")
-                x0 = np.clip(x0, orig_lb, orig_ub)
+            x = np.broadcast_to(x0, (orig_problem.num_vars,))
 
         if y0 is None:
-            y0 = 0.0
+            y: np.ndarray = np.zeros((orig_problem.num_vars,))
+        else:
+            y = np.broadcast_to(y0, (orig_problem.num_cons,))
 
-        x0 = np.broadcast_to(x0, shape=(orig_problem.num_vars,))
-        y0 = np.broadcast_to(y0, shape=(orig_problem.num_cons,))
+        (x, y) = self.transform_sol(x, y)
+        dtype = self.params.dtype
 
-        return (x0, y0)
+        x = x.astype(dtype)
+        y = y.astype(dtype)
+
+        return Iterate(self.trans_problem, self.params, x, y, self.evaluator)
 
     @functools.cached_property
     def scaled_problem(self):
@@ -70,13 +71,7 @@ class Transformation:
 
     @property
     def initial_iterate(self):
-        (x0, y0) = self.transform_sol(self.x0, self.y0)
-        dtype = self.params.dtype
-
-        x = x0.astype(dtype)
-        y = y0.astype(dtype)
-
-        return Iterate(self.trans_problem, self.params, x, y, self.evaluator)
+        return self.create_transformed_iterate(self.x0, self.y0)
 
     def transform_sol(self, x: np.ndarray, y: np.ndarray):
         scaling = self.scaling
