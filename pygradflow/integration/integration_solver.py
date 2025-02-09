@@ -194,6 +194,11 @@ class IntegrationSolver:
 
                 assert not (filter[j])
 
+                # FIXME: These conditions may not be satisfied if rhs has large
+                # derivative (guarantee in terms of quality of the root is
+                # in terms of primal distance, not function residuum)
+                #
+                # Do we need to refine the solution??
                 if at_lb:
                     assert func_pos(rhs, rhs_deriv, j)
                 elif at_ub:
