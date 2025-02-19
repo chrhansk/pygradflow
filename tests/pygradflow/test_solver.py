@@ -97,6 +97,23 @@ def test_solve_rosenbrock(rosenbrock_instance):
     solve_and_test_instance(rosenbrock_instance, solver)
 
 
+def test_solve_rosenbrock_simple(rosenbrock_instance):
+    problem = rosenbrock_instance.problem
+
+    params = Params(iteration_limit=100, collect_path=True)
+    solver = Solver(problem, params)
+
+    result = solver.solve()
+
+    assert result.success
+
+    x_opt = rosenbrock_instance.x_opt
+    y_opt = rosenbrock_instance.y_opt
+
+    assert np.allclose(result.x, x_opt, atol=1e-6)
+    assert np.allclose(result.y, y_opt, atol=1e-6)
+
+
 @pytest.mark.parametrize("step_control_type", step_control_types)
 def test_step_control(hs71_instance, step_control_type):
     problem = hs71_instance.problem

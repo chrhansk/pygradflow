@@ -41,7 +41,7 @@ class Transformation:
             x = np.broadcast_to(x0, (orig_problem.num_vars,))
 
         if y0 is None:
-            y: np.ndarray = np.zeros((orig_problem.num_vars,))
+            y: np.ndarray = np.zeros((orig_problem.num_cons,))
         else:
             y = np.broadcast_to(y0, (orig_problem.num_cons,))
 
