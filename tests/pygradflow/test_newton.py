@@ -26,18 +26,18 @@ def rosenbrock_instance():
     return (problem, x_0, y_0)
 
 
-def test_newton_active_set(rosenbrock_instance):
+def test_newton_active_set_value(rosenbrock_instance):
     problem, x_0, y_0 = rosenbrock_instance
     params = Params()
-
-    iterate = Iterate(problem, params, x_0, y_0)
-    dt = 1e-10
 
     n = x_0.shape[0]
 
     problem.var_lb = x_0 + np.ones((n,))
     problem.var_ub = x_0 + np.ones((n,))
     problem.var_ub[-1] = np.inf
+
+    iterate = Iterate(problem, params, x_0, y_0)
+    dt = 1e-10
 
     func = ImplicitFunc(problem, iterate, dt)
 
@@ -48,6 +48,9 @@ def test_newton_active_set(rosenbrock_instance):
     problem.var_lb = x_0 - np.ones((n,))
     problem.var_ub = x_0 + np.ones((n,))
     problem.var_ub[-1] = np.inf
+
+    iterate = Iterate(problem, params, x_0, y_0)
+    func = ImplicitFunc(problem, iterate, dt)
 
     active_set = func.active_set_at_point(x_0)
 

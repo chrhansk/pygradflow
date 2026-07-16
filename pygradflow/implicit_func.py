@@ -15,6 +15,13 @@ class StepFunc(abc.ABC):
         self.orig_iterate = iterate
         self.dt = dt
 
+        params = iterate.params
+        self.lb = problem.var_lb.astype(params.dtype)
+        self.ub = problem.var_ub.astype(params.dtype)
+
+        self.lb.flags.writeable = False
+        self.ub.flags.writeable = False
+
         self.n = problem.num_vars
         self.m = problem.num_cons
 
@@ -78,9 +85,8 @@ class StepFunc(abc.ABC):
         raise NotImplementedError()
 
     def apply_project_deriv(self, mat: sp.sparse.spmatrix, active_set: np.ndarray):
-        problem = self.problem
-        lb = problem.var_lb
-        ub = problem.var_ub
+        lb = self.lb
+        ub = self.ub
         (num_rows, _) = mat.shape
 
         assert active_set.dtype == bool
@@ -119,16 +125,14 @@ class ImplicitFunc(StepFunc):
         super().__init__(problem, iterate, dt)
 
     def project(self, x: np.ndarray, active_set: np.ndarray):
-        problem = self.problem
-        lb = problem.var_lb
-        ub = problem.var_ub
+        lb = self.lb
+        ub = self.ub
 
         return super().project_box(x, lb, ub, active_set)
 
     def active_set_at_point(self, p):
-        problem = self.problem
-        lb = problem.var_lb
-        ub = problem.var_ub
+        lb = self.lb
+        ub = self.ub
         return super().compute_active_set_box(p, lb, ub)
 
     def projection_initial(self, iterate: Iterate, rho: float, tau=None):
