@@ -285,8 +285,6 @@ class Solver:
         status = None
         iteration = 0
 
-        logger.info(display.header)
-
         path_dist = 0.0
         initial_iterate = iterate
         accepted_steps = 0
@@ -302,10 +300,16 @@ class Solver:
         else:
             path = None
 
+        display_count = 0
+
         while True:
             status = self._check_terminate(iterate, iteration, timer)
             if status is not None:
                 break
+
+            if display_count == 0:
+                logger.info(display.header)
+                display_count = 1
 
             display_iterate = display.should_display()
 
@@ -331,6 +335,8 @@ class Solver:
             self.callbacks(CallbackType.ComputedStep, iterate, next_iterate, accept)
 
             if display_iterate:
+                display_count = (display_count + 1) % header_interval
+
                 state = StateData(iterate, step_result)
                 state["iterate"] = iterate
                 state["active_set"] = lambda _, step_result: step_result.active_set
