@@ -84,7 +84,7 @@ class ImplicitProblem(cyipopt.Problem):
     @map_cython_exception
     def objective(self, z):
         assert z.shape == (self.num_vars,)
-        (x, w) = np.split(z, [self.prob_num_vars])
+        x, w = np.split(z, [self.prob_num_vars])
 
         rho = self.rho
         lamb = self.lamb
@@ -110,7 +110,7 @@ class ImplicitProblem(cyipopt.Problem):
     @map_cython_exception
     def gradient(self, z):
         assert z.shape == (self.num_vars,)
-        (x, w) = np.split(z, [self.prob_num_vars])
+        x, w = np.split(z, [self.prob_num_vars])
 
         eval = self.eval
         obj_grad = eval.obj_grad(x)
@@ -137,7 +137,7 @@ class ImplicitProblem(cyipopt.Problem):
     @map_cython_exception
     def constraints(self, z):
         assert z.shape == (self.num_vars,)
-        (x, w) = np.split(z, [self.prob_num_vars])
+        x, w = np.split(z, [self.prob_num_vars])
 
         eval = self.eval
         prob_cons = eval.cons(x)
@@ -155,7 +155,7 @@ class ImplicitProblem(cyipopt.Problem):
     @map_cython_exception
     def jacobian(self, z):
         assert z.shape == (self.num_vars,)
-        (x, w) = np.split(z, [self.prob_num_vars])
+        x, w = np.split(z, [self.prob_num_vars])
 
         eval = self.eval
         problem = self.problem
@@ -183,8 +183,8 @@ class ImplicitProblem(cyipopt.Problem):
         eval = self.eval
         jac_x = eval.cons_jac(x).tocoo()
 
-        (r_x, c_x) = (jac_x.row, jac_x.col)
-        (r_w, c_w) = np.diag_indices(problem.num_cons)
+        r_x, c_x = (jac_x.row, jac_x.col)
+        r_w, c_w = np.diag_indices(problem.num_cons)
         r_w = np.copy(r_w)
         c_w = np.copy(c_w)
 
@@ -258,7 +258,7 @@ class OptimizingController(StepController):
 
         lamb = 1.0 / dt
         implicit_problem = ImplicitProblem(iterate, lamb, rho)
-        (x, y) = implicit_problem.solve(timer=timer)
+        x, y = implicit_problem.solve(timer=timer)
 
         next_iterate = Iterate(problem, params, x, y, iterate.eval)
 

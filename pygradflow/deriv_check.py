@@ -22,7 +22,7 @@ class DerivError(ValueError):
         self.deriv_diffs = np.abs(self.expected_value - self.actual_value)
         self.max_deriv_diff = self.deriv_diffs.max()
 
-        (num_rows, _) = self.deriv_diffs.shape
+        num_rows, _ = self.deriv_diffs.shape
         self.col_index = col_index
 
     def __str__(self):
@@ -88,7 +88,7 @@ def deriv_check(
         darray = dval[:, i]
 
         if dsparse:
-            darray = darray.toarray()
+            darray = cast(sp.sparse.spmatrix, darray).toarray()
 
         darray = np.atleast_2d(darray)
 

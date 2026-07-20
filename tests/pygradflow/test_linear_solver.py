@@ -50,7 +50,7 @@ def posdef_matrix():
 
     delta = min(2.0 * min_eigval, 0.0)
 
-    (_, n) = mat.shape
+    _, n = mat.shape
     posdef_mat = mat + sp.sparse.diags(
         [-delta] * n,
     )
@@ -66,7 +66,7 @@ def negdef_matrix():
 
     delta = max(2.0 * max_eigval, 0.0)
 
-    (_, n) = mat.shape
+    _, n = mat.shape
     negdef_mat = mat + sp.sparse.diags(
         [-delta] * n,
     )

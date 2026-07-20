@@ -80,7 +80,7 @@ class Flow:
 
     def rhs(self, z, rho, c=None):
         eval = self.eval
-        (x, y) = self.split_states(z)
+        x, y = self.split_states(z)
 
         if c is None:
             c = eval.cons(x)
@@ -97,7 +97,7 @@ class Flow:
 
     def aug_lag_deriv_x(self, z, rho, c=None):
         eval = self.eval
-        (x, y) = self.split_states(z)
+        x, y = self.split_states(z)
 
         if c is None:
             c = eval.cons(x)
@@ -108,7 +108,7 @@ class Flow:
 
     def aug_lag_deriv_y(self, z, rho, c=None):
         eval = self.eval
-        (x, y) = self.split_states(z)
+        x, y = self.split_states(z)
 
         if c is None:
             c = eval.cons(x)
@@ -120,7 +120,7 @@ class Flow:
 
     def obj(self, z):
         problem = self.problem
-        (x, y) = self.split_states(z)
+        x, y = self.split_states(z)
         return problem.obj(x)
 
     def neg_aug_lag_deriv_xx(self, z, rho, c=None):
@@ -128,7 +128,7 @@ class Flow:
         problem = self.problem
         params = self.params
 
-        (x, y) = self.split_states(z)
+        x, y = self.split_states(z)
 
         iterate = Iterate(problem, params, x, y)
         hess = iterate.aug_lag_deriv_xx(rho)

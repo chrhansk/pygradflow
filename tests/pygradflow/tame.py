@@ -11,16 +11,16 @@ class Tame(Problem):
         super().__init__(lb, ub, num_cons=1)
 
     def obj(self, z):
-        (x, y) = z
+        x, y = z
 
         return (x - y) ** 2
 
     def obj_grad(self, z):
-        (x, y) = z
+        x, y = z
         return np.array([2 * (x - y), -2 * (x - y)])
 
     def cons(self, z):
-        (x, y) = z
+        x, y = z
         return np.array([x + y - 1])
 
     def cons_jac(self, z):

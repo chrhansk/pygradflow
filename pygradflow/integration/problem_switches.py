@@ -40,7 +40,7 @@ class ProblemSwitches:
         lb = self.problem.var_lb
 
         def at_lb(_, z):
-            (x, y) = self.flow.split_states(z)
+            x, y = self.flow.split_states(z)
             return x[j] - lb[j]
 
         at_lb.type = TriggerType.LB
@@ -53,7 +53,7 @@ class ProblemSwitches:
         ub = self.problem.var_ub
 
         def at_ub(_, z):
-            (x, y) = self.flow.split_states(z)
+            x, y = self.flow.split_states(z)
             return x[j] - ub[j]
 
         at_ub.type = TriggerType.UB
@@ -128,7 +128,7 @@ class ProblemSwitches:
         def rhs_deriv():
             return self.flow.rhs_deriv_x(z_curr, rho)
 
-        (x, y) = self.flow.split_states(z_curr)
+        x, y = self.flow.split_states(z_curr)
 
         lb_events = []
         ub_events = []
