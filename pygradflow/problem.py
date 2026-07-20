@@ -71,6 +71,7 @@ class Problem(abc.ABC):
             if cons_lb is not None:
                 (num_cons,) = cons_lb.shape
             else:
+                assert cons_ub is not None
                 (num_cons,) = cons_ub.shape
 
             if cons_lb is None:

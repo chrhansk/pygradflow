@@ -88,7 +88,7 @@ def deriv_check(
         darray = dval[:, i]
 
         if dsparse:
-            darray = darray.toarray()
+            darray = cast(sp.sparse.spmatrix, darray).toarray()
 
         darray = np.atleast_2d(darray)
 
