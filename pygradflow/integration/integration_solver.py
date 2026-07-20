@@ -208,14 +208,14 @@ class IntegrationSolver:
 
             elif event.type == TriggerType.UNBOUNDED:
                 params = self.params
-                (x_event, y_event) = self.flow.split_states(z_event)
+                x_event, y_event = self.flow.split_states(z_event)
                 iterate_event = Iterate(problem, params, x_event, y_event)
 
                 if iterate_event.is_feasible(params.opt_tol):
                     return UnboundedResult(t_event, z_event)
 
             elif event.type == TriggerType.PENALTY:
-                (x_event, y_event) = self.flow.split_states(z_event)
+                x_event, y_event = self.flow.split_states(z_event)
                 return PenaltyResult(t_event, z_event)
             else:
                 assert event.type == TriggerType.CONVERGED
@@ -271,7 +271,7 @@ class IntegrationSolver:
         event_triggers = restricted_flow.create_event_triggers(curr_z, rho)
 
         # Check consistency
-        (curr_x, curr_y) = self.flow.split_states(curr_z)
+        curr_x, curr_y = self.flow.split_states(curr_z)
         assert self.flow.is_boxed(curr_x)
         restricted_flow.check_point(curr_z, rho)
 
@@ -318,7 +318,7 @@ class IntegrationSolver:
                 logger.debug("Penalty event")
                 status = IntegrationStatus.Penalty
 
-        (next_x, next_y) = self.flow.split_states(next_z)
+        next_x, next_y = self.flow.split_states(next_z)
 
         not_filter = np.logical_not(curr_filter)
 
@@ -417,7 +417,7 @@ class IntegrationSolver:
                 status = SolverStatus.TimeLimit
                 break
 
-            (curr_x, curr_y) = self.flow.split_states(curr_z)
+            curr_x, curr_y = self.flow.split_states(curr_z)
 
             curr_it = Iterate(problem, params, curr_x, curr_y)
 
@@ -480,7 +480,7 @@ class IntegrationSolver:
                 logger.debug("Iteration limit reached")
                 break
 
-        (curr_x, curr_y) = self.flow.split_states(curr_z)
+        curr_x, curr_y = self.flow.split_states(curr_z)
         iterate = Iterate(problem, params, curr_x, curr_y)
 
         x = iterate.x
@@ -499,7 +499,7 @@ class IntegrationSolver:
 
         self.print_result(total_time, status, iterate, iterations, dist_factor)
 
-        (x, y, d) = self.transform.restore_sol(x, y, d)
+        x, y, d = self.transform.restore_sol(x, y, d)
 
         solver_result = SolverResult(
             problem,

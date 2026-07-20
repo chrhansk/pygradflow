@@ -16,7 +16,7 @@ class MINRESSolver(LinearSolver):
 
         result = sp.sparse.linalg.minres(self.mat, rhs, x0=initial_sol)
 
-        (sol, info) = result
+        sol, info = result
 
         if info != 0:
             raise LinearSolverError("MINRES failed with error code {}".format(info))

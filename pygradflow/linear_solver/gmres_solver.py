@@ -15,7 +15,7 @@ class GMRESSolver(LinearSolver):
         if initial_sol is not None:
             initial_sol = initial_sol()
 
-        (n, _) = mat.shape
+        n, _ = mat.shape
 
         atol = 1e-8
 
@@ -27,7 +27,7 @@ class GMRESSolver(LinearSolver):
 
         result = sp.sparse.linalg.gmres(mat, rhs, maxiter=n, x0=initial_sol, atol=atol)
 
-        (sol, info) = result
+        sol, info = result
 
         if info != 0:
             raise LinearSolverError("GMRES failed with error code {}".format(info))

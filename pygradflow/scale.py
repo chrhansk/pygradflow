@@ -9,7 +9,7 @@ from pygradflow.util import sparse_zero
 
 
 def scale_symmetric(A):
-    (n, _) = A.shape
+    n, _ = A.shape
 
     A = A.tocoo()
     a_rows = A.row
@@ -84,7 +84,7 @@ class Scaling:
             cons_weights = np.zeros((0,), dtype=int)
             return Scaling(var_weights, cons_weights)
 
-        (num_cons, num_vars) = cons_jac.shape
+        num_cons, num_vars = cons_jac.shape
         assert obj_grad.shape == (num_vars,)
 
         jac = cons_jac.tocoo()
@@ -105,7 +105,7 @@ class Scaling:
 
     @staticmethod
     def from_equilibrated_kkt(lag_hess, cons_jac):
-        (m, n) = cons_jac.shape
+        m, n = cons_jac.shape
         assert lag_hess.shape == (n, n)
 
         kkt_mat = sp.sparse.bmat([[lag_hess, cons_jac.T], [cons_jac, None]])

@@ -87,7 +87,7 @@ class StepFunc(abc.ABC):
     def apply_project_deriv(self, mat: sp.sparse.spmatrix, active_set: np.ndarray):
         lb = self.lb
         ub = self.ub
-        (num_rows, _) = mat.shape
+        num_rows, _ = mat.shape
 
         assert active_set.dtype == bool
         assert active_set.shape == lb.shape

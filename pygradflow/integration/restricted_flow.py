@@ -27,12 +27,12 @@ class RestrictedFlow:
         lb = problem.var_lb
         ub = problem.var_ub
 
-        (x, y) = self.flow.split_states(z)
+        x, y = self.flow.split_states(z)
         at_lb = Flow.isclose(x, lb)
         at_ub = Flow.isclose(x, ub)
 
         rhs = self.rhs(z, rho)
-        (rhs_x, _) = self.flow.split_states(rhs)
+        rhs_x, _ = self.flow.split_states(rhs)
 
         num_vars = problem.num_vars
         filter = self.filter
@@ -59,7 +59,7 @@ class RestrictedFlow:
         params = self.params
         eval = self.eval
 
-        (x, y) = self.flow.split_states(z)
+        x, y = self.flow.split_states(z)
 
         iterate = Iterate(problem, params, x, y)
         hess = iterate.aug_lag_deriv_xx(rho)
@@ -76,7 +76,7 @@ class RestrictedFlow:
         return dt
 
     def rhs(self, z, rho, c=None):
-        (x, y) = self.flow.split_states(z)
+        x, y = self.flow.split_states(z)
         eval = self.eval
 
         if c is None:
@@ -99,7 +99,7 @@ class RestrictedFlow:
         problem = self.problem
         params = self.params
 
-        (x, y) = self.flow.split_states(z)
+        x, y = self.flow.split_states(z)
 
         iterate = Iterate(problem, params, x, y)
         hess = iterate.aug_lag_deriv_xx(rho)

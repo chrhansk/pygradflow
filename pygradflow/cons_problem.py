@@ -114,7 +114,7 @@ class ConstrainedProblem(Problem):
     def lag_hess(self, x, y):
         orig_hess = self.problem.lag_hess(self.orig_vals(x), y)
 
-        (num_vars, _) = orig_hess.shape
+        num_vars, _ = orig_hess.shape
 
         num_slacks = len(self.slack_positions)
 

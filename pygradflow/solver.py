@@ -412,7 +412,7 @@ class Solver:
         y = iterate.y
         d = iterate.bounds_dual
 
-        (x, y, d) = self.transform.restore_sol(x, y, d)
+        x, y, d = self.transform.restore_sol(x, y, d)
 
         result = SolverResult(
             problem,

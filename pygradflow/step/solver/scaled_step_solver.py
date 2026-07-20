@@ -83,7 +83,7 @@ class ScaledStepSolver(StepSolver):
         self.reset_deriv()
 
     def solve(self, iterate: Iterate) -> StepResult:
-        (b0, b1, b2) = self.initial_rhs(iterate)
+        b0, b1, b2 = self.initial_rhs(iterate)
 
         n = self.n
         m = self.m
@@ -96,7 +96,7 @@ class ScaledStepSolver(StepSolver):
 
         b2t = fact * b2
 
-        (sx, sy, rcond) = self.solve_scaled(b0, b1, b2t)
+        sx, sy, rcond = self.solve_scaled(b0, b1, b2t)
 
         assert sx.shape == (n,)
         assert sy.shape == (m,)

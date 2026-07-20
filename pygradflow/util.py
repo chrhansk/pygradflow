@@ -25,7 +25,7 @@ def norm_mult(*args) -> float:
 
 
 def keep_rows(mat, row_filter):
-    (m, _) = mat.shape
+    m, _ = mat.shape
 
     assert row_filter.shape == (m,)
     assert row_filter.dtype == bool

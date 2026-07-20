@@ -45,7 +45,7 @@ class Transformation:
         else:
             y = np.broadcast_to(y0, (orig_problem.num_cons,))
 
-        (x, y) = self.transform_sol(x, y)
+        x, y = self.transform_sol(x, y)
         dtype = self.params.dtype
 
         x = x.astype(dtype)
@@ -90,7 +90,7 @@ class Transformation:
     def restore_sol(self, x: np.ndarray, y: np.ndarray, d: np.ndarray):
         trans_problem = self.trans_problem
 
-        (x, y, d) = trans_problem.restore_sol(x, y, d)
+        x, y, d = trans_problem.restore_sol(x, y, d)
 
         scaling = self.scaling
 
