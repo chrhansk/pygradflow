@@ -53,6 +53,3 @@ profile = "black"
 
 [tool.mypy]
 ignore_missing_imports = true
-plugins = [
-  "numpy.typing.mypy_plugin",
-]
